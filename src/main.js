@@ -15,6 +15,8 @@ import { Stage } from './three/stage.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
 import { People3D } from './three/people3d.js';
+import { Town3D } from './three/town3d.js';
+import { Landmarks3D } from './three/landmarks3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { smoothHeightAt } from './app/terrain.js';
@@ -23,6 +25,8 @@ const stage = new Stage(document.body);
 const sky = new Sky3D(stage.scene);
 const terrain = new Terrain3D(stage.scene);
 const people = new People3D(stage.scene);
+const town3d = new Town3D(stage.scene);
+const landmarks = new Landmarks3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
 
 rig.target.set(0, smoothHeightAt(0, 0), 0);
@@ -96,8 +100,10 @@ const feed = new Feed((d) => {
   }
   if (d.town && d.counts) {
     hudStat.textContent =
-      `${d.town.buildings.length} buildings · ${d.town.folk} living here · ` +
-      `${d.counts.working} working · ${d.counts.waiting} waiting on you`;
+      `${d.town.buildings.length} buildings (${d.town.toward}/${d.town.needed} toward the next) · ` +
+      `${d.town.folk} living here · ${d.counts.working} working · ${d.counts.waiting} waiting on you`;
+    town3d.sync(d.town);
+    landmarks.sync(d.town);
   }
   if (d.people) people.sync(d.people);
 });
@@ -284,7 +290,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, rig, feed,
+  stage, sky, terrain, people, town3d, landmarks, rig, feed,
   step(frames = 1, ms = 16) {
     for (let i = 0; i < frames; i++) frame(ms);
     return this.stats();

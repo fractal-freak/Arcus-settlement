@@ -133,9 +133,21 @@ writeFileSync(OUT, await page.screenshot({ type: 'png', timeout: 180_000, animat
 await browser.close();
 server.close();
 
+/**
+ * Baselines are kept PER MACHINE, and the first version was not.
+ *
+ * A GitHub runner has no GPU and renders in software; Kevin's Mac does not.
+ * The recorded median from one is meaningless against the other — the first
+ * scheduled run measured 10.7ms, compared it against 4.3ms recorded on the
+ * laptop, and refused a rulebook that had nothing wrong with it. A regression
+ * test that fires on a change of hardware is not a regression test.
+ */
+const WHERE = process.env.CI ? 'ci' : 'local';
 const REPORT = join(HERE, '..', 'state', 'report.json');
-let before = null;
-try { before = JSON.parse(await readFile(REPORT, 'utf8')); } catch { /* first run */ }
+let reports = {};
+try { reports = JSON.parse(await readFile(REPORT, 'utf8')); } catch { /* first run */ }
+if (reports.median) reports = {};             // the old single-machine shape
+const before = reports[WHERE] ?? null;
 
 const problems = [];
 if (errors.length) problems.push(`the page threw: ${errors.slice(0, 3).join(' | ')}`);
@@ -145,12 +157,15 @@ if (before?.median && report.median > before.median * WORSE_BY
   problems.push(`${report.median}ms a frame against ${before.median}ms last time — the new rules cost too much`);
 }
 
-console.log(`chunks ${report.chunks} · ${report.placed} placed · ${report.drawCalls} draws · median ${report.median}ms`
-  + (before?.median ? ` (was ${before.median}ms)` : ' (first run)'));
+console.log(`[${WHERE}] chunks ${report.chunks} · ${report.placed} placed · ${report.drawCalls} draws · median ${report.median}ms`
+  + (before?.median ? ` (was ${before.median}ms here)` : ' (first run on this machine)'));
 
 // Recorded only if it passed — otherwise a slow run would raise the bar it is
 // compared against and quietly let the next slow one through.
-if (!problems.length) writeFileSync(REPORT, JSON.stringify(report, null, 1));
+if (!problems.length) {
+  reports[WHERE] = report;
+  writeFileSync(REPORT, JSON.stringify(reports, null, 1));
+}
 if (problems.length) {
   console.error('REFUSED:');
   for (const p of problems) console.error('  ·', p);

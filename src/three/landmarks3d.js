@@ -22,7 +22,10 @@
  */
 
 import { Group } from 'three';
-import { smoothHeightAt, isWater } from '../app/terrain.js';
+import { smoothHeightAt, isWater, WATER_LEVEL, STEP } from '../app/terrain.js';
+
+/** The height the water surface is actually drawn at — see terrain3d.js's SURFACE_Y. */
+const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
 import { loadModels } from './assets.js';
 
 const MODELS = [
@@ -105,11 +108,17 @@ function buildBridge(models) {
   const node = m.scene.clone(true);
   node.scale.set(widthScale, widthScale, span / m.size.z);
 
-  // Sit the DECK at bank level, not the model's origin: the walking surface
-  // is box.max.y up from the origin, so placing the origin at the bank would
-  // float the road a scaled metre above the ground it is supposed to join.
+  // Sit the DECK above the BANK, and never below the water.
+  //
+  // Seating it flush with the bank looked right on paper and put the arch
+  // underwater in practice: the banks here shelve down to meet the river, so
+  // "bank height" at the span's ends is barely above the surface itself. The
+  // deck is lifted a real clearance over whichever is higher, the bank or the
+  // water, which is what a bridge is for.
   const bankH = Math.max(smoothHeightAt(from, z), smoothHeightAt(to, z));
-  node.position.set((from + to) / 2, bankH + 0.08 - m.box.max.y * widthScale, z);
+  const CLEARANCE = 1.15;
+  const deckTop = Math.max(bankH + 0.35, WATER_SURFACE + CLEARANCE);
+  node.position.set((from + to) / 2, deckTop - m.box.max.y * widthScale, z);
   node.rotation.y = Math.PI / 2;
   g.add(node);
   return g;

@@ -423,7 +423,8 @@ export class Stage {
     this.ambient.intensity = 0.10 + 0.16 * l;
 
     this.scene.fog.color.copy(skyCol);
-    this.scene.fog.density = 0.013 - 0.004 * l;
+    this._fogBase = 0.013 - 0.004 * l;
+    this.scene.fog.density = this._fogBase * this._fogZoomFactor();
     this.scene.background = skyCol;
 
     // Warm at low sun (dawn/dusk shafts), fading out near straight overhead
@@ -497,7 +498,11 @@ export class Stage {
     this._sunFar.copy(this.camera.position).addScaledVector(this.sunDir, 600);
     this._ndc.copy(this._sunFar).project(this.camera);
     const inFront = this._ndc.z < 1;
-    const strength = inFront ? (this._rayBaseStrength ?? 0) : 0;
+    // Rays fade out with the same zoom the fog does. They are a near-ground
+    // effect: from high up the shafts have nothing to graze past and just
+    // bloom into a white smear over the middle of the map, which was half of
+    // what made a zoomed-out view hard to read.
+    const strength = inFront ? (this._rayBaseStrength ?? 0) * this._fogZoomFactor() : 0;
     this.godRayPass.uniforms.rayStrength.value = strength;
     if (strength > 0) {
       this.godRayPass.uniforms.lightScreenPos.value.set(
@@ -507,7 +512,35 @@ export class Stage {
     }
   }
 
+  /**
+   * How much of the base fog density to actually apply, given how far out the
+   * camera has pulled.
+   *
+   * FogExp2 thickens with DISTANCE, so a density tuned to give a pleasant haze
+   * at walking height turns the whole settlement into a white sheet the moment
+   * the camera pulls back — which is exactly what zooming out was doing. The
+   * haze is worth keeping up close, where it gives the valley depth, so rather
+   * than thinning it everywhere the density is eased down as the camera
+   * retreats. Near the ground it is untouched; far out it drops to a quarter,
+   * enough to still soften the horizon without hiding the town.
+   */
+  _fogZoomFactor() {
+    const d = this.camera.position.y;
+    const t = Math.min(1, Math.max(0, (d - 34) / 130));
+    // Bottoms out around a third rather than at nothing. Thinning it away
+    // entirely did make the town legible from high up, and then showed the
+    // ragged edge of the streamed chunks out past the horizon, which the haze
+    // had been quietly covering. A third is clear enough to read the
+    // settlement and still thick enough to lose that edge in.
+    return 1 - t * 0.68;
+  }
+
   render() {
+    // Re-evaluated every frame because it follows the CAMERA, not the sun;
+    // applySky only runs when the sky itself changes.
+    if (this._fogBase && this.scene.fog) {
+      this.scene.fog.density = this._fogBase * this._fogZoomFactor();
+    }
     this.renderer.info.reset();
     this._renderDepth();
     this._updateGodRays();

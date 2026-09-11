@@ -153,9 +153,12 @@ function findCivic() {
   for (let step = 0; step < 48; step++) {
     const a = -Math.PI / 2 + (step % 2 ? -1 : 1) * Math.ceil(step / 2) * (Math.PI / 24);
     const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
-    const rot = a + Math.PI / 2;
+    // The capital looks in at the Settlement Stone in the middle of the square.
+    const r = Math.hypot(x, z) || 1;
+    const face = { x: -x / r, z: -z / r };
+    const rot = Math.atan2(face.x, face.z);
     if (!footprintOk(x, z, CIVIC_PLOT.w, CIVIC_PLOT.d, rot)) continue;
-    return { x, z, rot };
+    return { x, z, rot, face };
   }
   return null; // nowhere on the rim — the capital doesn't stand, same rule as everything else here
 }
@@ -174,13 +177,18 @@ function buildPlan() {
         // Perpendicular offset to the side of the street.
         const px = c * t + (-s) * side * (st.halfWidth + SETBACK);
         const pz = s * t + (c) * side * (st.halfWidth + SETBACK);
-        // A house faces the street it fronts: its own front turned back
-        // toward the street centreline.
-        const rot = st.angle + (side === 1 ? -Math.PI / 2 : Math.PI / 2);
+        // Which way the house must LOOK: straight back at the centreline of
+        // the street it fronts. Stored as a direction rather than a yaw,
+        // because a yaw only means something once you know which way the
+        // model faces, and that is the renderer's business, not the plan's.
+        // The plot sits at the centreline plus `side` times the perpendicular
+        // (-sin, cos), so facing the street is exactly the opposite of that.
+        const face = { x: -side * -Math.sin(st.angle), z: -side * Math.cos(st.angle) };
+        const rot = Math.atan2(face.x, face.z);
         if (Math.hypot(px, pz) < SQUARE.r + 1.0) continue;
         if (CIVIC && Math.hypot(px - CIVIC.x, pz - CIVIC.z) < CIVIC_CLEAR) continue;
         if (!footprintOk(px, pz, PLOT.w, PLOT.d, rot)) continue;
-        candidates.push({ x: px, z: pz, rot, street: st.key, dist: Math.hypot(px, pz) });
+        candidates.push({ x: px, z: pz, rot, face, street: st.key, dist: Math.hypot(px, pz) });
       }
     }
   }

@@ -36,7 +36,7 @@
  */
 
 import {
-  Group, CylinderGeometry, CircleGeometry, RingGeometry, MeshStandardMaterial,
+  Group, CylinderGeometry, CircleGeometry, MeshStandardMaterial,
   Mesh, InstancedMesh, Object3D, CanvasTexture, SRGBColorSpace, RepeatWrapping,
 } from 'three';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
@@ -117,7 +117,12 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
   ctx.fillStyle = ground;
   ctx.fillRect(0, 0, size, size);
 
-  const angleFor = (lon) => Math.PI - ((lon - founding.asc + 360) % 360) * DEG;
+  // Longitude increases COUNTER-CLOCKWISE from the Ascendant at the left.
+  // This ran the other way: signs and houses both climbed clockwise, which
+  // put the Midheaven at the bottom of the wheel instead of the top. Adding
+  // the offset rather than subtracting it is the whole fix — at ASC + 270
+  // the MC now lands at twelve o'clock, where a chart puts it.
+  const angleFor = (lon) => Math.PI + ((lon - founding.asc + 360) % 360) * DEG;
   const at = (lon, r) => ({
     x: cx + Math.cos(angleFor(lon)) * r,
     y: cy - Math.sin(angleFor(lon)) * r,
@@ -165,18 +170,13 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
     drawGlyph(ctx, SIGNS[s], mid.x, mid.y, size * 0.052, ink);
   }
 
-  // The twelve houses: equal from the Ascendant, numbered in their own band.
+  // The twelve houses: equal from the Ascendant. Cusps only — the numerals
+  // are gone on request, and they were the one thing on this stone that
+  // could not be carved in the project's own letterforms anyway, since
+  // digits meant reaching for a system font.
   for (let h = 0; h < 12; h++) {
     const cusp = founding.asc + h * 30;
-    spoke(cusp, rHouseIn, rSignIn, size * (h % 3 === 0 ? 0.0045 : 0.0028));
-    const mid = at(cusp + 15, (rHouseIn + rSignIn) / 2);
-    ctx.save();
-    ctx.font = `600 ${size * 0.030}px Georgia, "Times New Roman", serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = ink;
-    ctx.fillText(String(h + 1), mid.x, mid.y);
-    ctx.restore();
+    spoke(cusp, rHouseIn, rSignIn, size * (h % 3 === 0 ? 0.0050 : 0.0030));
   }
 
   // The angles. Drawn heavier than a cusp because they ARE the chart's frame:
@@ -208,6 +208,70 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
   ctx.stroke();
 }
 
+/**
+ * Wear. Bites irregular holes out of whatever has just been drawn, so the
+ * carving reads as something cut a long time ago rather than printed this
+ * morning.
+ *
+ * 'destination-out' is what makes this work: it erases, so the SAME eroded
+ * artwork can be composited into both the colour and the height passes and
+ * the two can never disagree about which stroke has worn away. Deterministic
+ * from hash2, so the stone weathers the same on every load — a monument that
+ * re-eroded itself on refresh would be its own kind of wrong.
+ */
+function erode(ctx, size) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+
+  // Broad soft patches: whole areas rubbed smooth.
+  for (let i = 0; i < 34; i++) {
+    const x = hash2(i, 3, 71) * size, y = hash2(i, 5, 72) * size;
+    const r = size * (0.03 + hash2(i, 7, 73) * 0.11);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    const a = 0.35 + hash2(i, 9, 74) * 0.5;
+    g.addColorStop(0, `rgba(0,0,0,${a})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Chips and pits: small hard bites out of the lines.
+  for (let i = 0; i < 900; i++) {
+    const x = hash2(i, 11, 75) * size, y = hash2(i, 13, 76) * size;
+    const r = size * 0.0016 * (0.6 + hash2(i, 17, 77) * 3.4);
+    ctx.fillStyle = `rgba(0,0,0,${0.5 + hash2(i, 19, 78) * 0.5})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // A few long cracks running across the face, breaking strokes as they go.
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 7; i++) {
+    let x = hash2(i, 23, 79) * size, y = hash2(i, 29, 80) * size;
+    let a = hash2(i, 31, 81) * Math.PI * 2;
+    ctx.strokeStyle = `rgba(0,0,0,${0.45 + hash2(i, 37, 82) * 0.4})`;
+    ctx.lineWidth = size * 0.0022 * (0.7 + hash2(i, 41, 83) * 1.8);
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let step = 0; step < 22; step++) {
+      a += (hash2(i * 40 + step, 43, 84) - 0.5) * 0.85;
+      x += Math.cos(a) * size * 0.022;
+      y += Math.sin(a) * size * 0.022;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** The chart, drawn and then worn, on its own transparent layer. */
+function chartLayer(size, founding, ink, weight) {
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  drawChart(ctx, size, founding, ink, 'rgba(0,0,0,0)', weight);
+  erode(ctx, size);
+  return c;
+}
+
 /** Colour and height-field passes of the same artwork, as two canvases. */
 function chartTextures(founding) {
   const size = 2048;
@@ -217,20 +281,25 @@ function chartTextures(founding) {
     return c;
   };
 
-  // Colour: granite, with the cut lines sitting in their own shadow. The
-  // ink is nearly opaque and the strokes are drawn heavier than the height
-  // pass alone would need — a groove in real stone is not a hairline, and
-  // Kevin's word for what this should feel like was "fossil".
+  // One worn layer, composited into both passes, so the colour and the depth
+  // agree about every chip.
+  const worn = chartLayer(size, founding, '#241d16', 1.3);
+
+  // Colour: granite with the cut lines sitting in their own shadow.
   const colour = make();
   const cctx = colour.getContext('2d');
   paintGranite(cctx, size, 0xb8b2a8);
-  drawChart(cctx, size, founding, 'rgba(34,29,23,0.95)', 'rgba(0,0,0,0)', 1.25);
+  cctx.globalAlpha = 0.92;
+  cctx.drawImage(worn, 0, 0);
+  cctx.globalAlpha = 1;
 
   // Height: mid-grey is the uncut face, dark is the bottom of the groove.
   // three.js reads bumpMap by luminance, so darker genuinely means deeper.
   const bump = make();
   const bctx = bump.getContext('2d');
-  drawChart(bctx, size, founding, '#080808', '#9a9a9a', 1.45);
+  bctx.fillStyle = '#9a9a9a';
+  bctx.fillRect(0, 0, size, size);
+  bctx.drawImage(chartLayer(size, founding, '#000000', 1.5), 0, 0);
 
   const colourTex = new CanvasTexture(colour);
   colourTex.colorSpace = SRGBColorSpace;
@@ -289,6 +358,42 @@ function graniteTexture(size = 1024) {
   return tex;
 }
 
+/**
+ * Knocks a clean lathe-turned solid out of true, so it reads as quarried rock
+ * rather than something poured in a mould.
+ *
+ * Only the CORNER vertices move. A four-sided cylinder's faces are defined by
+ * their corners, so displacing corners tilts each face without bending it —
+ * the stone gets an irregular, chipped silhouette while its faces stay broadly
+ * planar, which is what the carving needs to sit on.
+ *
+ * The angular index wraps deliberately. A cylinder duplicates its seam
+ * vertices, and hashing on raw atan2 gives -PI and +PI different noise, so the
+ * two halves of the seam pull apart and open a crack down the stone. Indexing
+ * the angle into whole segments and wrapping means both copies get the same
+ * displacement.
+ */
+function roughen(geo, segments, amount, seed) {
+  const pos = geo.attributes.position;
+  const TAU = Math.PI * 2;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const r = Math.hypot(x, z);
+    if (r < 1e-4) continue; // the cap's centre pole — leave it on the axis
+    const ai = ((Math.round(((Math.atan2(z, x) + Math.PI) / TAU) * segments) % segments) + segments) % segments;
+    const yi = Math.round(y * 2.6);
+    const n = (hash2(ai, yi, seed) - 0.5)
+      + (hash2(ai * 7 + 3, yi * 3 + 1, seed + 17) - 0.5) * 0.55;
+    const k = 1 + n * amount;
+    pos.setX(i, x * k);
+    pos.setZ(i, z * k);
+    pos.setY(i, y + (hash2(ai * 5 + 2, yi * 11 + 7, seed + 29) - 0.5) * amount * 0.9);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
 /** How tall the monolith stands. It is the landmark of the square, and reads as one. */
 const SHAFT_H = 9.4;
 const BASE_W = 1.55;
@@ -319,21 +424,25 @@ export class SettlementStone3D {
     // actual form of a raised stone, rather than a post with a cap. Four
     // radial segments give flat faces; the 45° turn puts a FACE forward
     // instead of an edge, which is what the carving needs.
-    const plinth = new Mesh(new CylinderGeometry(BASE_W * 1.62, BASE_W * 1.78, 0.62, 4), stoneMat);
+    const plinth = new Mesh(roughen(new CylinderGeometry(BASE_W * 1.62, BASE_W * 1.82, 0.62, 4, 2), 4, 0.10, 5), stoneMat);
     plinth.rotation.y = Math.PI / 4;
     plinth.position.set(0, h + 0.31, 0);
 
-    const step = new Mesh(new CylinderGeometry(BASE_W * 1.30, BASE_W * 1.52, 0.46, 4), stoneMat);
+    const step = new Mesh(roughen(new CylinderGeometry(BASE_W * 1.30, BASE_W * 1.54, 0.46, 4, 2), 4, 0.09, 11), stoneMat);
     step.rotation.y = Math.PI / 4;
     step.position.set(0, h + 0.62 + 0.23, 0);
 
-    const shaft = new Mesh(new CylinderGeometry(BASE_W * 0.74, BASE_W, SHAFT_H, 4), stoneMat);
+    // Ten height segments give the shaft enough corners to wander off true
+    // down its length; at one segment it could only ever lean, not weather.
+    const shaft = new Mesh(roughen(new CylinderGeometry(BASE_W * 0.74, BASE_W, SHAFT_H, 4, 10), 4, 0.075, 23), stoneMat);
     shaft.rotation.y = Math.PI / 4;
     shaft.position.set(0, h + 1.08 + SHAFT_H / 2, 0);
 
-    const cap = new Mesh(new CylinderGeometry(0.02, BASE_W * 0.74, BASE_W * 1.15, 4), stoneMat);
+    // A blunt, broken tip rather than a sharp pyramidion — this stone was
+    // raised and then left out in the weather for a very long time.
+    const cap = new Mesh(roughen(new CylinderGeometry(BASE_W * 0.26, BASE_W * 0.74, BASE_W * 0.95, 4, 3), 4, 0.17, 37), stoneMat);
     cap.rotation.y = Math.PI / 4;
-    cap.position.set(0, h + 1.08 + SHAFT_H + BASE_W * 0.575, 0);
+    cap.position.set(0, h + 1.08 + SHAFT_H + BASE_W * 0.475, 0);
 
     for (const m of [plinth, step, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; }
     group.add(plinth, step, shaft, cap);
@@ -357,13 +466,6 @@ export class SettlementStone3D {
     const faceZ = rAtFace * Math.SQRT1_2 + 0.01;
     const rChart = rAtFace * 0.62;
 
-    const surround = new Mesh(
-      new RingGeometry(rChart * 0.99, rChart * 1.20, 48),
-      new MeshStandardMaterial({ map: granite, roughness: 0.96, metalness: 0.02, color: 0x8a8880 }),
-    );
-    surround.position.set(0, faceY, faceZ - 0.004);
-    surround.receiveShadow = true;
-
     const chart = new Mesh(
       new CircleGeometry(rChart, 96),
       new MeshStandardMaterial({
@@ -378,20 +480,29 @@ export class SettlementStone3D {
     );
     chart.position.set(0, faceY, faceZ);
     chart.receiveShadow = true;
-    group.add(surround, chart);
+    group.add(chart);
 
     this.scene.add(group);
 
     // Cobblestone paving, a real Kenney tile — a ring around the stone rather
     // than a filled slab, so the monolith stands IN a plaza rather than on a
     // platform.
+    // The plaza. Kenney's floor-flat is exactly one unit square and exactly
+    // ZERO units thick — a plane, measured, not assumed — so two things had
+    // to change for it to read as a paved square rather than scattered strips.
+    //
+    // It now fills a DISC instead of a ring: the old version left a hole
+    // around the stone and stopped short of the square's edge, which is the
+    // patchiness Kevin saw. And each tile sits at the HIGHEST of its own four
+    // corners plus a hair, because a flat plane dropped at the height of its
+    // centre point buries its own corners wherever the ground curves away,
+    // and a half-buried plane looks exactly like a missing one.
     const paving = await this._pavingReady;
     const positions = [];
-    const RING = 7;
+    const RING = 9;
     for (let gx = -RING; gx <= RING; gx++) {
       for (let gz = -RING; gz <= RING; gz++) {
-        const d = Math.hypot(gx, gz);
-        if (d > RING + 0.5 || d < 2.2) continue;
+        if (Math.hypot(gx, gz) > RING) continue;
         positions.push([gx, gz]);
       }
     }
@@ -399,7 +510,11 @@ export class SettlementStone3D {
     tiles.receiveShadow = true;
     const dummy = new Object3D();
     positions.forEach(([gx, gz], i) => {
-      dummy.position.set(gx, smoothHeightAt(gx, gz), gz);
+      const top = Math.max(
+        smoothHeightAt(gx - 0.5, gz - 0.5), smoothHeightAt(gx + 0.5, gz - 0.5),
+        smoothHeightAt(gx - 0.5, gz + 0.5), smoothHeightAt(gx + 0.5, gz + 0.5),
+      );
+      dummy.position.set(gx, top + 0.035, gz);
       dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
       tiles.setMatrixAt(i, dummy.matrix);

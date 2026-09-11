@@ -102,11 +102,19 @@ function scaleFor(size, plot) {
 }
 
 /**
- * The kit models face -Z. Confirmed by placing one and looking at it, not
- * assumed from convention — the door came out facing away from the street on
- * the first pass.
+ * Every KayKit building's front is its local -Z. Established by standing one
+ * on open ground at zero rotation and walking round it, not assumed.
+ *
+ * Turning a model to look along a direction (fx, fz) is therefore
+ * atan2(-fx, -fz): rotating local -Z by a yaw gives (-sin, -cos), and setting
+ * that equal to the facing vector falls out to the negated arguments. The old
+ * code added a flat PI to the plan's own yaw instead, which happened to be
+ * right for one side of one street and wrong everywhere else — which is why
+ * houses faced whichever way they liked rather than the road.
  */
-const MODEL_FACING = Math.PI;
+function yawToFace(face) {
+  return Math.atan2(-face.x, -face.z);
+}
 
 export class Town3D {
   constructor(scene) {
@@ -171,7 +179,7 @@ export class Town3D {
     const s = scaleFor(model.size, plot) * extraScale;
     node.scale.setScalar(s);
     node.position.set(x, smoothHeightAt(x, z), z);
-    node.rotation.set(0, rot + MODEL_FACING, 0);
+    node.rotation.set(0, rot, 0);
     this.group.add(node);
     return node;
   }
@@ -192,7 +200,7 @@ export class Town3D {
     houses.forEach((b, i) => {
       const plot = PLOTS[i];
       if (!plot) return;
-      const node = this._place(modelFor(b, i), plot.x, plot.z, plot.rot, PLOT);
+      const node = this._place(modelFor(b, i), plot.x, plot.z, yawToFace(plot.face), PLOT);
       if (node) node.userData.building = b;
     });
 
@@ -200,22 +208,23 @@ export class Town3D {
 
     if (CIVIC) {
       const colour = COLOURS[0];
-      this._place(`${CASTLE}_${colour}`, CIVIC.x, CIVIC.z, CIVIC.rot, CIVIC_PLOT);
+      this._place(`${CASTLE}_${colour}`, CIVIC.x, CIVIC.z, yawToFace(CIVIC.face), CIVIC_PLOT);
     }
   }
 
   /** Scaffolding, two tents and the materials, on the plot being built now. */
   _buildSite(plot) {
     if (!plot) return;
-    this._place('building_scaffolding', plot.x, plot.z, plot.rot, PLOT);
-    const c = Math.cos(plot.rot), s = Math.sin(plot.rot);
+    const yaw = yawToFace(plot.face);
+    this._place('building_scaffolding', plot.x, plot.z, yaw, PLOT);
+    const c = Math.cos(yaw), s = Math.sin(yaw);
     const at = (lx, lz) => ({ x: plot.x + (lx * c - lz * s), z: plot.z + (lx * s + lz * c) });
     const small = { w: 1.3, d: 1.3 };
-    const t1 = at(-2.2, 1.9); this._place('tent', t1.x, t1.z, plot.rot + 0.4, small);
-    const t2 = at(2.3, 2.0); this._place('tent', t2.x, t2.z, plot.rot - 0.6, small);
-    const l = at(-2.4, -1.6); this._place('resource_lumber', l.x, l.z, plot.rot + 1.1, small);
-    const r = at(2.5, -1.5); this._place('resource_stone', r.x, r.z, plot.rot - 0.3, small);
-    const cr = at(0.4, 2.3); this._place('crate_A_big', cr.x, cr.z, plot.rot + 0.8, small);
-    const ba = at(-1.1, 2.4); this._place('barrel', ba.x, ba.z, plot.rot, small);
+    const t1 = at(-2.2, 1.9); this._place('tent', t1.x, t1.z, yaw + 0.4, small);
+    const t2 = at(2.3, 2.0); this._place('tent', t2.x, t2.z, yaw - 0.6, small);
+    const l = at(-2.4, -1.6); this._place('resource_lumber', l.x, l.z, yaw + 1.1, small);
+    const r = at(2.5, -1.5); this._place('resource_stone', r.x, r.z, yaw - 0.3, small);
+    const cr = at(0.4, 2.3); this._place('crate_A_big', cr.x, cr.z, yaw + 0.8, small);
+    const ba = at(-1.1, 2.4); this._place('barrel', ba.x, ba.z, yaw, small);
   }
 }

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcus · the settlement</title>
+<!-- %BASE_URL% is Vite's own substitution for `base` in vite.config.js — the
+     one way to get a hand-written tag rewritten the same way Vite rewrites
+     its own script/import URLs. A literal /world/next/ here bypassed that
+     and stayed hardcoded to the hub no matter what base was set to. -->
+<link rel="stylesheet" href="%BASE_URL%style.css">
+</head>
+<body>
+<div id="hud">
+  <div id="title">The settlement</div>
+  <div id="stat"></div>
+  <div id="sky"></div>
+</div>
+<div id="hint">drag to move · scroll to zoom</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

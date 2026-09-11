@@ -19,3 +19,48 @@ canvas { display: block; }
   position: fixed; right: 14px; bottom: 12px; z-index: 5;
   font-size: 11px; color: #6e6888; pointer-events: none;
 }
+
+/* One pill per open Claude Code session, positioned every frame by
+   projecting its 3D figure through the camera (see syncPeopleOverlay in
+   main.js) — the container never intercepts a click, only the pills do,
+   so dragging the camera still works everywhere else on screen. */
+#people { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.who {
+  position: absolute; top: 0; left: 0; z-index: 4;
+  transform: translate(-9999px, -9999px);
+  display: block; pointer-events: auto; cursor: pointer;
+  text-decoration: none; outline: none;
+}
+.who {
+  --fade: 1; --pscale: 1;
+}
+.who .tag {
+  display: block;
+  transform: translate(-50%, -100%) translateY(-6px) scale(var(--pscale));
+  opacity: var(--fade);
+  padding: 2px 7px; border-radius: 6px;
+  background: rgba(10, 9, 20, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10.5px; color: #d6d1e6; white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.15s, transform 0.15s;
+}
+.who.waiting .tag {
+  background: rgba(255, 215, 106, 0.16); border-color: rgba(255, 215, 106, 0.5);
+  color: #ffe9ae;
+}
+.who.busy .tag { border-color: rgba(255, 255, 255, 0.22); }
+.who.on .tag::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 5px; border-radius: 50%; background: #ff8a6a; }
+.who:hover .tag, .who:focus .tag { background: rgba(20, 18, 34, 0.88); border-color: rgba(255, 255, 255, 0.3); }
+
+#card {
+  position: fixed; z-index: 6; max-width: 240px;
+  background: rgba(12, 11, 22, 0.92); border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px; padding: 10px 12px; pointer-events: none;
+  font-size: 11.5px; line-height: 1.5; color: #c7c2da;
+  opacity: 0; transform: translateY(4px); transition: opacity 0.1s, transform 0.1s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+#card.show { opacity: 1; transform: translateY(0); }
+#card .t { font-size: 12.5px; font-weight: 600; color: #f1eef8; margin-bottom: 4px; }
+#card .m b { color: #e8e3f0; font-weight: 600; }
+#card .m .doing { color: #9fd0ff; }
+#card .go { margin-top: 6px; font-size: 10.5px; color: #7d7796; }

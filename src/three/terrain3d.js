@@ -65,7 +65,7 @@ function makeToonRamp(stops) {
   tex.generateMipmaps = false;
   return tex;
 }
-const toonRamp = makeToonRamp([58, 150, 255]);
+export const toonRamp = makeToonRamp([58, 150, 255]);
 
 /** Warm, saturated bases. The ramp does the modelling now; these stay flat and simple. */
 const BASE = {

@@ -14,6 +14,7 @@ import { Vector3 } from 'three';
 import { Stage } from './three/stage.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
+import { People3D } from './three/people3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { smoothHeightAt } from './app/terrain.js';
@@ -21,6 +22,7 @@ import { smoothHeightAt } from './app/terrain.js';
 const stage = new Stage(document.body);
 const sky = new Sky3D(stage.scene);
 const terrain = new Terrain3D(stage.scene);
+const people = new People3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
 
 rig.target.set(0, smoothHeightAt(0, 0), 0);
@@ -97,8 +99,123 @@ const feed = new Feed((d) => {
       `${d.town.buildings.length} buildings · ${d.town.folk} living here · ` +
       `${d.counts.working} working · ${d.counts.waiting} waiting on you`;
   }
+  if (d.people) people.sync(d.people);
 });
 feed.start();
+
+// ── People overlay ─────────────────────────────────────────────────────
+//
+// The figures themselves are real 3D geometry (people3d.js); clicking and
+// hovering them is a plain DOM layer on top of the canvas, positioned by
+// projecting each figure's world position through the camera every frame.
+// The same technique arcus-world-page.mjs already uses for the 2D page —
+// simpler and more reliable than raycasting into a scene whose camera
+// OrbitControls already owns pointer dragging for panning.
+
+const peopleLayer = document.getElementById('people');
+const card = document.getElementById('card');
+const pills = new Map(); // session id -> <a>
+let hoveredId = null;
+const tmpProj = new Vector3();
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function openSession(id) {
+  fetch('/world/open?session=' + encodeURIComponent(id)).catch(() => {
+    location.href = 'claude://code/continue?session=' + id;
+  });
+}
+
+function ago(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = m / 60;
+  if (h < 24) return `${h < 2 ? '1 hour' : Math.round(h) + ' hours'} ago`;
+  return `${Math.round(h / 24)}d ago`;
+}
+
+function showCard(p, x, y) {
+  const doing = p.state === 'working' ? 'Working right now'
+    : p.state === 'waiting' ? 'Open, waiting on you' : 'Resting';
+  const bits = [`<b>${doing}</b>`];
+  if (p.doing) {
+    bits.push(`<span class="doing">${esc(p.doing.verb)}${p.doing.detail ? ' — ' + esc(p.doing.detail) : ''}</span>`);
+  }
+  const b = p.built || {};
+  bits.push(b.commits || b.files
+    ? `Built: <b>${b.commits}</b> commit${b.commits === 1 ? '' : 's'}, <b>${b.files}</b> file${b.files === 1 ? '' : 's'} changed`
+    : 'Nothing committed on this branch yet');
+  if (p.branch) bits.push(esc(p.branch));
+  bits.push(`${p.turns} turn${p.turns === 1 ? '' : 's'} · ${ago(p.idleMs)}`);
+  card.innerHTML =
+    `<div class="t">${esc(p.title || p.worktree || 'Untitled session')}</div>` +
+    `<div class="m">${bits.join('<br>')}</div>` +
+    `<div class="go">Click to open this chat</div>`;
+  card.classList.add('show');
+  const r = card.getBoundingClientRect();
+  let top = y - r.height - 18;
+  if (top < 70) top = y + 24;
+  top = Math.min(top, Math.max(70, innerHeight - r.height - 8));
+  card.style.left = `${Math.max(8, Math.min(x - r.width / 2, innerWidth - r.width - 8))}px`;
+  card.style.top = `${top}px`;
+}
+function hideCard() { card.classList.remove('show'); }
+
+function syncPeopleOverlay() {
+  const seen = new Set();
+  for (const a of people.anchors()) {
+    seen.add(a.id);
+    let el = pills.get(a.id);
+    if (!el) {
+      el = document.createElement('a');
+      el.className = 'who';
+      el.href = `claude://code/continue?session=${a.id}`;
+      el.innerHTML = '<span class="tag"></span>';
+      el.addEventListener('click', (e) => { e.preventDefault(); openSession(a.id); });
+      el.addEventListener('pointerenter', () => { hoveredId = a.id; people.setHover(a.id); });
+      el.addEventListener('focus', () => { hoveredId = a.id; people.setHover(a.id); });
+      el.addEventListener('pointerleave', () => {
+        if (hoveredId === a.id) { hoveredId = null; people.setHover(null); hideCard(); }
+      });
+      el.addEventListener('blur', () => {
+        if (hoveredId === a.id) { hoveredId = null; people.setHover(null); hideCard(); }
+      });
+      peopleLayer.appendChild(el);
+      pills.set(a.id, el);
+    }
+    tmpProj.copy(a.position).project(stage.camera);
+    const behind = tmpProj.z > 1;
+    el.style.display = behind ? 'none' : '';
+    if (behind) continue;
+    const sx = (tmpProj.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-tmpProj.y * 0.5 + 0.5) * innerHeight;
+    el.style.transform = `translate(${sx}px, ${sy}px)`;
+    // Real cluttering at 36 real sessions, verified live: a wider spawn
+    // radius (people3d.js) thins them out in world space, but two labels
+    // can still land close together on screen from some angles. Distance
+    // fade is what actually cuts through THAT — nearby sessions read at
+    // full clarity, far ones recede instead of competing for the same
+    // pixels, and a hovered pill always snaps back to full regardless.
+    const dist = stage.camera.position.distanceTo(a.position);
+    const t = Math.min(1, Math.max(0, (dist - 22) / 55));
+    const focused = hoveredId === a.id;
+    el.style.setProperty('--fade', focused ? '1' : (1 - t * 0.7).toFixed(2));
+    el.style.setProperty('--pscale', focused ? '1' : (1 - t * 0.35).toFixed(2));
+    const short = a.data.title || a.data.worktree || 'session';
+    const trimmed = short.length > 22 ? `${short.slice(0, 21).trimEnd()}…` : short;
+    const tag = el.querySelector('.tag');
+    if (tag.textContent !== trimmed) tag.textContent = trimmed;
+    el.classList.toggle('on', !!a.data.unread);
+    el.classList.toggle('busy', a.data.state === 'working');
+    el.classList.toggle('waiting', a.data.state === 'waiting');
+    if (hoveredId === a.id) showCard(a.data, sx, sy);
+  }
+  for (const [id, el] of pills) {
+    if (!seen.has(id)) { el.remove(); pills.delete(id); }
+  }
+}
 
 // ── Frame ───────────────────────────────────────────────────────────────
 
@@ -109,6 +226,7 @@ function frame(dtMs) {
   elapsed += dtMs;
   rig.update(dtMs);
   clampAboveGround();
+  people.tick(dtMs);
 
   const t = rig.target;
   // How much DETAILED land (cliffs, trees, water) to keep loaded. Zoomed out
@@ -137,6 +255,10 @@ function frame(dtMs) {
   sky.update(dtMs, t);
   stage.followShadow(tmp.set(t.x, t.y, t.z), rig.distance);
   stage.render();
+  // After render(), not before: projecting a figure's position needs the
+  // camera's matrixWorld for THIS frame, which stage.render() is what
+  // actually brings current.
+  syncPeopleOverlay();
 }
 
 let last = performance.now();
@@ -162,7 +284,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, rig, feed,
+  stage, sky, terrain, people, rig, feed,
   step(frames = 1, ms = 16) {
     for (let i = 0; i < frames; i++) frame(ms);
     return this.stats();

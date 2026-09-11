@@ -154,6 +154,46 @@ export const EXTRA_PROJECTS = [
       "crate_long_A",
       "crate_open"
     ]
+  },
+  {
+    "key": "muster_archery_range",
+    "dim": "garrison",
+    "want": "to set up target practice and weapon racks near the stone tower base",
+    "needs": 30,
+    "place": "square",
+    "tag": "accent",
+    "n": 4,
+    "kinds": [
+      "target",
+      "weaponrack",
+      "bucket_arrows"
+    ]
+  },
+  {
+    "key": "construct_public_stage",
+    "dim": "civic_assembly",
+    "want": "to build a central stage for town announcements near the crossroads",
+    "needs": 60,
+    "place": "square",
+    "tag": "tall",
+    "n": 2,
+    "kinds": [
+      "building_stage_A",
+      "building_well_red"
+    ]
+  },
+  {
+    "key": "town_boundary_fencing",
+    "dim": "civic_assembly",
+    "want": "to frame open residential plots with wooden post fencing along lanes",
+    "needs": 40,
+    "place": "byLane",
+    "tag": "tall",
+    "n": 5,
+    "kinds": [
+      "fence_wood_straight",
+      "fence_wood_straight_gate"
+    ]
   }
 ];
 
@@ -186,6 +226,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "Lanes and yards around the craft buildings remain bare dirt, missing stored timber, stone piles, and trade crates that convey economic wealth.",
     "tag": "clutter",
     "target": 90
+  },
+  {
+    "key": "garrison",
+    "name": "Garrison Staging",
+    "why": "The prominent stone tower lacks martial equipment, targets, and guard posts needed to define its defensive role.",
+    "tag": "accent",
+    "target": 45
+  },
+  {
+    "key": "civic_assembly",
+    "name": "Civic Assembly",
+    "why": "The broad central thoroughfares offer no public gathering stages or fenced enclosure to structure civic life.",
+    "tag": "tall",
+    "target": 35
   }
 ];
 
@@ -196,6 +250,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-11",
+    "seen": "The red stone tower and central dirt crossroads sit exposed on empty lawn without armories, practice equipment, or civic gathering structures, leaving major spaces feeling unpurposeful.",
+    "added": "garrison, civic_assembly, muster_archery_range, sentry_encampment, construct_public_stage, town_boundary_fencing"
+  },
   {
     "at": "2026-09-11",
     "seen": "A dense clump of identical small trees dominates the foreground while major structures like the red tower stand exposed on bare grass without defensive stone boundaries or organized staging yards.",

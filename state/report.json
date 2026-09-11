@@ -7,10 +7,10 @@
   "placed": 413
  },
  "ci": {
-  "median": 11.2,
+  "median": 8.5,
   "chunks": 121,
   "triangles": 1315659,
   "drawCalls": 1035,
-  "placed": 417
+  "placed": 416
  }
 }

@@ -1,3 +1,8 @@
 node_modules/
 dist/
 .DS_Store
+
+# The simulation's own memory is committed — it IS the settlement, and losing
+# it loses the town's whole history. Only the screenshot the critic looks at is
+# transient.
+state/world.png

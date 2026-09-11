@@ -47,7 +47,15 @@ import { digFor } from '../src/app/digs.js';
  * variable with the local one as the default — no branching, no second copy of
  * this module, and nothing to drift apart.
  */
-const SAVE = process.env.SETTLEMENT_STATE || `${homedir()}/.claude/arcus-life.json`;
+/**
+ * Asked for each time, not decided once when this module is imported.
+ *
+ * ES imports are hoisted, so a caller that sets SETTLEMENT_STATE before doing
+ * its work still sets it AFTER this file has run — which is how the first
+ * scheduled run went looking for a file in a home directory that does not
+ * exist on a GitHub runner and died before the settlement had ticked once.
+ */
+const savePath = () => process.env.SETTLEMENT_STATE || `${homedir()}/.claude/arcus-life.json`;
 
 /** One tick is an hour of settlement time. */
 const TICK_MS = 90_000;
@@ -504,13 +512,14 @@ function blank(now) {
 }
 
 function load() {
-  try { return JSON.parse(readFileSync(SAVE, 'utf8')); } catch { return null; }
+  try { return JSON.parse(readFileSync(savePath(), 'utf8')); } catch { return null; }
 }
 
 function save(state) {
-  const tmp = `${SAVE}.tmp`;
+  const to = savePath();
+  const tmp = `${to}.tmp`;
   writeFileSync(tmp, JSON.stringify(state));
-  renameSync(tmp, SAVE);
+  renameSync(tmp, to);
 }
 
 /**

@@ -148,3 +148,53 @@ canvas { display: block; }
 }
 #crew .sub { margin: 1px 0 0 13px; font-size: 9.5px; color: #8a7457; }
 #crew .empty { padding: 6px 7px; color: #7a674b; }
+
+
+/* ── The chronicle ────────────────────────────────────────────────────────
+   What the settlement did while nobody was looking. Same parchment as the
+   crew board, on the other side, so the two read as a pair of notices pinned
+   up in the square rather than two different pieces of software. */
+#chron {
+  position: fixed; right: 12px; top: 92px; z-index: 5;
+  width: 268px; max-height: calc(100vh - 190px); overflow-y: auto;
+  background:
+    radial-gradient(120% 80% at 82% 0%, rgba(255, 250, 232, 0.96), rgba(0, 0, 0, 0) 60%),
+    radial-gradient(90% 70% at 5% 100%, rgba(198, 172, 126, 0.55), rgba(0, 0, 0, 0) 55%),
+    #e6d8b8;
+  border: 1px solid #6b5535; border-radius: 4px; padding: 9px 9px 10px;
+  font-size: 11.5px; color: #4a3c28;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 252, 240, 0.5),
+    inset 0 0 22px rgba(120, 92, 52, 0.22),
+    0 10px 26px rgba(28, 20, 10, 0.45);
+}
+#chronToggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  margin: 0 0 8px; padding: 2px 3px 7px;
+  background: none; border: 0; border-bottom: 1px solid rgba(107, 85, 53, 0.35);
+  cursor: pointer; text-align: left; font: inherit;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #6b5535;
+}
+#chronToggle:hover { color: #4a3c28; }
+#chronToggle .arrow { font-size: 9px; transition: transform 0.15s; }
+#chronToggle .when {
+  margin-left: auto; letter-spacing: 0.03em; text-transform: none;
+  font-weight: 500; color: #8a7457;
+}
+#chron.shut #chronBody { display: none; }
+#chron.shut #chronToggle { margin-bottom: 0; padding-bottom: 2px; border-bottom: 0; }
+#chron.shut #chronToggle .arrow { transform: rotate(-90deg); }
+#chron .e { padding: 5px 3px; border-bottom: 1px solid rgba(107, 85, 53, 0.14); }
+#chron .e:last-child { border-bottom: 0; }
+#chron .d { font-size: 9.5px; color: #8a7457; margin-bottom: 1px; }
+#chron .t { color: #35291a; line-height: 1.45; }
+/* A colour per kind of event, so a month of history can be skimmed. */
+#chron .e.work  .t::before { content: '⚒ '; color: #6b5535; }
+#chron .e.bond  .t::before { content: '❦ '; color: #3f7f4a; }
+#chron .e.love  .t::before { content: '❦ '; color: #a8437a; }
+#chron .e.feud  .t::before { content: '⚔ '; color: #a5452b; }
+#chron .e.peace .t::before { content: '☮ '; color: #3f7f4a; }
+#chron .e.find  .t::before { content: '◆ '; color: #8a6a2f; }
+#chron .e.arrival .t::before { content: '➤ '; color: #6b5535; }
+#chron .empty { padding: 8px 3px; color: #7a674b; }

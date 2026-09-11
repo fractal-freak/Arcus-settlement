@@ -111,6 +111,7 @@ const feed = new Feed((d) => {
     landmarks.sync(d.town);
     folk.sync(d.town);
   }
+  if (d.life) syncChronicle(d.life);
   if (d.people) {
     people.sync(d.people);
     // Once per feed tick, not once per frame: this writes DOM, and the list
@@ -133,6 +134,7 @@ feed.start();
 const peopleLayer = document.getElementById('people');
 const card = document.getElementById('card');
 const crew = document.getElementById('crew');
+const chron = document.getElementById('chron');
 const pills = new Map(); // session id -> <a>
 const crewRows = new Map(); // session id -> <button>
 let hoveredId = null;
@@ -331,6 +333,48 @@ function updateOcclusion(anchors) {
     ray.far = reach - 0.45; // stop just short, or the figure's own ground hits
     const hit = ray.intersectObjects(solid, true);
     if (hit.length) occluded.add(a.id); else occluded.delete(a.id);
+  }
+}
+
+/**
+ * The chronicle: what the settlement got up to while nobody was looking.
+ *
+ * Rebuilt whole on each feed tick rather than reconciled row by row. It is at
+ * most sixty entries and it only changes when the hub's simulation has
+ * actually advanced, so the simpler code is the right code here — unlike the
+ * crew board, whose rows carry click handlers worth keeping alive.
+ */
+function syncChronicle(L) {
+  if (!L) return;
+  if (!chron.firstChild) {
+    const h = document.createElement('button');
+    h.type = 'button';
+    h.id = 'chronToggle';
+    h.innerHTML = '<span class="arrow">▾</span><span>Chronicle</span><span class="when"></span>';
+    h.addEventListener('click', () => {
+      const now = !chron.classList.contains('shut');
+      chron.classList.toggle('shut', now);
+      try { localStorage.setItem('chronShut', now ? '1' : '0'); } catch { /* private window */ }
+    });
+    chron.appendChild(h);
+    const body = document.createElement('div');
+    body.id = 'chronBody';
+    chron.appendChild(body);
+    try { if (localStorage.getItem('chronShut') === '1') chron.classList.add('shut'); } catch { /* private window */ }
+  }
+  chron.querySelector('.when').textContent = L.said || '';
+  const body = chron.querySelector('#chronBody');
+  const entries = L.chronicle || [];
+  if (!entries.length) {
+    body.innerHTML = '<div class="empty">Nothing has happened here yet. Come back in a while.</div>';
+    return;
+  }
+  const html = entries.slice(0, 40).map((e) =>
+    `<div class="e ${esc(e.kind)}"><div class="d">${esc(e.at)}</div><div class="t">${esc(e.text)}</div></div>`,
+  ).join('');
+  if (body.dataset.sig !== String(entries[0].tick) + entries.length) {
+    body.innerHTML = html;
+    body.dataset.sig = String(entries[0].tick) + entries.length;
   }
 }
 

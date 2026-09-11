@@ -31,6 +31,11 @@ import { toonRamp } from './terrain3d.js';
 
 const robeGeo = new ConeGeometry(0.32, 0.9, 8);
 const headGeo = new SphereGeometry(0.19, 10, 8);
+// A bare cone-and-sphere read as exactly that. A hood — a second, smaller
+// cone overlapping the head from above — and two angled sleeve-cones are
+// what actually make it read as a hooded figure rather than a toy.
+const hoodGeo = new ConeGeometry(0.27, 0.55, 8);
+const armGeo = new ConeGeometry(0.07, 0.48, 6);
 const markerGeo = new IcosahedronGeometry(0.1, 1);
 
 /** A simple string hash — session ids are stable strings, not numbers. */
@@ -91,7 +96,24 @@ class Figure {
     const head = new Mesh(headGeo, this.headMat);
     head.position.y = 1.0;
     head.castShadow = true;
-    this.group.add(robe, head);
+    // The hood's base sits at the head's lower half and its point rises
+    // just above the crown — the head peeks out from underneath rather
+    // than the two shapes merely touching.
+    const hood = new Mesh(hoodGeo, this.robeMat);
+    hood.position.y = 1.08;
+    hood.castShadow = true;
+    // Sleeves: angled out and slightly down from where the robe is already
+    // wide, so they read as arms hanging at the figure's sides, not rods
+    // buried inside the cone.
+    const armL = new Mesh(armGeo, this.robeMat);
+    armL.position.set(-0.27, 0.6, 0);
+    armL.rotation.z = 0.45;
+    armL.castShadow = true;
+    const armR = new Mesh(armGeo, this.robeMat);
+    armR.position.set(0.27, 0.6, 0);
+    armR.rotation.z = -0.45;
+    armR.castShadow = true;
+    this.group.add(robe, head, hood, armL, armR);
 
     this.markerMat = new MeshBasicMaterial({ color: 0xffd76a });
     this.marker = new Mesh(markerGeo, this.markerMat);

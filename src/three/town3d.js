@@ -78,6 +78,14 @@ pyramidRoofGeo.rotateY(Math.PI / 4); // a box's corners, not its faces, is where
 const coneRoofGeo = new ConeGeometry(0.78, 0.9, 12); // the granary's silo cap
 const awningGeo = new BoxGeometry(1.08, 0.12, 1.08); // the market stall's flat cover
 
+// A plain box with a roof on top read as exactly that — a box with a roof
+// on top. A door, two windows and (on about half) a chimney are what
+// actually reads as a BUILDING rather than a shed, for barely more
+// geometry: each is one more instanced primitive, not a modelled asset.
+const doorGeo = new BoxGeometry(0.24, 0.42, 0.05);
+const windowGeo = new BoxGeometry(0.16, 0.16, 0.05);
+const chimneyGeo = new BoxGeometry(0.13, 0.55, 0.13);
+
 // White base colour: setColorAt is the only colour source, exactly like
 // terrain3d.js's rock and ruin instances — instance colour multiplies
 // against the material's own, so white leaves it unmodified.
@@ -85,9 +93,19 @@ const bodyMat = new MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp })
 const pyramidMat = new MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp });
 const coneMat = new MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp });
 const awningMat = new MeshToonMaterial({ color: 0xffffff, gradientMap: toonRamp });
+// These three never vary — one colour apiece, no instance tint needed.
+const doorMat = new MeshToonMaterial({ color: 0x2b2233, gradientMap: toonRamp });
+const windowMat = new MeshToonMaterial({ color: 0xf3dfa0, gradientMap: toonRamp });
+const chimneyMat = new MeshToonMaterial({ color: 0x8a8088, gradientMap: toonRamp });
 
 const dummy = new Object3D();
 const tmpColor = new Color();
+
+/** A local (dx, dz) offset, rotated to match a building's own yaw — how a door ends up on its FRONT face, not always on world +Z. */
+function rotatedOffset(dx, dz, rot) {
+  const c = Math.cos(rot), s = Math.sin(rot);
+  return { x: dx * c - dz * s, z: dx * s + dz * c };
+}
 
 export class Town3D {
   constructor(scene) {
@@ -110,25 +128,28 @@ export class Town3D {
   }
 
   _rebuild(buildings) {
+    const groups = ['bodies', 'pyramids', 'cones', 'awnings', 'doors', 'windows', 'chimneys'];
     if (this.bodies) {
-      this.group.remove(this.bodies, this.pyramids, this.cones, this.awnings);
-      this.bodies.dispose(); this.pyramids.dispose(); this.cones.dispose(); this.awnings.dispose();
+      this.group.remove(...groups.map((k) => this[k]));
+      for (const k of groups) this[k].dispose();
     }
 
     const n = buildings.length;
     this.bodies = new InstancedMesh(bodyGeo, bodyMat, n);
-    // Over-allocated to n rather than an exact per-roof count, known only
-    // after the loop below finishes — one-time waste of unused instance
-    // buffer capacity on a rebuild that happens once per 20 commits, not a
-    // per-frame cost, so not worth a second pass just to size these exactly.
+    // Over-allocated to n (or 2n for windows) rather than an exact count,
+    // known only after the loop below finishes — one-time waste of unused
+    // instance buffer capacity on a rebuild that happens once per 20
+    // commits, not a per-frame cost, so not worth a second pass just to
+    // size these exactly.
     this.pyramids = new InstancedMesh(pyramidRoofGeo, pyramidMat, n);
     this.cones = new InstancedMesh(coneRoofGeo, coneMat, n);
     this.awnings = new InstancedMesh(awningGeo, awningMat, n);
-    for (const m of [this.bodies, this.pyramids, this.cones, this.awnings]) {
-      m.castShadow = true; m.receiveShadow = true;
-    }
+    this.doors = new InstancedMesh(doorGeo, doorMat, n);
+    this.windows = new InstancedMesh(windowGeo, windowMat, n * 2);
+    this.chimneys = new InstancedMesh(chimneyGeo, chimneyMat, n);
+    for (const k of groups) { this[k].castShadow = true; this[k].receiveShadow = true; }
 
-    let np = 0, nc = 0, na = 0;
+    let np = 0, nc = 0, na = 0, nd = 0, nwn = 0, nch = 0;
     buildings.forEach((b, i) => {
       const idx = b.n ?? i;
       const { x, z } = positionFor(idx);
@@ -151,9 +172,12 @@ export class Town3D {
       this.bodies.setColorAt(i, tmpColor.setHex(TRADE_COLOR[b.trade] ?? TRADE_COLOR.app));
 
       const roofY = h + height + 0.02;
+      // A wider eave than the body — the roof reads as SITTING ON the
+      // walls rather than a lid exactly their own size, the way a real
+      // roof overhangs the walls it covers.
       if (b.trade === 'stores') {
         dummy.position.set(x, roofY + 0.45, z);
-        dummy.scale.set(w * 1.05, 1, depth * 1.05);
+        dummy.scale.set(w * 1.15, 1, depth * 1.15);
         dummy.rotation.set(0, rot, 0);
         dummy.updateMatrix();
         this.cones.setMatrixAt(nc, dummy.matrix);
@@ -169,12 +193,44 @@ export class Town3D {
         na++;
       } else {
         dummy.position.set(x, roofY + 0.32, z);
-        dummy.scale.set(w * 1.08, 1, depth * 1.08);
+        dummy.scale.set(w * 1.22, 1, depth * 1.22);
         dummy.rotation.set(0, rot, 0);
         dummy.updateMatrix();
         this.pyramids.setMatrixAt(np, dummy.matrix);
         this.pyramids.setColorAt(np, tmpColor.setHex(ROOF_COLOR[b.trade] ?? ROOF_COLOR.app));
         np++;
+      }
+
+      // A door, two windows flanking it, and — on about half — a chimney.
+      // A market stall skips a door (it is open-fronted, not a house), but
+      // still gets its windows for a "shopfront" read.
+      const front = rotatedOffset(0, depth / 2 + 0.03, rot);
+      if (b.trade !== 'site') {
+        dummy.position.set(x + front.x, h + 0.23, z + front.z);
+        dummy.scale.set(1, 1, 1);
+        dummy.rotation.set(0, rot, 0);
+        dummy.updateMatrix();
+        this.doors.setMatrixAt(nd, dummy.matrix);
+        nd++;
+      }
+      const winL = rotatedOffset(-w * 0.3, depth / 2 + 0.03, rot);
+      dummy.position.set(x + winL.x, h + height * 0.62, z + winL.z);
+      dummy.rotation.set(0, rot, 0);
+      dummy.updateMatrix();
+      this.windows.setMatrixAt(nwn, dummy.matrix); nwn++;
+      const winR = rotatedOffset(w * 0.3, depth / 2 + 0.03, rot);
+      dummy.position.set(x + winR.x, h + height * 0.62, z + winR.z);
+      dummy.rotation.set(0, rot, 0);
+      dummy.updateMatrix();
+      this.windows.setMatrixAt(nwn, dummy.matrix); nwn++;
+
+      if (b.trade !== 'site' && hash2(idx, 9, 74) > 0.5) {
+        const chim = rotatedOffset(w * 0.26, depth * 0.18, rot);
+        dummy.position.set(x + chim.x, roofY + 0.5, z + chim.z);
+        dummy.rotation.set(0, rot, 0);
+        dummy.updateMatrix();
+        this.chimneys.setMatrixAt(nch, dummy.matrix);
+        nch++;
       }
     });
 
@@ -182,10 +238,13 @@ export class Town3D {
     this.pyramids.count = np;
     this.cones.count = nc;
     this.awnings.count = na;
-    for (const m of [this.bodies, this.pyramids, this.cones, this.awnings]) {
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+    this.doors.count = nd;
+    this.windows.count = nwn;
+    this.chimneys.count = nch;
+    for (const k of groups) {
+      this[k].instanceMatrix.needsUpdate = true;
+      if (this[k].instanceColor) this[k].instanceColor.needsUpdate = true;
     }
-    this.group.add(this.bodies, this.pyramids, this.cones, this.awnings);
+    this.group.add(...groups.map((k) => this[k]));
   }
 }

@@ -84,10 +84,14 @@ jobs:
           CRITIC_MODEL: ${{ vars.CRITIC_MODEL }}
         run: node sim/critic.mjs
 
+      # --prune drops the entries that are wrong and keeps the rest. A whole
+      # night's thinking should not be lost because one job of six had a
+      # malformed sentence in it — which is exactly what happened the first
+      # time this ran for real.
       - name: Check the new rules
         id: check
         continue-on-error: true
-        run: node sim/verify.mjs
+        run: node sim/verify.mjs --prune
 
       - name: Refuse rules that do not make sense
         if: steps.check.outcome == 'failure'

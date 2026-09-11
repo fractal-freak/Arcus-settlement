@@ -36,8 +36,9 @@
  */
 
 import {
-  Group, CylinderGeometry, CircleGeometry, MeshStandardMaterial,
-  Mesh, InstancedMesh, Object3D, CanvasTexture, SRGBColorSpace, RepeatWrapping,
+  Group, CircleGeometry, IcosahedronGeometry, TubeGeometry, CatmullRomCurve3,
+  MeshStandardMaterial, Mesh, InstancedMesh, Object3D, BufferAttribute,
+  CanvasTexture, SRGBColorSpace, Vector3, Color, DoubleSide,
 } from 'three';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
 import { GLYPHS, GLYPH_UPM } from '../app/glyphs.js';
@@ -109,6 +110,62 @@ function drawGlyph(ctx, char, cx, cy, size, fill) {
  * still drawn where it actually falls, which in equal house is not normally
  * the tenth cusp, and that is correct rather than a mistake.
  */
+/**
+ * Where each body's glyph actually gets cut, given that two of them can sit
+ * on nearly the same degree.
+ *
+ * Two rules, and they fight each other, so the order matters:
+ *
+ *   1. A glyph never overlaps another. Crowded bodies go SIDE BY SIDE — and
+ *      not resolved with a leader line back to the true degree, which is the
+ *      house rule on Arcus's own wheels and is right here too.
+ *   2. A glyph never leaves its own sign. The whole point of the wheel on
+ *      this stone is reading which sign a planet was in when the settlement
+ *      was founded; a body nudged across a cusp to make room would be a
+ *      plain lie about the chart.
+ *
+ * So bodies are grouped BY SIGN and spread only within their own wedge,
+ * starting from their true degrees and pushed apart just far enough to clear
+ * each other. The separation is capped by what the wedge can actually hold,
+ * so a stellium packs tighter rather than bursting its sign.
+ *
+ * Founding chart today: the Sun and Moon are 0.1 degrees apart in Virgo — a
+ * New Moon — which is exactly the case that was drawing them on top of one
+ * another.
+ */
+function placeBodies(bodies) {
+  const MARGIN = 3.2;     // degrees kept clear of each cusp
+  const WANT_SEP = 9.0;   // degrees between glyph centres, when there is room
+  const out = [];
+  const bySign = new Map();
+  for (const [name, lon] of bodies) {
+    const sign = Math.floor(((lon % 360) + 360) % 360 / 30);
+    if (!bySign.has(sign)) bySign.set(sign, []);
+    bySign.get(sign).push({ name, lon });
+  }
+  for (const [sign, group] of bySign) {
+    const s0 = sign * 30;
+    const lo = s0 + MARGIN, hi = s0 + 30 - MARGIN;
+    group.sort((p, q) => p.lon - q.lon);
+    const k = group.length;
+    const sep = k > 1 ? Math.min(WANT_SEP, (hi - lo) / (k - 1)) : 0;
+    // Start from the truth, then relax apart inside the wedge.
+    const show = group.map((p) => Math.min(hi, Math.max(lo, p.lon)));
+    for (let pass = 0; pass < 40; pass++) {
+      for (let i = 0; i < k - 1; i++) {
+        const gap = show[i + 1] - show[i];
+        if (gap >= sep) continue;
+        const push = (sep - gap) / 2;
+        show[i] -= push;
+        show[i + 1] += push;
+      }
+      for (let i = 0; i < k; i++) show[i] = Math.min(hi, Math.max(lo, show[i]));
+    }
+    group.forEach((p, i) => out.push({ ...p, show: show[i], sign }));
+  }
+  return out;
+}
+
 function drawChart(ctx, size, founding, ink, ground, weight = 1) {
   const cx = size / 2, cy = size / 2;
   const R = size * 0.46;
@@ -131,11 +188,11 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
 
   /**
    * Nothing here is drawn with arc() or a straight lineTo, and that is the
-   * point. A perfect circle is the single loudest tell that a thing was
-   * printed rather than cut — it was still reading as machine-made even after
-   * the wear passes, because underneath the chips the geometry was flawless.
-   * Every ring and every division is stepped out by hand with the radius
-   * wandering and the stroke breathing, the way a chisel actually tracks.
+   * point. A perfect circle is the loudest tell that a thing was printed
+   * rather than cut — it was still reading as machine-made even under the
+   * wear, because the geometry beneath the chips was flawless. Every ring and
+   * division is stepped out by hand with the radius wandering and the stroke
+   * breathing, the way a chisel actually tracks.
    */
   const handCircle = (r, w, jitter, seed) => {
     const steps = 190;
@@ -152,13 +209,13 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
   };
 
   const handSpoke = (lon, r0, r1, w, seed) => {
-    const steps = 14;
+    const steps = 18;
     const a = angleFor(lon);
     ctx.beginPath();
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const rr = r0 + (r1 - r0) * t;
-      const off = (hash2(i, seed, 11) - 0.5) * size * 0.0035;
+      const off = (hash2(i, seed, 11) - 0.5) * size * 0.0055;
       const x = cx + Math.cos(a) * rr - Math.sin(a) * off;
       const y = cy - Math.sin(a) * rr - Math.cos(a) * off;
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
@@ -167,36 +224,39 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
     ctx.stroke();
   };
 
-  // TWO rings, and only two: the band the signs sit in. The degree ticks, the
-  // house cusps, the house ring and the inner court have all gone — asked for
-  // plainly, and the wheel is better for it. A stone carries what is worth the
-  // chisel, not everything a screen could show.
   const rRim = R;
-  const rSignIn = R * 0.80;
-  handCircle(rRim, size * 0.0060, 0.006, 5);
-  handCircle(rSignIn, size * 0.0048, 0.007, 19);
+  const rSignIn = R * 0.78;
+  const rHub = R * 0.17;
+  handCircle(rRim, size * 0.0072, 0.007, 5);
+  handCircle(rSignIn, size * 0.0060, 0.008, 19);
 
-  // The twelve signs: one division on each boundary, glyph at each midpoint.
+  // The twelve divisions run the WHOLE way in, rim to hub, not just across
+  // the sign band. Twelve real wedges is what makes "this planet is in that
+  // sign" readable at a glance — with the cut stopping at the inner ring, a
+  // glyph floated in open space and you had to measure it by eye.
   for (let i = 0; i < 12; i++) {
-    handSpoke(i * 30, rSignIn, rRim, size * 0.0042, 31 + i);
+    handSpoke(i * 30, rHub, rRim, size * 0.0050, 31 + i);
+  }
+
+  // Sign glyphs in their band.
+  for (let i = 0; i < 12; i++) {
     const mid = at(i * 30 + 15, (rSignIn + rRim) / 2);
-    // Each glyph set a touch off square and a touch off size, because a hand
-    // cutting twelve of these into rock does not repeat itself exactly.
     ctx.save();
     ctx.translate(mid.x, mid.y);
     ctx.rotate((hash2(i, 41, 13) - 0.5) * 0.16);
-    drawGlyph(ctx, SIGNS[i], 0, 0, size * 0.062 * (0.93 + hash2(i, 43, 17) * 0.14), ink);
+    drawGlyph(ctx, SIGNS[i], 0, 0, size * 0.060 * (0.93 + hash2(i, 43, 17) * 0.14), ink);
     ctx.restore();
   }
 
-  // Every body at its real longitude, standing in the open middle.
-  const bodies = founding.bodies ?? [];
-  bodies.forEach(([name, lon], i) => {
-    const p = at(lon, rSignIn * 0.68);
+  // Bodies, sitting just inside their own sign's wedge so the pairing reads
+  // without counting round the rim.
+  const rBody = rSignIn * 0.80;
+  placeBodies(founding.bodies ?? []).forEach((p, i) => {
+    const q = at(p.show, rBody);
     ctx.save();
-    ctx.translate(p.x, p.y);
+    ctx.translate(q.x, q.y);
     ctx.rotate((hash2(i, 47, 23) - 0.5) * 0.16);
-    drawGlyph(ctx, PLANET_GLYPH[name] ?? '☉', 0, 0, size * 0.058 * (0.93 + hash2(i, 53, 29) * 0.14), ink);
+    drawGlyph(ctx, PLANET_GLYPH[p.name] ?? '☉', 0, 0, size * 0.056 * (0.93 + hash2(i, 53, 29) * 0.14), ink);
     ctx.restore();
   });
 }
@@ -276,13 +336,13 @@ function chartTextures(founding) {
 
   // One worn layer, composited into both passes, so the colour and the depth
   // agree about every chip.
-  const worn = chartLayer(size, founding, '#241d16', 1.3);
+  const worn = chartLayer(size, founding, '#1a140e', 1.55);
 
   // Colour: granite with the cut lines sitting in their own shadow.
   const colour = make();
   const cctx = colour.getContext('2d');
   paintGranite(cctx, size, 0xb8b2a8);
-  cctx.globalAlpha = 0.92;
+  cctx.globalAlpha = 0.97;
   cctx.drawImage(worn, 0, 0);
   cctx.globalAlpha = 1;
 
@@ -292,7 +352,7 @@ function chartTextures(founding) {
   const bctx = bump.getContext('2d');
   bctx.fillStyle = '#9a9a9a';
   bctx.fillRect(0, 0, size, size);
-  bctx.drawImage(chartLayer(size, founding, '#000000', 1.5), 0, 0);
+  bctx.drawImage(chartLayer(size, founding, '#000000', 1.85), 0, 0);
 
   const colourTex = new CanvasTexture(colour);
   colourTex.colorSpace = SRGBColorSpace;
@@ -340,66 +400,154 @@ function paintGranite(ctx, size, base) {
   }
 }
 
-function graniteTexture(size = 1024) {
-  const c = document.createElement('canvas');
-  c.width = size; c.height = size;
-  paintGranite(c.getContext('2d'), size, 0xb3aea6);
-  const tex = new CanvasTexture(c);
-  tex.colorSpace = SRGBColorSpace;
-  tex.wrapS = tex.wrapT = RepeatWrapping;
-  tex.anisotropy = 8;
-  return tex;
+
+/**
+ * The boulder's overall size. It is a rock, not a monument: wider than it is
+ * tall, sunk into its own ground, and big enough that the whole square is
+ * arranged around it.
+ */
+const ROCK_R = 3.4;
+
+/** Smooth, seam-free lumpiness from the vertex position itself. */
+function lumps(x, y, z) {
+  return Math.sin(x * 1.7 + 0.6) * Math.cos(z * 1.3 - 0.2) * 0.50
+    + Math.sin(y * 2.1 + x * 0.7) * 0.30
+    + Math.sin((x + z) * 3.1 + y * 1.1) * 0.20
+    + Math.sin((x - y) * 5.3 + z * 2.7) * 0.10;
 }
 
 /**
- * Knocks a clean lathe-turned solid out of true, so it reads as quarried rock
- * rather than something poured in a mould.
+ * The sacred stone: one huge weathered boulder, with a single dressed panel
+ * cut flat on its face for the chart.
  *
- * Only the CORNER vertices move. A four-sided cylinder's faces are defined by
- * their corners, so displacing corners tilts each face without bending it —
- * the stone gets an irregular, chipped silhouette while its faces stay broadly
- * planar, which is what the carving needs to sit on.
+ * Layered trigonometry rather than a hash for the lumps, because a boulder is
+ * a closed surface and a hash quantised on spherical coordinates splits along
+ * the poles and the date line. Two vertices at the same point must always get
+ * the same displacement or the rock tears open; a function of the position
+ * itself cannot do otherwise.
  *
- * The angular index wraps deliberately. A cylinder duplicates its seam
- * vertices, and hashing on raw atan2 gives -PI and +PI different noise, so the
- * two halves of the seam pull apart and open a crack down the stone. Indexing
- * the angle into whole segments and wrapping means both copies get the same
- * displacement.
+ * `dress` flattens everything facing the viewer inside the carving radius
+ * onto one plane, which is what gives the chart somewhere true to sit — a
+ * dressed panel on an otherwise rough rock, exactly what carving a boulder
+ * actually involves.
  */
-function roughen(geo, segments, amount, seed, dressed = null) {
+function makeBoulder(dressZ, dressR) {
+  const geo = new IcosahedronGeometry(ROCK_R, 4);
   const pos = geo.attributes.position;
-  const TAU = Math.PI * 2;
+  const v = new Vector3();
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    const r = Math.hypot(x, z);
-    if (r < 1e-4) continue; // the cap's centre pole — leave it on the axis
-    // A DRESSED band: the stretch of the shaft the chart is cut into is left
-    // very nearly true. A mason levels the panel before carving it, and there
-    // is a blunter reason too — the carving is a flat disc standing just off
-    // the face, so a face that wanders by five per cent of its own radius
-    // swallows half of it. That is exactly what ate the bottom of the wheel.
-    let amt = amount;
-    if (dressed && y > dressed.y0 && y < dressed.y1) {
-      const t = Math.min((y - dressed.y0) / dressed.fade, (dressed.y1 - y) / dressed.fade, 1);
-      amt = amount * (1 - 0.93 * Math.max(0, t));
-    }
-    const ai = ((Math.round(((Math.atan2(z, x) + Math.PI) / TAU) * segments) % segments) + segments) % segments;
-    const yi = Math.round(y * 2.6);
-    const n = (hash2(ai, yi, seed) - 0.5)
-      + (hash2(ai * 7 + 3, yi * 3 + 1, seed + 17) - 0.5) * 0.55;
-    const k = 1 + n * amt;
-    pos.setX(i, x * k);
-    pos.setZ(i, z * k);
-    pos.setY(i, y + (hash2(ai * 5 + 2, yi * 11 + 7, seed + 29) - 0.5) * amt * 0.9);
+    v.fromBufferAttribute(pos, i);
+    const d = v.clone().normalize();
+    // Two scales of lump: broad shoulders and hollows, then a finer break-up
+    // over the top of them. One octave alone came out egg-smooth.
+    const broad = lumps(d.x * 1.9, d.y * 1.9, d.z * 1.9);
+    const fine = lumps(d.x * 5.7 + 11, d.y * 5.7 - 4, d.z * 5.7 + 7);
+    v.multiplyScalar(1 + broad * 0.34 + fine * 0.13);
+    // Squat and broad, and broader still at the foot where it meets the earth.
+    v.y *= 0.82;
+    const sink = Math.max(0, -v.y / ROCK_R);
+    v.x *= 1 + sink * 0.20;
+    v.z *= 1 + sink * 0.20;
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  // Dress the panel: everything on the front, within the carving, onto a plane.
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    if (v.z <= 0) continue;
+    const inPanel = Math.hypot(v.x, v.y - dressZ.y);
+    if (inPanel > dressR * 1.55) continue;
+    // Fully flat out past the chart's own edge, then fading back into the
+    // rock. The fade used to begin INSIDE the carving, so the outermost ring
+    // of the wheel sat on ground that was still curving away and the rock
+    // could bulge over it.
+    const t = Math.min(1, Math.max(0, 1 - (inPanel - dressR * 1.08) / (dressR * 0.47)));
+    if (t <= 0) continue;
+    pos.setZ(i, v.z + (dressZ.z - v.z) * t);
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
+
+  // Moss, painted per vertex — no UVs needed, and an icosahedron has none
+  // worth using. It grows where moss grows: on what faces the sky, thicker
+  // in the damp low places, and nowhere on the dressed panel, which is kept
+  // clear the way a tended stone would be.
+  const nor = geo.attributes.normal;
+  const colors = new Float32Array(pos.count * 3);
+  const stone = new Color(), moss = new Color(0x4e7031), dark = new Color(0x67635b);
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const up = nor.getY(i);
+    const grain = 0.5 + 0.5 * lumps(v.x * 3.1, v.y * 3.1, v.z * 3.1);
+    stone.setHex(0xa9a49b).lerp(dark, grain * 0.55);
+    const damp = Math.max(0, 1 - (v.y + ROCK_R * 0.5) / (ROCK_R * 1.3));
+    let m = Math.max(0, (up - 0.02) / 0.55) * (0.45 + 0.55 * grain) + damp * 0.42 * grain;
+    const onPanel = v.z > 0 && Math.hypot(v.x, v.y - dressZ.y) < dressR * 1.30;
+    if (onPanel) m *= 0.06;
+    stone.lerp(moss, Math.min(0.92, Math.max(0, m)));
+    colors[i * 3] = stone.r; colors[i * 3 + 1] = stone.g; colors[i * 3 + 2] = stone.b;
+  }
+  geo.setAttribute('color', new BufferAttribute(colors, 3));
   return geo;
 }
 
-/** How tall the monolith stands. It is the landmark of the square, and reads as one. */
-const SHAFT_H = 9.4;
-const BASE_W = 1.55;
+/**
+ * Vines draped over the rock. Each is a tube following a curve that starts up
+ * near the crown, hugs the shoulder and then falls away down the side, with
+ * leaves threaded along it. Kept off the front so nothing grows across the
+ * chart.
+ */
+function makeVines(baseY) {
+  const g = new Group();
+  const vineMat = new MeshStandardMaterial({ color: 0x4f6b33, roughness: 0.9, metalness: 0 });
+  const leafMat = new MeshStandardMaterial({ color: 0x6b8f42, roughness: 0.85, metalness: 0, side: DoubleSide });
+  const leafGeo = new IcosahedronGeometry(0.13, 0);
+
+  for (let v = 0; v < 7; v++) {
+    // Start round the BACK and the sides only. The front of this rock is at
+    // a = PI/2 in this parameterisation, and the first pass swept straight
+    // through it — vines hanging over the chart, which is the one surface
+    // that has to stay readable. The sweep now starts a good way past it and
+    // runs the long way round.
+    const a0 = Math.PI * 0.80 + (v / 7) * Math.PI * 1.40 + hash2(v, 3, 61) * 0.20;
+    const pts = [];
+    const steps = 9;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      // Down from the crown, drifting round the rock as it falls.
+      const phi = (0.14 + t * 1.30) * Math.PI * 0.5;
+      const a = a0 + Math.sin(t * 3.1 + v) * 0.22;
+      const rr = ROCK_R * (1.02 + lumps(Math.cos(a) * 2.3, Math.cos(phi) * 2.3, Math.sin(a) * 2.3) * 0.16);
+      pts.push(new Vector3(
+        Math.cos(a) * Math.sin(phi) * rr,
+        Math.cos(phi) * rr * 0.82 + 0.06,
+        Math.sin(a) * Math.sin(phi) * rr,
+      ));
+    }
+    const curve = new CatmullRomCurve3(pts);
+    const tube = new Mesh(new TubeGeometry(curve, 26, 0.045 + hash2(v, 5, 62) * 0.022, 5, false), vineMat);
+    tube.castShadow = true;
+    g.add(tube);
+
+    for (let l = 0; l < 9; l++) {
+      const t = 0.12 + (l / 9) * 0.86;
+      const p = curve.getPoint(t);
+      const leaf = new Mesh(leafGeo, leafMat);
+      const off = 0.10 + hash2(v * 10 + l, 7, 63) * 0.09;
+      leaf.position.set(
+        p.x * (1 + off * 0.1) + (hash2(v * 10 + l, 11, 64) - 0.5) * 0.2,
+        p.y + (hash2(v * 10 + l, 13, 65) - 0.5) * 0.18,
+        p.z * (1 + off * 0.1) + (hash2(v * 10 + l, 17, 66) - 0.5) * 0.2,
+      );
+      const sc = 0.7 + hash2(v * 10 + l, 19, 67) * 0.9;
+      leaf.scale.set(sc * 1.5, sc * 0.42, sc);
+      leaf.rotation.set(hash2(v * 10 + l, 23, 68) * 3, hash2(v * 10 + l, 29, 69) * 6.28, hash2(v * 10 + l, 31, 70) * 3);
+      leaf.castShadow = true;
+      g.add(leaf);
+    }
+  }
+  g.position.y = baseY;
+  return g;
+}
 
 export class SettlementStone3D {
   constructor(scene) {
@@ -418,80 +566,43 @@ export class SettlementStone3D {
     const group = new Group();
     const h = smoothHeightAt(0, 0);
 
-    // How far up the shaft the carving sits. Declared here because the stone
-    // itself has to know: the band it lands on is left dressed rather than
-    // weathered.
-    const FRAC = 0.34;
-
-    const granite = graniteTexture();
-    const stoneMat = new MeshStandardMaterial({
-      map: granite, roughness: 0.93, metalness: 0.02,
-    });
-
-    // A stepped plinth, a tapering four-sided shaft and a pyramidion — the
-    // actual form of a raised stone, rather than a post with a cap. Four
-    // radial segments give flat faces; the 45° turn puts a FACE forward
-    // instead of an edge, which is what the carving needs.
-    const plinth = new Mesh(roughen(new CylinderGeometry(BASE_W * 1.62, BASE_W * 1.82, 0.62, 4, 2), 4, 0.10, 5), stoneMat);
-    plinth.rotation.y = Math.PI / 4;
-    plinth.position.set(0, h + 0.31, 0);
-
-    const step = new Mesh(roughen(new CylinderGeometry(BASE_W * 1.30, BASE_W * 1.54, 0.46, 4, 2), 4, 0.09, 11), stoneMat);
-    step.rotation.y = Math.PI / 4;
-    step.position.set(0, h + 0.62 + 0.23, 0);
-
-    // Ten height segments give the shaft enough corners to wander off true
-    // down its length; at one segment it could only ever lean, not weather.
-    // The dressed band is in the cylinder's OWN local Y, which runs from
-    // -SHAFT_H/2 to +SHAFT_H/2 about its middle — FRAC measures from the base,
-    // so it has to be shifted before it means anything here.
-    const bandMid = (FRAC - 0.5) * SHAFT_H;
-    const shaft = new Mesh(roughen(
-      new CylinderGeometry(BASE_W * 0.74, BASE_W, SHAFT_H, 4, 14), 4, 0.075, 23,
-      { y0: bandMid - 1.5, y1: bandMid + 1.5, fade: 0.7 },
-    ), stoneMat);
-    shaft.rotation.y = Math.PI / 4;
-    shaft.position.set(0, h + 1.08 + SHAFT_H / 2, 0);
-
-    // A blunt, broken tip rather than a sharp pyramidion — this stone was
-    // raised and then left out in the weather for a very long time.
-    const cap = new Mesh(roughen(new CylinderGeometry(BASE_W * 0.26, BASE_W * 0.74, BASE_W * 0.95, 4, 3), 4, 0.17, 37), stoneMat);
-    cap.rotation.y = Math.PI / 4;
-    cap.position.set(0, h + 1.08 + SHAFT_H + BASE_W * 0.475, 0);
-
-    for (const m of [plinth, step, shaft, cap]) { m.castShadow = true; m.receiveShadow = true; }
-    group.add(plinth, step, shaft, cap);
-
-    // The carved face. A shallow sunken panel, then the chart cut into it —
-    // same granite as the shaft, so it reads as the stone's own surface
-    // worked rather than a disc fixed onto it.
     const { colourTex, bumpTex } = chartTextures(founding);
-    // WHERE the face actually is, rather than a guessed offset. A cylinder of
-    // four radial segments turned 45 degrees presents a flat face at
-    // radius/root-two from the axis, and the shaft tapers, so the face plane
-    // moves inward as it rises. The first attempt used a flat fraction of the
-    // base width and left the carving hovering a third of a unit in front of
-    // the stone it was supposed to be cut into.
-    const faceY = h + 1.08 + SHAFT_H * FRAC;
-    const rAtFace = BASE_W + (BASE_W * 0.74 - BASE_W) * FRAC;
-    const faceZ = rAtFace * Math.SQRT1_2 + 0.05;
-    const rChart = rAtFace * 0.62;
+
+    // Where the chart is cut: on the front of the rock, a little above the
+    // middle, at about the height of someone standing in front of it.
+    const panelY = ROCK_R * 0.22;
+    const rChart = ROCK_R * 0.56;
+    const panelZ = ROCK_R * 0.80;
+
+    // The rock sits DOWN into its own ground, the way a boulder that has been
+    // there a very long time does — there is no plinth under it, because
+    // nobody built this, they found it.
+    const rock = new Mesh(
+      makeBoulder({ y: panelY, z: panelZ }, rChart),
+      new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0.02 }),
+    );
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    rock.position.set(0, h + ROCK_R * 0.46, 0);
+    group.add(rock);
 
     const chart = new Mesh(
       new CircleGeometry(rChart, 96),
       new MeshStandardMaterial({
         map: colourTex,
         bumpMap: bumpTex,
-        // Deep enough that the grooves catch a real edge as the sun moves,
-        // shallow enough that it still reads as cut stone and not corrugation.
-        bumpScale: 0.16,
-        roughness: 0.92,
+        // Deep enough that the grooves catch a real edge as the sun moves
+        // across the day, shallow enough to still read as cut stone.
+        bumpScale: 0.30,
+        roughness: 0.93,
         metalness: 0.02,
       }),
     );
-    chart.position.set(0, faceY, faceZ);
+    chart.position.set(0, h + ROCK_R * 0.46 + panelY, panelZ + 0.05);
     chart.receiveShadow = true;
     group.add(chart);
+
+    group.add(makeVines(h + ROCK_R * 0.46));
 
     this.scene.add(group);
 

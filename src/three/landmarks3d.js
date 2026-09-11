@@ -36,15 +36,20 @@ function group(scene) {
 /** The well — the first landmark, right at the town's actual centre. */
 function buildWell() {
   const g = new Group();
-  const h = smoothHeightAt(0, 0);
+  // Offset from the exact origin now — (0,0) belongs to the Settlement
+  // Stone (settlementStone3d.js), the town's real founding-chart obelisk,
+  // and this town square has room for both a well and a monument the same
+  // way any real one does.
+  const wx = 5, wz = 4;
+  const h = smoothHeightAt(wx, wz);
   const wall = new Mesh(new CylinderGeometry(0.62, 0.68, 0.5, 12), STONE);
-  wall.position.set(0, h + 0.25, 0);
+  wall.position.set(wx, h + 0.25, wz);
   const postGeo = new CylinderGeometry(0.05, 0.05, 1.1, 6);
-  const postA = new Mesh(postGeo, WOOD); postA.position.set(-0.5, h + 0.85, 0);
-  const postB = new Mesh(postGeo, WOOD); postB.position.set(0.5, h + 0.85, 0);
+  const postA = new Mesh(postGeo, WOOD); postA.position.set(wx - 0.5, h + 0.85, wz);
+  const postB = new Mesh(postGeo, WOOD); postB.position.set(wx + 0.5, h + 0.85, wz);
   const roof = new Mesh(new ConeGeometry(0.9, 0.5, 4), ROOF);
   roof.rotation.y = Math.PI / 4;
-  roof.position.set(0, h + 1.5, 0);
+  roof.position.set(wx, h + 1.5, wz);
   for (const m of [wall, postA, postB, roof]) { m.castShadow = true; m.receiveShadow = true; }
   g.add(wall, postA, postB, roof);
   return g;

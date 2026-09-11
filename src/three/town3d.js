@@ -29,7 +29,7 @@
  * get real assets in now and reconcile style/detail later.
  */
 
-import { Group, InstancedMesh, Object3D, Vector3 } from 'three';
+import { Group, InstancedMesh, Object3D } from 'three';
 import { smoothHeightAt, isWater, hash2, noise } from '../app/terrain.js';
 import { loadPieces } from './assets.js';
 
@@ -97,7 +97,27 @@ const TILE = 1;
 // alone — a small thumbnail had already been wrong once this same pass.)
 // are the actual roof surface pieces; both confirmed by their preview
 // images before ever touching the tiling code below.
-const PIECES = ['wall', 'wall-door', 'wall-window', 'roof-side', 'roof-side-corner', 'tower-base', 'tower-top', 'column-damaged'];
+//
+// Three wealth tiers, real data driving which one a building gets: `weight`
+// is the number of distinct files its commits actually touched (clamped at
+// 60 by arcus-town.mjs), the one non-arbitrary signal this data has for
+// "how much work," used here as a stand-in for "how much house." Boundaries
+// are the REAL tercile split of all 133 live buildings' weights (27, 44),
+// not round numbers picked by eye — an even guess (10/30) checked against
+// the real distribution put 79 of 133 in the top tier and only 4 in the
+// bottom, nothing like the "fancy stone down to very low income" spread
+// asked for.
+const TIERS = [
+  { key: 'humble', max: 27, wall: 'wall-pane-wood', door: 'wall-pane-wood-door', window: 'wall-pane-wood-window', maxTiles: 2 },
+  { key: 'plain', max: 44, wall: 'wall', door: 'wall-door', window: 'wall-window', maxTiles: 3 },
+  { key: 'grand', max: Infinity, wall: 'wall-fortified', door: 'wall-fortified-door', window: 'wall-fortified-window', maxTiles: 3 },
+];
+function tierFor(weight) { return TIERS.find((t) => weight <= t.max) ?? TIERS[TIERS.length - 1]; }
+
+const PIECES = [
+  ...new Set(TIERS.flatMap((t) => [t.wall, t.door, t.window])),
+  'roof-side', 'roof-side-corner', 'tower-base', 'tower-top', 'column-damaged',
+];
 
 /**
  * Every wall placement around one building's rectangular footprint, in the
@@ -107,7 +127,7 @@ const PIECES = ['wall', 'wall-door', 'wall-window', 'roof-side', 'roof-side-corn
  * building's centre — 0 for the +Z (front) edge, PI for -Z (back), ±PI/2
  * for the side edges.
  */
-function perimeterTiles(wTiles, dTiles, seed) {
+function perimeterTiles(wTiles, dTiles, seed, tier) {
   const out = [];
   const hw = wTiles / 2, hd = dTiles / 2;
   for (let i = 0; i < wTiles; i++) {
@@ -121,7 +141,8 @@ function perimeterTiles(wTiles, dTiles, seed) {
     out.push({ x: -hw, z, facing: -Math.PI / 2 });
   }
   // One door, roughly centred on the front edge; a couple of windows
-  // scattered elsewhere; the rest plain wall.
+  // scattered elsewhere; the rest plain wall — all three drawn from
+  // whichever wealth tier this building belongs to.
   let door = null, bestD = Infinity;
   out.forEach((t, i) => {
     if (t.facing !== 0) return;
@@ -129,9 +150,9 @@ function perimeterTiles(wTiles, dTiles, seed) {
     if (d < bestD) { bestD = d; door = i; }
   });
   return out.map((t, i) => {
-    if (i === door) return { ...t, kind: 'wall-door' };
+    if (i === door) return { ...t, kind: tier.door };
     const r = hash2(Math.round(t.x * 4 + 17), Math.round(t.z * 4 + 31), seed);
-    return { ...t, kind: r > 0.72 ? 'wall-window' : 'wall' };
+    return { ...t, kind: r > 0.72 ? tier.window : tier.wall };
   });
 }
 
@@ -162,39 +183,51 @@ export class Town3D {
   }
 
   _rebuild(buildings) {
-    const groups = ['walls', 'doors', 'windows', 'roofSides', 'roofCorners'];
-    if (this.walls) {
-      this.group.remove(...groups.map((k) => this[k]));
-      for (const k of groups) this[k].dispose();
+    if (this.meshes) {
+      this.group.remove(...this.meshes.values());
+      for (const m of this.meshes.values()) m.dispose();
     }
 
     const A = this.assets;
-    // Over-allocated (a generous fixed tiles-per-building estimate) rather
-    // than counted exactly up front — one-time waste of unused instance
-    // buffer capacity on a rebuild that happens once per 20 commits, not a
-    // per-frame cost.
     const n = buildings.length;
-    const wallCap = n * 10;
-    this.walls = new InstancedMesh(A.wall.geometry, A.wall.material, wallCap);
-    this.doors = new InstancedMesh(A['wall-door'].geometry, A['wall-door'].material, n);
-    this.windows = new InstancedMesh(A['wall-window'].geometry, A['wall-window'].material, wallCap);
-    this.roofSides = new InstancedMesh(A['roof-side'].geometry, A['roof-side'].material, wallCap);
-    this.roofCorners = new InstancedMesh(A['roof-side-corner'].geometry, A['roof-side-corner'].material, n * 2);
-    for (const k of groups) { this[k].castShadow = true; this[k].receiveShadow = true; }
+    // One InstancedMesh per PIECE NAME (walls/doors/windows across all
+    // three wealth tiers, plus the two roof pieces) rather than per
+    // semantic role — a 'humble' building's wall and a 'grand' one's are
+    // different geometry entirely now, not just a different colour on the
+    // same box, so each real piece needs its own instancing group. Counts
+    // are generous fixed estimates, over-allocated rather than counted
+    // exactly up front — a one-time waste of unused buffer capacity on a
+    // rebuild that happens once per 20 commits, not a per-frame cost.
+    this.meshes = new Map();
+    const capFor = (name) => (name.startsWith('roof') ? n * 3 : n * 4);
+    for (const name of PIECES) {
+      const piece = A[name];
+      const mesh = new InstancedMesh(piece.geometry, piece.material, capFor(name));
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      this.meshes.set(name, mesh);
+    }
+    const counts = new Map(PIECES.map((name) => [name, 0]));
+    const place = (name, matrix) => {
+      const mesh = this.meshes.get(name);
+      const i = counts.get(name);
+      mesh.setMatrixAt(i, matrix);
+      counts.set(name, i + 1);
+    };
 
-    let nw = 0, nd = 0, nwin = 0, nrs = 0, ne = 0;
     buildings.forEach((b, i) => {
       const idx = b.n ?? i;
       const { x, z } = positionFor(idx);
       const h = smoothHeightAt(x, z);
       const seed = hash2(idx, 7, 71);
       const rot = seed * 6.283;
-      // Village-cottage footprint: 2-3 tiles a side, 1.7-2.9 real building
-      // units wide — the same scale range the hand-built pass settled on
+      const tier = tierFor(b.weight ?? 4);
+      // Village-cottage footprint: 2-3 tiles a side (humble tier capped at
+      // 2, so a low-weight building also reads smaller, not just plainer-
+      // walled) — the same scale range the hand-built pass settled on
       // after its own live retune, kept here so the town's overall size
       // and density didn't have to be re-verified from scratch.
-      const wTiles = 2 + ((hash2(idx, 3, 72) * 2) | 0);
-      const dTiles = 2 + ((hash2(idx, 5, 73) * 2) | 0);
+      const wTiles = 2 + ((hash2(idx, 3, 72) * (tier.maxTiles - 1)) | 0);
+      const dTiles = 2 + ((hash2(idx, 5, 73) * (tier.maxTiles - 1)) | 0);
       const wallHeight = 0.75 + Math.min(1.7, (b.weight ?? 4) / 22);
 
       // Every piece in this kit is a 1x1x1 tile, PIVOTED AT ITS OWN BASE
@@ -205,21 +238,19 @@ export class Town3D {
       // wall's bottom half above the ground with its top poking up past
       // the roof. Fixed: a base-pivoted piece goes exactly at the height
       // its base is supposed to stand on.
-      for (const t of perimeterTiles(wTiles, dTiles, idx)) {
+      for (const t of perimeterTiles(wTiles, dTiles, idx, tier)) {
         const off = rotatedOffset(t.x * TILE, t.z * TILE, rot);
         dummy.position.set(x + off.x, h, z + off.z);
         dummy.scale.set(1, wallHeight, 1);
         dummy.rotation.set(0, rot + t.facing, 0);
         dummy.updateMatrix();
-        if (t.kind === 'wall-door') { this.doors.setMatrixAt(nd, dummy.matrix); nd++; }
-        else if (t.kind === 'wall-window') { this.windows.setMatrixAt(nwin, dummy.matrix); nwin++; }
-        else { this.walls.setMatrixAt(nw, dummy.matrix); nw++; }
+        place(t.kind, dummy.matrix);
       }
 
-      // A real hip roof along the Z ridge: a triangular roof-side-corner cap at
-      // each end, roof-side slope tiles filling anywhere between them.
-      // Each tile scaled by wTiles in X to span the building's width in
-      // one piece rather than also tiling across that axis — the one
+      // A real hip roof along the Z ridge: a triangular roof-side-corner
+      // cap at each end, roof-side slope tiles filling anywhere between
+      // them. Each tile scaled by wTiles in X to span the building's width
+      // in one piece rather than also tiling across that axis — the one
       // simplification kept from the first pass, everything along the
       // ridge is now real tiled geometry.
       const roofY = h + wallHeight;
@@ -227,26 +258,23 @@ export class Town3D {
         const lz = -dTiles / 2 + j + 0.5;
         const off = rotatedOffset(0, lz, rot);
         dummy.scale.set(wTiles, 1, 1);
+        dummy.position.set(x + off.x, roofY, z + off.z);
         if (j === 0 || j === dTiles - 1) {
-          dummy.position.set(x + off.x, roofY, z + off.z);
           dummy.rotation.set(0, rot + (j === 0 ? Math.PI : 0), 0);
           dummy.updateMatrix();
-          this.roofCorners.setMatrixAt(ne, dummy.matrix); ne++;
+          place('roof-side-corner', dummy.matrix);
         } else {
-          dummy.position.set(x + off.x, roofY, z + off.z);
           dummy.rotation.set(0, rot, 0);
           dummy.updateMatrix();
-          this.roofSides.setMatrixAt(nrs, dummy.matrix); nrs++;
+          place('roof-side', dummy.matrix);
         }
       }
     });
 
-    this.walls.count = nw;
-    this.doors.count = nd;
-    this.windows.count = nwin;
-    this.roofSides.count = nrs;
-    this.roofCorners.count = ne;
-    for (const k of groups) this[k].instanceMatrix.needsUpdate = true;
-    this.group.add(...groups.map((k) => this[k]));
+    for (const [name, mesh] of this.meshes) {
+      mesh.count = counts.get(name);
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+    this.group.add(...this.meshes.values());
   }
 }

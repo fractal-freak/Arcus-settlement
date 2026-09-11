@@ -271,6 +271,66 @@ export class Town3D {
       }
     });
 
+    // The capital: one hand-placed, larger structure near the town centre
+    // rather than another spiral slot — always the 'grand' tier regardless
+    // of any single building's own weight, since it represents the
+    // settlement as a whole, not one commit's worth of work. A tower-base/
+    // tower-top pair on its roof ridge is the one silhouette element no
+    // ordinary building here has, so it reads as the seat of the town from
+    // across the square, not just a bigger house.
+    {
+      const cx = -8, cz = -4;
+      const ch = smoothHeightAt(cx, cz);
+      const crot = 0.3;
+      const grand = TIERS.find((t) => t.key === 'grand');
+      const cwTiles = 5, cdTiles = 4;
+      const cWallHeight = 2.4;
+      for (const t of perimeterTiles(cwTiles, cdTiles, 777, grand)) {
+        const off = rotatedOffset(t.x * TILE, t.z * TILE, crot);
+        dummy.position.set(cx + off.x, ch, cz + off.z);
+        dummy.scale.set(1, cWallHeight, 1);
+        dummy.rotation.set(0, crot + t.facing, 0);
+        dummy.updateMatrix();
+        place(t.kind, dummy.matrix);
+      }
+      const cRoofY = ch + cWallHeight;
+      for (let j = 0; j < cdTiles; j++) {
+        const lz = -cdTiles / 2 + j + 0.5;
+        const off = rotatedOffset(0, lz, crot);
+        dummy.scale.set(cwTiles, 1, 1);
+        dummy.position.set(cx + off.x, cRoofY, cz + off.z);
+        if (j === 0 || j === cdTiles - 1) {
+          dummy.rotation.set(0, crot + (j === 0 ? Math.PI : 0), 0);
+          dummy.updateMatrix();
+          place('roof-side-corner', dummy.matrix);
+        } else {
+          dummy.rotation.set(0, crot, 0);
+          dummy.updateMatrix();
+          place('roof-side', dummy.matrix);
+        }
+      }
+      // The tower, rising directly off the roof ridge. First version added
+      // an extra 0.9-unit gap here before the tower even started, on top of
+      // not accounting for 'tower-top' being a short 0.3-tall CAP piece,
+      // not a full 1-unit tile like everything else in this kit (its real
+      // bounding box, checked after the fact from a screenshot that showed
+      // it floating disconnected in open sky) — together those left the
+      // whole tower hanging well above the building it was meant to rise
+      // from. Fixed: tower-base's own base sits exactly at the ridge, and
+      // tower-top's own base sits exactly at tower-base's real (scaled) top.
+      const TOWER_BASE_H = 1.8;
+      dummy.position.set(cx, cRoofY, cz);
+      dummy.scale.set(1.4, TOWER_BASE_H, 1.4);
+      dummy.rotation.set(0, crot, 0);
+      dummy.updateMatrix();
+      place('tower-base', dummy.matrix);
+      dummy.position.set(cx, cRoofY + TOWER_BASE_H, cz);
+      dummy.scale.set(1.4, 1.4, 1.4);
+      dummy.rotation.set(0, crot, 0);
+      dummy.updateMatrix();
+      place('tower-top', dummy.matrix);
+    }
+
     for (const [name, mesh] of this.meshes) {
       mesh.count = counts.get(name);
       mesh.instanceMatrix.needsUpdate = true;

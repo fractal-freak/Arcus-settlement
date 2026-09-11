@@ -20,13 +20,21 @@
  * Every chunk samples smoothHeightAt() at EXACT world coordinates, so two
  * neighbouring chunks compute the identical height for the vertices they
  * share along their border — the reason there is no crack at a chunk seam.
+ *
+ * Cel-shaded pass: every material below is MeshToonMaterial (or a hand-written
+ * ShaderMaterial for water and grass, which need effects toon alone cannot
+ * do) sharing ONE stepped gradient map, so a hillside reads as flat bands of
+ * light and shadow rather than a smooth realistic falloff. The actual ink
+ * outline is NOT a mesh here — see stage.js's composer pass, which draws it
+ * once in screen space off the depth buffer instead of doubling every prop's
+ * draw calls with an inverted-shell outline mesh.
  */
 
 import {
   Group, Mesh, BufferGeometry, BufferAttribute, PlaneGeometry,
   CylinderGeometry, IcosahedronGeometry, BoxGeometry,
-  MeshLambertMaterial, MeshStandardMaterial, InstancedMesh,
-  Object3D, Color,
+  MeshToonMaterial, ShaderMaterial, InstancedMesh,
+  Object3D, Color, Vector3, CanvasTexture, NearestFilter, DoubleSide,
 } from 'three';
 import { CHUNK, chunkKey } from '../app/iso.js';
 import { groundAt, smoothHeightAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
@@ -37,7 +45,29 @@ const EPS = 0.4; // sample spacing for the slope estimate, in tiles
 const RISE = 3;       // how far below its resting spot a new chunk starts, in world units
 const RISE_MS = 260;  // how long it takes to arrive
 
-/** Warm, saturated bases. Lighting does the modelling; these stay flat and simple. */
+/**
+ * The stepped lighting ramp every toon material shares. Three flat bands —
+ * shadow, mid, lit — with two hard transitions between them, which is the
+ * entire visual difference between "lit realistically" and "cel-shaded": a
+ * slope does not darken smoothly as it turns from the sun, it snaps between
+ * bands the way a hand-painted cel would. NearestFilter is what keeps the
+ * transition a hard line instead of the mip chain blurring it back into a
+ * gradient.
+ */
+function makeToonRamp(stops) {
+  const c = document.createElement('canvas');
+  c.width = stops.length; c.height = 1;
+  const ctx = c.getContext('2d');
+  stops.forEach((v, i) => { ctx.fillStyle = `rgb(${v},${v},${v})`; ctx.fillRect(i, 0, 1, 1); });
+  const tex = new CanvasTexture(c);
+  tex.minFilter = NearestFilter;
+  tex.magFilter = NearestFilter;
+  tex.generateMipmaps = false;
+  return tex;
+}
+const toonRamp = makeToonRamp([58, 150, 255]);
+
+/** Warm, saturated bases. The ramp does the modelling now; these stay flat and simple. */
 const BASE = {
   grass: new Color(0x7ec767), meadow: new Color(0x63b85c), scrub: new Color(0xa7bd66),
   sand: new Color(0xe8d9a8), stone: new Color(0xa6a6b2), snow: new Color(0xeef3f6),
@@ -45,7 +75,6 @@ const BASE = {
 const ROCKY = new Color(0x8a7058);   // what a steep slope exposes, regardless of the ground kind on it
 const BEACH = new Color(0xe3d5a0);   // the rim right at the waterline
 
-const WATER = 0x3fb8e8;
 const tmpC = new Color();
 
 /**
@@ -78,7 +107,10 @@ function paletteAt(wx, wz, h, kind) {
 // ── Props: shared geometry, one instanced mesh per kind per chunk ─────────
 
 const trunkGeo = new CylinderGeometry(0.09, 0.13, 1, 6);
-const leafGeo = new IcosahedronGeometry(0.52, 0);
+// Detail 1 instead of 0 — four times the faces of the original facet-flat
+// icosahedron, still cheap for an instanced blob, but round enough that
+// toon shading reads as a soft puff of foliage instead of a gemstone.
+const leafGeo = new IcosahedronGeometry(0.52, 1);
 const rockGeo = new IcosahedronGeometry(0.5, 0);
 // A dig site: a few broken columns of varying height around a low slab,
 // built from the same two-geometry-per-prop pattern as a tree's trunk and
@@ -86,29 +118,173 @@ const rockGeo = new IcosahedronGeometry(0.5, 0);
 const ruinsPillarGeo = new CylinderGeometry(0.14, 0.19, 1, 6);
 const ruinsSlabGeo = new BoxGeometry(1.3, 0.12, 1.3);
 
-const trunkMat = new MeshLambertMaterial({ color: 0x8a5c3a });
+const trunkMat = new MeshToonMaterial({ color: 0x8a5c3a, gradientMap: toonRamp });
 // No vertexColors here: setColorAt()/instanceColor is a PER-INSTANCE
 // attribute the renderer picks up on its own the moment it is first set,
 // independent of the material's vertexColors flag. That flag is instead for a
 // PER-VERTEX `color` attribute on the geometry itself — turning it on for a
 // plain IcosahedronGeometry that never gets one would have the shader looking
 // for an attribute that does not exist.
-const leafMat = new MeshLambertMaterial({ color: 0x3f9950 });
-const rockMat = new MeshLambertMaterial({ color: 0x8f8f9a });
+const leafMat = new MeshToonMaterial({ color: 0x3f9950, gradientMap: toonRamp });
+const rockMat = new MeshToonMaterial({ color: 0x8f8f9a, gradientMap: toonRamp });
 // Worked stone, not a boulder — warmer and a shade lighter than rockMat so a
 // ruin reads as built even from a distance, before any pillar is distinct.
-const ruinsMat = new MeshLambertMaterial({ color: 0x9d9483 });
+const ruinsMat = new MeshToonMaterial({ color: 0x9d9483, gradientMap: toonRamp });
 
 // landMat's geometry DOES carry a real per-vertex `color` attribute (built by
 // hand in buildLand), so this is the one material here vertexColors is for.
-const landMat = new MeshLambertMaterial({ vertexColors: true });
-// Reflective, as asked — Standard picks up the sun as a soft highlight that
-// Lambert cannot. Kept short of a mirror on purpose: a fully glossy water
-// tried earlier washed itself out to grey under this same bright overhead
-// light, measured, not guessed at. Moderate roughness keeps the highlight
-// without losing the blue underneath it.
-const waterMat = new MeshStandardMaterial({
-  color: WATER, roughness: 0.38, metalness: 0.05, transparent: true, opacity: 0.86,
+const landMat = new MeshToonMaterial({ vertexColors: true, gradientMap: toonRamp });
+
+// ── Water: a hand-written shader, not MeshToonMaterial ─────────────────────
+//
+// Toon alone cannot do a shoreline: foam has to know how close a wet vertex
+// is to dry land, and this project has no normal-map texture asset (nothing
+// else here is textured either — every surface is procedural), so ripple
+// shading is faked the same way the terrain's own colour is: a formula, not
+// an image. Both come from a small attribute baked once per chunk build
+// (aFoam) and a per-frame uTime uniform this module exposes via
+// Terrain3D.updateShaders(), not from anything sampled at draw time.
+const waterVert = `
+  attribute float aFoam;
+  uniform float uTime;
+  varying float vFoam;
+  varying vec2 vWorldXZ;
+  void main() {
+    vFoam = aFoam;
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldXZ = worldPos.xz;
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
+  }
+`;
+const waterFrag = `
+  uniform vec3 uDeep;
+  uniform vec3 uShallow;
+  uniform vec3 uFoamColor;
+  uniform vec3 uSunDir;
+  uniform vec3 uSunColor;
+  uniform float uTime;
+  uniform float uOpacity;
+  varying float vFoam;
+  varying vec2 vWorldXZ;
+  void main() {
+    // Two scrolling sine fields standing in for a normal map: cheap, and the
+    // only ripple technique that fits a project with no texture pipeline.
+    vec2 p = vWorldXZ * 0.35;
+    float n1 = sin(p.x * 1.7 + uTime * 0.9) + sin(p.y * 1.3 - uTime * 0.7);
+    float n2 = sin((p.x + p.y) * 2.6 - uTime * 1.4);
+    vec3 normal = normalize(vec3(n1 * 0.05, 1.0, n2 * 0.05));
+
+    vec3 sunDir = normalize(uSunDir);
+    float lit = max(0.0, dot(normal, sunDir));
+    float band = lit > 0.55 ? 1.0 : (lit > 0.22 ? 0.62 : 0.38);
+
+    vec3 base = mix(uDeep, uShallow, 0.35) * band;
+    float glint = pow(max(0.0, dot(normal, sunDir)), 28.0);
+    base += uSunColor * glint * 0.55;
+
+    // Foam breathes rather than sitting painted in place.
+    float breathe = 0.5 + 0.5 * sin(uTime * 1.8 + vWorldXZ.x * 0.5 + vWorldXZ.y * 0.5);
+    float foamAmt = smoothstep(0.35, 0.85, vFoam + breathe * 0.18);
+    vec3 color = mix(base, uFoamColor, foamAmt);
+
+    gl_FragColor = vec4(color, mix(uOpacity, 1.0, foamAmt * 0.6));
+  }
+`;
+const waterMat = new ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uDeep: { value: new Color(0x1f6fa8) },
+    uShallow: { value: new Color(0x5fc2e0) },
+    uFoamColor: { value: new Color(0xf3fbff) },
+    uSunDir: { value: new Vector3(0, 1, 0) },
+    uSunColor: { value: new Color(0xffffff) },
+    uOpacity: { value: 0.86 },
+  },
+  vertexShader: waterVert,
+  fragmentShader: waterFrag,
+  transparent: true,
+});
+
+// ── Grass: a cheap crossed-quad blade, instanced, swaying in a fake wind ──
+
+/**
+ * A curved, tapered blade — 4 segments up its height rather than one straight
+ * quad, each level bowed forward a little more than the last (a quadratic
+ * curve, so the arch happens mostly near the tip, the way a real blade
+ * actually bends under its own weight) and narrowed toward the top. A single
+ * straight quad read as a stiff upright stick even with wind sway on top of
+ * it; the rest pose itself needed the curve, not just motion.
+ */
+function makeGrassBladeGeometry() {
+  const w = 0.13, h = 0.66, lean = 0.22, SEGS = 3;
+  const positions = [], sway = [], uvs = [], idx = [];
+  const addStrip = (nx, nz) => {
+    const base = positions.length / 3;
+    for (let s = 0; s <= SEGS; s++) {
+      const t = s / SEGS;
+      const y = t * h;
+      const bow = lean * t * t;
+      const hw = (w / 2) * (1 - t * 0.65);
+      const cx = nx * bow, cz = nz * bow;
+      positions.push(cx - hw * nx, y, cz - hw * nz); sway.push(t); uvs.push(0, t);
+      positions.push(cx + hw * nx, y, cz + hw * nz); sway.push(t); uvs.push(1, t);
+    }
+    for (let s = 0; s < SEGS; s++) {
+      const a = base + s * 2, b = a + 1, c = a + 2, d = a + 3;
+      idx.push(a, c, b, b, c, d);
+    }
+  };
+  addStrip(1, 0);
+  addStrip(0, 1); // crossed, so a blade has silhouette from every angle, not just two
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+  geo.setAttribute('aSway', new BufferAttribute(new Float32Array(sway), 1));
+  geo.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+  geo.setIndex(idx);
+  return geo;
+}
+const grassBladeGeo = makeGrassBladeGeometry();
+
+const grassVert = `
+  attribute float aSway;
+  uniform float uTime;
+  varying float vShade;
+  void main() {
+    vec3 local = position;
+    #ifdef USE_INSTANCING
+      vec4 worldPos = instanceMatrix * vec4(local, 1.0);
+    #else
+      vec4 worldPos = vec4(local, 1.0);
+    #endif
+    worldPos = modelMatrix * worldPos;
+    float phase = worldPos.x * 0.6 + worldPos.z * 0.35;
+    float wind = (sin(uTime * 1.6 + phase) * 0.14 + sin(uTime * 3.1 + phase * 1.7) * 0.05) * aSway;
+    worldPos.x += wind;
+    worldPos.z += wind * 0.6;
+    vShade = 0.72 + 0.28 * aSway;
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
+  }
+`;
+const grassFrag = `
+  uniform vec3 uColorLow;
+  uniform vec3 uColorHigh;
+  varying float vShade;
+  void main() {
+    gl_FragColor = vec4(mix(uColorLow, uColorHigh, vShade), 1.0);
+  }
+`;
+const grassMat = new ShaderMaterial({
+  uniforms: {
+    uTime: { value: 0 },
+    uColorLow: { value: new Color(0x2f6b34) },
+    // Golden-green rather than the cooler light green this was before —
+    // asked for explicitly, and it also happens to sit naturally with the
+    // rest of this pass's low, warm sun.
+    uColorHigh: { value: new Color(0xc8c85a) },
+  },
+  vertexShader: grassVert,
+  fragmentShader: grassFrag,
+  side: DoubleSide,
 });
 
 const dummy = new Object3D();
@@ -119,18 +295,39 @@ export class Terrain3D {
     this.chunks = new Map();
     this.fading = new Map();  // chunkKey -> real timestamp it started rising, for updateFades()
     this.built = 0;
+    // Grass blades are a near-camera detail, not a streamed one — capped to a
+    // fixed ring of chunks around wherever the camera is actually looking,
+    // independent of how far the terrain itself is asked to stream (which
+    // still grows with zoom). Sub-pixel blades at 150 tiles out would only
+    // alias, and every one of them is an extra instanced draw.
+    this.grassRadiusChunks = 3;
+    this._lastTargetChunk = null;
 
     /**
      * A floor under everything, well below the real terrain's lowest point.
      * Unchanged from the blocky version — still just two triangles, still
      * what keeps zooming out from ever showing a hard edge.
      */
-    const floorMat = new MeshLambertMaterial({ color: BASE.grass });
+    const floorMat = new MeshToonMaterial({ color: BASE.grass, gradientMap: toonRamp });
     this.floor = new Mesh(new PlaneGeometry(1, 1), floorMat);
     this.floor.rotation.x = -Math.PI / 2;
     this.floor.position.y = -6;
     this.floor.receiveShadow = true;
     this.floor.renderOrder = -1;
+    // Layer 1, not the default 0 — kept OUT of stage.js's depth-only
+    // pre-pass (that camera drops layer 1 for the one render call it uses to
+    // feed the outline/god-ray passes). The floor sits below real terrain by
+    // design, so where a streamed chunk ends and the floor takes over is a
+    // genuine, large depth step — invisible to the eye in the ordinary
+    // shaded view, but exactly the kind of thing a depth-edge outline pass
+    // is built to find, and it did: a solid black band across the whole
+    // horizon the moment the floor came into frame. Hiding it from depth
+    // only (stage.js's main camera still renders it normally in colour, so
+    // it keeps doing its actual job of never showing a hard edge on zoom
+    // out) means that boundary now reads as empty sky to both passes —
+    // AT WORST a very distant, thin outline exactly like a real horizon,
+    // never a nearby wall.
+    this.floor.layers.set(1);
     scene.add(this.floor);
   }
 
@@ -141,19 +338,29 @@ export class Terrain3D {
     this.floor.position.z = targetZ;
   }
 
+  /** Shared uniforms every water and grass surface reads — updated once, felt everywhere. */
+  updateShaders(elapsedMs, sunDir, sunColor) {
+    const t = elapsedMs / 1000;
+    waterMat.uniforms.uTime.value = t;
+    grassMat.uniforms.uTime.value = t;
+    if (sunDir) waterMat.uniforms.uSunDir.value.copy(sunDir);
+    if (sunColor) waterMat.uniforms.uSunColor.value.copy(sunColor);
+  }
+
   clear() {
     for (const k of [...this.chunks.keys()]) this.drop(k);
   }
 
   /**
    * The land and water meshes carry geometry built fresh for this one chunk —
-   * safe, correct, and necessary to dispose. The tree and rock meshes carry
-   * geometry SHARED across every chunk (trunkGeo, leafGeo, rockGeo are module
-   * constants, one instance each for the whole world) — disposing that here
-   * would free it while every other still-loaded chunk's trees are still
-   * drawing from it. InstancedMesh has its own `.dispose()` for exactly this:
-   * it releases only the per-instance matrix/colour buffers this one mesh
-   * owns, and deliberately leaves a possibly-shared geometry alone.
+   * safe, correct, and necessary to dispose. The tree, rock, ruins and grass
+   * meshes carry geometry SHARED across every chunk (trunkGeo, leafGeo,
+   * rockGeo, ruinsPillarGeo, ruinsSlabGeo, grassBladeGeo are module constants,
+   * one instance each for the whole world) — disposing that here would free
+   * it while every other still-loaded chunk's props are still drawing from
+   * it. InstancedMesh has its own `.dispose()` for exactly this: it releases
+   * only the per-instance matrix/colour buffers this one mesh owns, and
+   * deliberately leaves a possibly-shared geometry alone.
    */
   drop(key) {
     const g = this.chunks.get(key);
@@ -225,18 +432,36 @@ export class Terrain3D {
    * actually wet — flat quads at a fixed height, not the boxes the blocky
    * version used, so there are no side walls to catch stray shadows and read
    * as streaks the way the very first version of this did.
+   *
+   * Each vertex also carries `aFoam`: the fraction of its tile's eight
+   * neighbours that are DRY land, baked once here rather than sampled from a
+   * depth buffer every frame. A tile fully surrounded by water gets 0 — open
+   * water — and a tile right against the bank gets a real fraction, which is
+   * what lets the shader fade foam in as a band instead of painting a hard
+   * ring of the same colour around every pond.
    */
   buildWater(t0x, t0y) {
     const positions = [];
+    const foam = [];
     const idx = [];
     let n = 0;
+    const wetAt = (tx, tz) => smoothHeightAt(tx + 0.5, tz + 0.5) < WATER_LEVEL + STEP * 0.5;
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
-        if (smoothHeightAt(tx + 0.5, tz + 0.5) >= WATER_LEVEL + STEP * 0.5) continue;
+        if (!wetAt(tx, tz)) continue;
         const y = WATER_LEVEL + 0.03; // a hair above the bed, so it never z-fights the land dipping to meet it
+        let dry = 0;
+        for (let dj = -1; dj <= 1; dj++) {
+          for (let di = -1; di <= 1; di++) {
+            if (di === 0 && dj === 0) continue;
+            if (!wetAt(tx + di, tz + dj)) dry++;
+          }
+        }
+        const f = dry / 8;
         const a = n, b = n + 1, c = n + 2, d = n + 3;
         positions.push(tx, y, tz, tx + 1, y, tz, tx, y, tz + 1, tx + 1, y, tz + 1);
+        foam.push(f, f, f, f);
         idx.push(a, c, b, b, c, d);
         n += 4;
       }
@@ -244,14 +469,63 @@ export class Terrain3D {
     if (!n) return null;
     const geo = new BufferGeometry();
     geo.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+    geo.setAttribute('aFoam', new BufferAttribute(new Float32Array(foam), 1));
     geo.setIndex(idx);
-    geo.computeVertexNormals();
     const mesh = new Mesh(geo, waterMat);
     mesh.receiveShadow = true;
     return mesh;
   }
 
-  /** Trees, bushes, rocks: instanced per chunk, grounded on the same smooth surface as the land mesh. */
+  /**
+   * A near-field lawn of instanced grass blades across grass/meadow tiles —
+   * separate from buildProps' discrete trees/bushes/rocks because this is a
+   * DENSITY field, not a placement decision: every eligible tile gets a
+   * handful of blades, jittered and wind-swayed, rather than any single tile
+   * "deciding" whether it has grass on it the way propAt decides trees.
+   */
+  buildGrass(t0x, t0y) {
+    const blades = [];
+    for (let j = 0; j < CHUNK; j++) {
+      for (let i = 0; i < CHUNK; i++) {
+        const tx = t0x + i, tz = t0y + j;
+        const g = groundAt(tx, tz);
+        if (g.kind !== GROUND.grass && g.kind !== GROUND.meadow) continue;
+        const density = 3 + Math.floor(hash2(tx, tz, 40) * 3); // 3-5 blades a tile
+        for (let b = 0; b < density; b++) {
+          const jx = (hash2(tx * 4 + b, tz, 41) - 0.5) * 0.92;
+          const jz = (hash2(tx, tz * 4 + b, 42) - 0.5) * 0.92;
+          const x = tx + 0.5 + jx, z = tz + 0.5 + jz;
+          const h = smoothHeightAt(x, z);
+          blades.push({ x, z, h, r: hash2(tx * 3 + b, tz * 7 + b, 43) });
+        }
+      }
+    }
+    if (!blades.length) return null;
+    const inst = new InstancedMesh(grassBladeGeo, grassMat, blades.length);
+    inst.castShadow = false;
+    inst.receiveShadow = false;
+    // Same layer-1 exclusion as the floor and clouds (see their notes in
+    // this file and sky3d.js) — kept out of stage.js's depth-only pre-pass.
+    // Blades this thin were never going to want individual ink outlines
+    // anyway (it would read as noise, not silhouette), and this is also
+    // the single largest instance count in the whole scene — measured
+    // real per-frame cost with it included in depth: a real, meaningful
+    // slice of a frame that had gone from comfortably under 16.7ms before
+    // this pass existed to over budget on the majority of frames.
+    inst.layers.set(1);
+    blades.forEach((m, n) => {
+      const s = 0.75 + m.r * 0.6;
+      dummy.position.set(m.x, m.h, m.z);
+      dummy.scale.set(s, s * (0.8 + m.r * 0.5), s);
+      dummy.rotation.set(0, m.r * 6.283, 0);
+      dummy.updateMatrix();
+      inst.setMatrixAt(n, dummy.matrix);
+    });
+    inst.instanceMatrix.needsUpdate = true;
+    return inst;
+  }
+
+  /** Trees, bushes, rocks, ruins: instanced per chunk, grounded on the same smooth surface as the land mesh. */
   buildProps(t0x, t0y) {
     const trees = [], rocks = [], ruins = [];
     for (let j = 0; j < CHUNK; j++) {
@@ -407,6 +681,13 @@ export class Terrain3D {
     const props = this.buildProps(t0x, t0y);
     if (props) group.add(props);
 
+    const near = !this._lastTargetChunk ||
+      Math.hypot(cx - this._lastTargetChunk.cx, cy - this._lastTargetChunk.cy) <= this.grassRadiusChunks;
+    if (near) {
+      const grass = this.buildGrass(t0x, t0y);
+      if (grass) group.add(grass);
+    }
+
     // Starts below its true position and rises into place over updateFades()
     // — see the note there for why a vertical offset was used rather than a
     // scale or an opacity fade.
@@ -485,6 +766,7 @@ export class Terrain3D {
     const camCx = Math.floor(camX / CHUNK);
     const camCy = Math.floor(camZ / CHUNK);
     const r = Math.max(1, Math.ceil((radiusTiles + ring) / CHUNK));
+    this._lastTargetChunk = { cx: cx0, cy: cy0 };
 
     const wanted = new Set();
     const todo = [];

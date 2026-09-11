@@ -58,12 +58,17 @@ function clampAboveGround() {
 // ── Data ────────────────────────────────────────────────────────────────
 
 /**
- * Held at midday for now, on request — it is easier to see what is being
- * built without the world also going dark partway through. The real-sky
- * system underneath is untouched, still polling and still computing the
- * true Pawtucket sun every few seconds; only what gets HANDED to the
- * renderer is overridden, right here, nowhere else. Flip this back to false
- * and daylight becomes real time again with no other change needed.
+ * Held at a fixed daylight moment for now, on request — it is easier to see
+ * what is being built without the world also going dark partway through.
+ * The altitude below is deliberately LOW (real golden hour, not midday): the
+ * cel-shaded pass wants long soft shadows and a warm sky, both of which only
+ * happen with the sun near the horizon — stage.js's own lowness-driven
+ * colour blend reads this same number, so lowering it warms the whole
+ * atmosphere, not just the light. The real-sky system underneath is
+ * untouched, still polling and still computing the true Pawtucket sun every
+ * few seconds; only what gets HANDED to the renderer is overridden, right
+ * here, nowhere else. Flip this back to false and daylight becomes real time
+ * again with no other change needed.
  */
 const FORCE_DAYLIGHT = true;
 
@@ -77,7 +82,7 @@ const feed = new Feed((d) => {
     // HUD line below still reads d.sky directly, so the clock and moon phase
     // it shows stay real even while the lit sky itself is held still.
     const renderSky = FORCE_DAYLIGHT
-      ? { ...d.sky, light: 1, sun: { ...d.sky.sun, alt: 55, az: 178 } }
+      ? { ...d.sky, light: 1, sun: { ...d.sky.sun, alt: 15, az: 178 } }
       : d.sky;
     stage.applySky(renderSky);
     sky.applySky(renderSky);
@@ -124,6 +129,10 @@ function frame(dtMs) {
   // not assumed. See the long comment on Terrain3D.update for the rest.
   terrain.update(t.x, t.z, radius, 5, cam.x, cam.z);
   terrain.updateFades(performance.now());
+  // One shared clock for every water and grass surface in the world, fed
+  // from the same elapsed-time accumulator the frame loop already keeps —
+  // water and grass wave together instead of each timing off Date.now().
+  terrain.updateShaders(elapsed, stage.sunDir, stage.sun.color);
 
   sky.update(dtMs, t);
   stage.followShadow(tmp.set(t.x, t.y, t.z), rig.distance);

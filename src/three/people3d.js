@@ -25,9 +25,9 @@
 import {
   Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3,
 } from 'three';
-import { smoothHeightAt, isWater, hash2 } from '../app/terrain.js';
+import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
 import { PLOTS, CIVIC } from '../app/village.js';
-import { loadCharacters, makeCharacter, kindFor } from './characters.js';
+import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
 
 const markerGeo = new IcosahedronGeometry(0.1, 1);
 
@@ -61,10 +61,20 @@ function hashString(s) {
  * water if the hash happens to land in the river, since the town's centre
  * sits right against it.
  */
-/** Is this spot inside a building's footprint? A session standing in a wall reads as a bug. */
-function insideABuilding(x, z) {
-  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 3.2) return true;
-  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 4.5) return true;
+/**
+ * Somewhere a session genuinely cannot stand: inside a building, or below the
+ * waterline. The height test matters — isWater() only asks whether a whole
+ * TILE counts as river, so a figure could pass it while standing on ground
+ * that is itself under the surface, which is how sessions ended up wading in
+ * the river.
+ */
+const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
+
+function unstandable(x, z) {
+  if (isWater(Math.round(x), Math.round(z))) return true;
+  if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
+  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
+  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
   return false;
 }
 
@@ -78,12 +88,11 @@ function positionFor(id) {
   // Still hashed off the session id alone, so the same session stands in the
   // same spot on every reload.
   let angle = hash2(seed, 17, 61) * Math.PI * 2;
-  let radius = 5 + hash2(seed, 19, 62) * 22;
+  let radius = 7 + hash2(seed, 19, 62) * 26;
   let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 8
-    && (isWater(Math.round(x), Math.round(z)) || insideABuilding(x, z)); tries++) {
+  for (let tries = 0; tries < 14 && unstandable(x, z); tries++) {
     angle = hash2(seed, 20 + tries, 63) * Math.PI * 2;
-    radius = 5 + hash2(seed, 21 + tries, 64) * 24;
+    radius = 7 + hash2(seed, 21 + tries, 64) * 30;
     x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
   }
   return { x, z };
@@ -98,9 +107,11 @@ class Figure {
     this.baseZ = z;
     this.seed = (hashString(id) % 1000) / 1000;
 
-    // Which of the six this session is — hashed off its own id, so a session
-    // keeps the same face across reloads the same way it keeps the same spot.
-    this.char = makeCharacter(kindFor(hashString(id)), HEIGHT);
+    // Every session wears the same outfit, on purpose. These are the dig
+    // crew — the archaeologist astrologers actually working the site — and a
+    // crew reads as a crew by being dressed alike. It is also the clearest
+    // possible tell against a villager, who is any of the other five.
+    this.char = makeCharacter(DIG_CREW, HEIGHT);
     if (this.char) {
       this.group.add(this.char.root);
       this.char.root.rotation.y = this.seed * 6.283;

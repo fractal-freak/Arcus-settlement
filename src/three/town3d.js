@@ -87,8 +87,15 @@ const MODELS = [
  * multiplier is capped by what actually fits the plot, which keeps the kit's
  * real size relationships (a market IS the widest thing on the street) while
  * guaranteeing nothing overhangs its neighbour.
+ *
+ * Raised from 3.2 because at that size a cottage stood barely a head above
+ * the people walking past it. These are RTS-scale models — built to read at
+ * a glance from a strategy camera, where a building only has to be a bit
+ * bigger than a unit — and this is not an RTS camera. A person is 1.8 units;
+ * at 5.0 a cottage ridge is about 4.6, roughly two and a half times a person,
+ * which is what a real single-storey house with a pitched roof actually is.
  */
-const BASE_SCALE = 3.2;
+const BASE_SCALE = 5.0;
 
 function scaleFor(size, plot) {
   return Math.min(BASE_SCALE, plot.w / size.x, plot.d / size.z);

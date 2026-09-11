@@ -38,10 +38,10 @@ function fitScale(model, target) {
 /** The well — just off the square's centre, which belongs to the Settlement Stone. */
 function buildWell(models) {
   const g = new Group();
-  const x = 4.4, z = 3.4;
+  const x = 6.2, z = 5.0;
   const m = models.building_well_red;
   const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 2.2));
+  node.scale.setScalar(fitScale(m, 3.4));
   node.position.set(x, smoothHeightAt(x, z), z);
   node.rotation.y = -0.6;
   g.add(node);
@@ -51,10 +51,10 @@ function buildWell(models) {
 /** The clock tower — the tallest thing on the square, on purpose. */
 function buildTower(models) {
   const g = new Group();
-  const x = -4.6, z = 3.2;
+  const x = -6.6, z = 4.8;
   const m = models.building_tower_A_red;
   const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 3.2));
+  node.scale.setScalar(fitScale(m, 5.6));
   node.position.set(x, smoothHeightAt(x, z), z);
   node.rotation.y = 0.35;
   g.add(node);
@@ -83,50 +83,45 @@ function buildBridge(models) {
   if (lo === null) return g; // river moved out of range — nothing to span, not an error
 
   const m = models.building_bridge_A;
-  // Scale set by the walkway width, so the crossing stays a sensible size for
-  // the people on it whatever the river happens to be doing.
-  const scale = 2.6 / m.size.x;
-  const segLen = m.size.z * scale;
 
-  const margin = 1.6;
+  const margin = 1.8;
   const from = lo - margin, to = hi + 1 + margin;
   const span = to - from;
 
-  // Segments are spaced CLOSER than their own length and never stretched.
-  // The first version stretched each one to exactly fill its share of the
-  // span, which should have tiled seamlessly and did not: the model's
-  // bounding box is wider than its actual deck (the arch's stonework stops
-  // short of the box the railings define), so spacing by the box left a real
-  // gap of open air between every arch. Overlapping slightly is invisible on
-  // stonework and cannot gap; stretching a modelled arch to hide it would
-  // have smeared the very detail the model is here for.
-  const OVERLAP = 0.84;
-  const count = Math.max(1, Math.ceil(span / (segLen * OVERLAP)));
-  const spacing = span / count;
+  // ONE span, stretched along its length — not a row of repeated arches.
+  //
+  // This used to tile the model, four copies of a single-arch hex bridge laid
+  // end to end. Their decks genuinely did overlap (measured: 3.75-unit
+  // segments placed 3.05 apart), so there was no gap in the road — but each
+  // copy brings its own arch and its own hump, and four humps in a row reads
+  // as four little bridges rather than one crossing, which is exactly how
+  // Kevin described it. A single arch spanning the whole river is also just
+  // the more confident piece of architecture.
+  //
+  // Width and height keep their modelled proportions; only the length is
+  // stretched, which on a stone arch reads as a longer, shallower span rather
+  // than as distortion.
+  const widthScale = 3.4 / m.size.x;
+  const node = m.scene.clone(true);
+  node.scale.set(widthScale, widthScale, span / m.size.z);
 
   // Sit the DECK at bank level, not the model's origin: the walking surface
   // is box.max.y up from the origin, so placing the origin at the bank would
   // float the road a scaled metre above the ground it is supposed to join.
   const bankH = Math.max(smoothHeightAt(from, z), smoothHeightAt(to, z));
-  const originY = bankH + 0.08 - m.box.max.y * scale;
-
-  for (let i = 0; i < count; i++) {
-    const node = m.scene.clone(true);
-    node.scale.setScalar(scale);
-    node.position.set(from + (i + 0.5) * spacing, originY, z);
-    node.rotation.y = Math.PI / 2;
-    g.add(node);
-  }
+  node.position.set((from + to) / 2, bankH + 0.08 - m.box.max.y * widthScale, z);
+  node.rotation.y = Math.PI / 2;
+  g.add(node);
   return g;
 }
 
 /** The great gate — where the road out of the village passes the settlement's edge. */
 function buildGate(models) {
   const g = new Group();
-  const x = -31, z = -5.1;
+  const x = -47, z = -7.9;
   const m = models.wall_straight_gate;
   const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 6.0));
+  node.scale.setScalar(fitScale(m, 9.0));
   node.position.set(x, smoothHeightAt(x, z), z);
   node.rotation.y = Math.PI / 2;
   g.add(node);
@@ -136,10 +131,10 @@ function buildGate(models) {
 /** The keep — the furthest-off milestone, the settlement's own stronghold. */
 function buildDome(models) {
   const g = new Group();
-  const x = 2, z = -24;
+  const x = 4, z = -34;
   const m = models.building_castle_green;
   const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 7.0));
+  node.scale.setScalar(fitScale(m, 11.0));
   node.position.set(x, smoothHeightAt(x, z), z);
   node.rotation.y = 0.8;
   g.add(node);

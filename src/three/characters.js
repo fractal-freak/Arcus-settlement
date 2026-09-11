@@ -33,6 +33,21 @@ const BASE = './assets/kaykit-characters/';
 /** The six the free tier ships. Picked per person by a stable hash, never at random. */
 export const KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barbarian'];
 
+/**
+ * The dig crew's uniform: every active session wears this one.
+ *
+ * Said plainly, because it is a compromise and not a match — this pack has no
+ * archaeologist. The Ranger is the closest thing in it: field leathers, a
+ * shoulder strap, boots, no armour and no robe, which is what someone working
+ * a site outdoors all day would actually be dressed in. What makes the crew
+ * read as a crew is that they are all dressed ALIKE and nobody else in the
+ * settlement is dressed that way; the villagers draw from the other five.
+ */
+export const DIG_CREW = 'Ranger';
+
+/** Everyone who is not on the dig — so a villager is never mistaken for crew. */
+export const VILLAGER_KINDS = KINDS.filter((k) => k !== DIG_CREW);
+
 const ANIM_FILES = ['Rig_Medium_General', 'Rig_Medium_MovementBasic'];
 
 const loader = new GLTFLoader();
@@ -128,7 +143,7 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
   };
 }
 
-/** Pick one of the six deterministically, so the same person is the same character every load. */
+/** Pick a villager deterministically, so the same person is the same character every load. */
 export function kindFor(seed) {
-  return KINDS[Math.abs(Math.floor(seed)) % KINDS.length];
+  return VILLAGER_KINDS[Math.abs(Math.floor(seed)) % VILLAGER_KINDS.length];
 }

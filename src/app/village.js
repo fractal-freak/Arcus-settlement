@@ -35,7 +35,7 @@
 import { smoothHeightAt, isWater, groundAt, GROUND } from './terrain.js';
 
 /** The square: open ground around the Settlement Stone, never built on. */
-export const SQUARE = { x: 0, z: 0, r: 6.5 };
+export const SQUARE = { x: 0, z: 0, r: 9.5 };
 
 /**
  * Authored street skeleton. Angles are world radians, (cos, sin) → (x, z).
@@ -50,18 +50,18 @@ export const SQUARE = { x: 0, z: 0, r: 6.5 };
  * far the village actually reaches.
  */
 const STREETS = [
-  { key: 'bridge', angle: 0, from: 7.0, to: 9.5, halfWidth: 1.5 },
-  { key: 'west', angle: Math.PI, from: 7.0, to: 30, halfWidth: 1.5 },
-  { key: 'north', angle: -Math.PI / 2 - 0.30, from: 7.0, to: 26, halfWidth: 1.3 },
-  { key: 'south', angle: Math.PI / 2 + 0.22, from: 7.0, to: 20, halfWidth: 1.3 },
+  { key: 'bridge', angle: 0, from: 10.0, to: 15, halfWidth: 2.3 },
+  { key: 'west', angle: Math.PI, from: 10.0, to: 48, halfWidth: 2.3 },
+  { key: 'north', angle: -Math.PI / 2 - 0.30, from: 10.0, to: 42, halfWidth: 2.0 },
+  { key: 'south', angle: Math.PI / 2 + 0.22, from: 10.0, to: 34, halfWidth: 2.0 },
 ];
 
 /** How far apart plots sit along a street, and how far back from its centre. */
-const PITCH = 6.0;
-const SETBACK = 3.8;
+const PITCH = 9.5;
+const SETBACK = 5.6;
 
 /** A plot's own footprint, in world units. Houses are placed to fit inside this. */
-export const PLOT = { w: 4.6, d: 4.6 };
+export const PLOT = { w: 7.0, d: 7.0 };
 
 /**
  * Ground a building can actually stand on. Deliberately strict: sand is
@@ -126,7 +126,7 @@ function footprintOk(cx, cz, w, d, rot) {
  * greedily: nearest the square wins the ground, anything too close to an
  * already-accepted plot is dropped.
  */
-const MIN_GAP = 5.6;
+const MIN_GAP = 8.5;
 
 /**
  * The civic plot: a single larger site on the rim of the square, for the
@@ -144,7 +144,7 @@ const MIN_GAP = 5.6;
  * get built at all. The most important building in the settlement gets first
  * claim on the ground; the houses work around it.
  */
-export const CIVIC_PLOT = { w: 7.0, d: 5.5 };
+export const CIVIC_PLOT = { w: 11.0, d: 9.0 };
 
 function findCivic() {
   const radius = SQUARE.r + CIVIC_PLOT.d / 2 + 0.5;
@@ -163,7 +163,7 @@ function findCivic() {
 export const CIVIC = findCivic();
 
 /** Clearance a house plot must keep from the capital's own footprint. */
-const CIVIC_CLEAR = 7.5;
+const CIVIC_CLEAR = 11.0;
 
 function buildPlan() {
   const candidates = [];
@@ -258,6 +258,38 @@ export function isReserved(tx, tz) {
   return RESERVED.has(tileKey(tx, tz));
 }
 
+/**
+ * Just the building plots, without the streets and their generous margins.
+ *
+ * Long grass is kept off THIS rather than off everything reserved. Clearing
+ * the full reserved area — plots plus streets plus a margin round each —
+ * stripped the greenery from the whole middle of the settlement, so the
+ * village read as one wide bare patch with houses dropped on it rather than
+ * as lanes between gardens. Grass now grows right up to the edge of a lane,
+ * which is most of what makes the lane read as a lane. Trees still keep off
+ * the whole reserved area: a tree through a roof is a different problem.
+ */
+const PLOT_TILES = (() => {
+  const set = new Set();
+  const mark = (x, z) => set.add(tileKey(x, z));
+  const stamp = (cx, cz, w, d, rot) => {
+    const c = Math.cos(rot), s2 = Math.sin(rot);
+    const hw = w / 2 + 0.6, hd = d / 2 + 0.6;
+    for (let lx = -hw; lx <= hw; lx += 0.5) {
+      for (let lz = -hd; lz <= hd; lz += 0.5) {
+        mark(cx + (lx * c - lz * s2), cz + (lx * s2 + lz * c));
+      }
+    }
+  };
+  for (const p of PLOTS) stamp(p.x, p.z, PLOT.w, PLOT.d, p.rot);
+  if (CIVIC) stamp(CIVIC.x, CIVIC.z, CIVIC_PLOT.w, CIVIC_PLOT.d, CIVIC.rot);
+  return set;
+})();
+
+export function isPlotTile(tx, tz) {
+  return PLOT_TILES.has(tileKey(tx, tz));
+}
+
 /** Is this tile street or square surface (so it can be paved rather than grassed)? */
 const PAVED = (() => {
   const set = new Set();
@@ -280,4 +312,35 @@ const PAVED = (() => {
 
 export function isPaved(tx, tz) {
   return PAVED.has(tileKey(tx, tz));
+}
+
+/** How far past the edge of a street the packed earth fades out. */
+const PATH_EDGE = 1.7;
+
+/**
+ * How much of a worn path is underfoot at this exact point: 1 on the street
+ * or the square, easing to 0 just outside it.
+ *
+ * Continuous, and deliberately NOT the tile-based isPaved() above. The
+ * streets were being reserved — kept clear of trees and grass — but never
+ * actually DRAWN, so the village had bare ground where its lanes should be
+ * and read, in Kevin's words, chaotic and disorganised. terrain3d.js blends
+ * this straight into the land's own vertex colours, which costs no extra
+ * geometry and cannot z-fight the ground the way a decal laid on top would.
+ * Distance to the real centreline, not tile membership, is what keeps the
+ * path edges smooth curves instead of a staircase.
+ */
+export function pathAmountAt(x, z) {
+  // Distance OUTSIDE the square (negative when standing on it).
+  let best = Math.hypot(x - SQUARE.x, z - SQUARE.z) - SQUARE.r;
+  for (const st of STREETS) {
+    const c = Math.cos(st.angle), s = Math.sin(st.angle);
+    // Project onto the street's own axis, clamped to its actual length, so a
+    // lane stops where it stops instead of running on as an infinite line.
+    const t = Math.max(0, Math.min(st.to, x * c + z * s));
+    const d = Math.hypot(x - c * t, z - s * t) - st.halfWidth;
+    if (d < best) best = d;
+  }
+  if (best <= 0) return 1;
+  return Math.max(0, 1 - best / PATH_EDGE);
 }

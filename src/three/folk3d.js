@@ -28,7 +28,7 @@
  */
 
 import { Group } from 'three';
-import { smoothHeightAt, isWater, hash2 } from '../app/terrain.js';
+import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
 import { PLOTS, CIVIC } from '../app/village.js';
 import { loadCharacters, makeCharacter, kindFor } from './characters.js';
 
@@ -38,10 +38,20 @@ const HEIGHT = 1.55;
 /** How many villagers' mixers get advanced per frame. */
 const MIXERS_PER_FRAME = 8;
 
-/** Don't set up home inside somebody's house. */
-function insideABuilding(x, z) {
-  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 3.2) return true;
-  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 4.5) return true;
+/**
+ * Somewhere a person genuinely cannot stand: inside a house, or below the
+ * waterline. The height test is the one that was missing — isWater() asks
+ * whether a whole TILE counts as river, so a villager could pass it standing
+ * on a bank whose actual ground sits under the surface, and end up shin-deep
+ * in the water. Buildings are bigger now too, so the clearances grew with them.
+ */
+const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
+
+function unstandable(x, z) {
+  if (isWater(Math.round(x), Math.round(z))) return true;
+  if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
+  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
+  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
   return false;
 }
 
@@ -49,12 +59,11 @@ function insideABuilding(x, z) {
 function homeFor(i) {
   const seed = hash2(i, 41, 131);
   let angle = hash2(i, 43, 132) * Math.PI * 2;
-  let radius = 4 + hash2(i, 45, 133) * 26;
+  let radius = 6 + hash2(i, 45, 133) * 32;
   let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 8
-    && (isWater(Math.round(x), Math.round(z)) || insideABuilding(x, z)); tries++) {
+  for (let tries = 0; tries < 14 && unstandable(x, z); tries++) {
     angle = hash2(i, 47 + tries, 134) * Math.PI * 2;
-    radius = 4 + hash2(i, 49 + tries, 135) * 28;
+    radius = 6 + hash2(i, 49 + tries, 135) * 34;
     x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
   }
   return { x, z, seed };

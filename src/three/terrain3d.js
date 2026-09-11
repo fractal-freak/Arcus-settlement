@@ -38,7 +38,7 @@ import {
 } from 'three';
 import { CHUNK, chunkKey } from '../app/iso.js';
 import { groundAt, smoothHeightAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
-import { isReserved } from '../app/village.js';
+import { isReserved, isPlotTile, pathAmountAt } from '../app/village.js';
 
 /** Vertices per tile edge. 2 is one extra vertex per tile — enough to round off a shelf into a slope. */
 const SUB = 2;
@@ -75,6 +75,7 @@ const BASE = {
 };
 const ROCKY = new Color(0x8a7058);   // what a steep slope exposes, regardless of the ground kind on it
 const BEACH = new Color(0xe3d5a0);   // the rim right at the waterline
+const PATH  = new Color(0x9a8362);   // packed earth, worn by everyone walking the same way
 
 /**
  * The one height that is BOTH "this tile counts as wet" and "the water
@@ -87,27 +88,13 @@ const BEACH = new Color(0xe3d5a0);   // the rim right at the waterline
  * wasn't reaching it. Deriving both from one constant is what stops the two
  * drifting apart again.
  *
- * WET_MARGIN then extends the surface one tile PAST the last wet tile. Water
- * is a flat quad per whole tile while the land is a smooth subdivided mesh,
- * so the square water tiles could never follow a curving bank: the pale
- * beach-coloured land showed through between them as a row of sawtooth
- * triangles all along the river. The extra ring is hidden under the bank
- * wherever the bank is higher — which is everywhere it should be — and fills
- * those gaps wherever it isn't.
+ * Which tiles actually get a surface is needsWater() below, not a ring of a
+ * fixed width around the wet ones.
  */
 const SURFACE_Y = WATER_LEVEL + STEP * 0.5;
 
 /** How deep the water has to get before the shore foam has faded out entirely. */
 const FOAM_DEPTH = 0.75;
-
-/**
- * How many tiles the water surface runs PAST the last wet tile, to be hidden
- * under the bank. One was not enough: wherever the bank still sat below the
- * surface a tile out, the water mesh's own square outer edge was left showing
- * as a hard stair-stepped line along the shore. Two puts that edge properly
- * inside the hillside.
- */
-const WET_MARGIN = 2;
 
 const tmpC = new Color();
 
@@ -135,6 +122,14 @@ function paletteAt(wx, wz, h, kind) {
   const shore = Math.min(1, Math.max(0, 1 - (h - WATER_LEVEL) / 0.5));
 
   tmpC.copy(base).lerp(ROCKY, rocky).lerp(BEACH, shore * (1 - rocky) * 0.85);
+
+  // The village's lanes and square, worn into the ground itself rather than
+  // laid on top of it as separate geometry — no extra draw call, and nothing
+  // to z-fight the land it sits on. pathAmountAt is a smooth distance to the
+  // real street centreline, so the edges wander instead of stepping tile to
+  // tile the way a per-tile test would.
+  const path = pathAmountAt(wx, wz);
+  if (path > 0) tmpC.lerp(PATH, path * 0.88);
   return tmpC;
 }
 
@@ -491,17 +486,34 @@ export class Terrain3D {
       const depth = SURFACE_Y - smoothHeightAt(x, z);
       return Math.max(0, Math.min(1, 1 - depth / FOAM_DEPTH));
     };
-    /** A dry tile still gets a quad if a wet one is within WET_MARGIN — see SURFACE_Y. */
-    const nearWater = (tx, tz) => {
-      for (let dj = -WET_MARGIN; dj <= WET_MARGIN; dj++) {
-        for (let di = -WET_MARGIN; di <= WET_MARGIN; di++) if (wetAt(tx + di, tz + dj)) return true;
+    /**
+     * A tile needs water if ANY point in it stands below the surface.
+     *
+     * This replaces a fixed two-tile ring around the wet tiles, and it is the
+     * difference between an edge that is hidden and an edge that is merely
+     * usually hidden. A blanket ring ends wherever it ends: on a broad flat
+     * riverbank barely above the waterline, two tiles out was still under
+     * water, so the water mesh's own square boundary sat there in plain view
+     * as the stair-stepped line along the shore Kevin kept pointing at.
+     *
+     * Sampling the tile's own corners and midpoints instead means the surface
+     * covers exactly the ground that is genuinely submerged, and stops at
+     * ground that genuinely is not — so the visible waterline is always the
+     * smooth curve where the LAND crosses the surface, never the square edge
+     * of a quad. It also draws FEWER quads than the ring did.
+     */
+    const needsWater = (tx, tz) => {
+      for (let a = 0; a <= 2; a++) {
+        for (let b = 0; b <= 2; b++) {
+          if (smoothHeightAt(tx + a * 0.5, tz + b * 0.5) < SURFACE_Y) return true;
+        }
       }
       return false;
     };
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
-        if (!nearWater(tx, tz)) continue;
+        if (!needsWater(tx, tz)) continue;
         const y = SURFACE_Y;
         const a = n, b = n + 1, c = n + 2, d = n + 3;
         positions.push(tx, y, tz, tx + 1, y, tz, tx, y, tz + 1, tx + 1, y, tz + 1);
@@ -544,7 +556,9 @@ export class Terrain3D {
         const tx = t0x + i, tz = t0y + j;
         const g = groundAt(tx, tz);
         if (g.kind !== GROUND.grass && g.kind !== GROUND.meadow) continue;
-        if (isReserved(tx, tz)) continue; // village ground — a street and a doorstep are not meadow
+        // Off the lanes and off the plots, but not off the whole settlement —
+        // grass growing up to a lane's edge is what gives the lane an edge.
+        if (isPlotTile(tx, tz) || pathAmountAt(tx + 0.5, tz + 0.5) > 0.3) continue;
         const density = 3 + Math.floor(hash2(tx, tz, 40) * 3); // 3-5 blades a tile
         for (let b = 0; b < density; b++) {
           const jx = (hash2(tx * 4 + b, tz, 41) - 0.5) * 0.92;

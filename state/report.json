@@ -5,5 +5,12 @@
   "triangles": 1315659,
   "drawCalls": 1035,
   "placed": 416
+ },
+ "ci": {
+  "median": 11.2,
+  "chunks": 121,
+  "triangles": 1315659,
+  "drawCalls": 1035,
+  "placed": 420
  }
 }

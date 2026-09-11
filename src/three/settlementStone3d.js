@@ -348,7 +348,10 @@ export class SettlementStone3D {
     // moves inward as it rises. The first attempt used a flat fraction of the
     // base width and left the carving hovering a third of a unit in front of
     // the stone it was supposed to be cut into.
-    const FRAC = 0.60;
+    // Low enough to actually READ from the square. At 0.60 the carving sat
+    // seven units up and you had to fly to see it, which is no use for the
+    // one thing on this stone anybody is meant to look at.
+    const FRAC = 0.34;
     const faceY = h + 1.08 + SHAFT_H * FRAC;
     const rAtFace = BASE_W + (BASE_W * 0.74 - BASE_W) * FRAC;
     const faceZ = rAtFace * Math.SQRT1_2 + 0.01;

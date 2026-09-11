@@ -1,139 +1,148 @@
 /**
- * Milestones: the landmarks the town earns by existing long enough to
+ * Milestones: the landmarks the settlement earns by existing long enough to
  * deserve them, not by anyone asking for them.
  *
  * arcus-town.mjs's own MILESTONES list is the authority on what has been
- * earned (`town().milestones`, filtered by real building count — 10/30/60/
- * 100/150) — this module only ever renders whichever of the five keys is
- * already in that array. There is no "not yet" placeholder for the second
- * dome sitting dim in the world; until 150 buildings stand, it simply is
- * not built, the same "nothing invented" rule the buildings themselves
- * follow.
+ * earned (`town().milestones`, gated on real building count — 10/30/60/100/
+ * 150) — this module only ever renders whichever of the five keys is already
+ * in that array. There is no "not yet" placeholder sitting dim in the world;
+ * until 150 buildings stand, the second dome simply is not built. Same
+ * "nothing invented" rule the buildings themselves follow.
  *
- * Unlike a building, each of these is a ONE-OFF, hand-placed structure —
- * a sunflower-spiral slot would not know to put the bridge across the
- * river or the well at the town's actual centre, so each gets a real,
- * considered spot instead of a hashed one.
+ * Unlike a house, each of these is a ONE-OFF, hand-placed structure — a plot
+ * on a lane would not know to put the bridge across the river — so each gets
+ * a real considered spot instead of a plot.
+ *
+ * These were hand-built primitives until Kevin pointed at the bridge and
+ * asked for a real one: a flat brown slab with two rails, which is what a
+ * bridge looks like when it is three boxes. They are KayKit models now (CC0,
+ * see public/assets/kaykit/License.txt), the same kit the houses come from,
+ * so the well on the square no longer reads as a different game from the
+ * houses around it.
  */
 
-import {
-  Group, BoxGeometry, CylinderGeometry, ConeGeometry, SphereGeometry, MeshToonMaterial, Mesh,
-} from 'three';
+import { Group } from 'three';
 import { smoothHeightAt, isWater } from '../app/terrain.js';
-import { toonRamp } from './terrain3d.js';
+import { loadModels } from './assets.js';
 
-const STONE = new MeshToonMaterial({ color: 0xa6a3ad, gradientMap: toonRamp });
-const WOOD = new MeshToonMaterial({ color: 0x8a5c3a, gradientMap: toonRamp });
-const ROOF = new MeshToonMaterial({ color: 0x6b5a8a, gradientMap: toonRamp });
-const GOLD = new MeshToonMaterial({ color: 0xd9b463, gradientMap: toonRamp });
+const MODELS = [
+  'building_well_red', 'building_tower_A_red', 'building_bridge_A',
+  'wall_straight_gate', 'building_castle_green',
+];
 
-function group(scene) {
+/** Scale a loaded model so its widest ground axis measures `target` world units. */
+function fitScale(model, target) {
+  return target / Math.max(model.size.x, model.size.z);
+}
+
+/** The well — just off the square's centre, which belongs to the Settlement Stone. */
+function buildWell(models) {
   const g = new Group();
-  scene.add(g);
+  const x = 4.4, z = 3.4;
+  const m = models.building_well_red;
+  const node = m.scene.clone(true);
+  node.scale.setScalar(fitScale(m, 2.2));
+  node.position.set(x, smoothHeightAt(x, z), z);
+  node.rotation.y = -0.6;
+  g.add(node);
   return g;
 }
 
-/** The well — the first landmark, right at the town's actual centre. */
-function buildWell() {
+/** The clock tower — the tallest thing on the square, on purpose. */
+function buildTower(models) {
   const g = new Group();
-  // Offset from the exact origin now — (0,0) belongs to the Settlement
-  // Stone (settlementStone3d.js), the town's real founding-chart obelisk,
-  // and this town square has room for both a well and a monument the same
-  // way any real one does.
-  const wx = 5, wz = 4;
-  const h = smoothHeightAt(wx, wz);
-  const wall = new Mesh(new CylinderGeometry(0.62, 0.68, 0.5, 12), STONE);
-  wall.position.set(wx, h + 0.25, wz);
-  const postGeo = new CylinderGeometry(0.05, 0.05, 1.1, 6);
-  const postA = new Mesh(postGeo, WOOD); postA.position.set(wx - 0.5, h + 0.85, wz);
-  const postB = new Mesh(postGeo, WOOD); postB.position.set(wx + 0.5, h + 0.85, wz);
-  const roof = new Mesh(new ConeGeometry(0.9, 0.5, 4), ROOF);
-  roof.rotation.y = Math.PI / 4;
-  roof.position.set(wx, h + 1.5, wz);
-  for (const m of [wall, postA, postB, roof]) { m.castShadow = true; m.receiveShadow = true; }
-  g.add(wall, postA, postB, roof);
-  return g;
-}
-
-/** The clock tower — the tallest thing near the square, on purpose. */
-function buildTower() {
-  const g = new Group();
-  const x = -4.5, z = 2.5;
-  const h = smoothHeightAt(x, z);
-  const shaft = new Mesh(new BoxGeometry(1.3, 5.2, 1.3), STONE);
-  shaft.position.set(x, h + 2.6, z);
-  const cap = new Mesh(new ConeGeometry(1.05, 1.2, 4), ROOF);
-  cap.rotation.y = Math.PI / 4;
-  cap.position.set(x, h + 5.2 + 0.6, z);
-  const face = new Mesh(new CylinderGeometry(0.4, 0.4, 0.08, 16), GOLD);
-  face.rotation.x = Math.PI / 2;
-  face.position.set(x, h + 4.1, z + 0.66);
-  for (const m of [shaft, cap, face]) { m.castShadow = true; m.receiveShadow = true; }
-  g.add(shaft, cap, face);
+  const x = -4.6, z = 3.2;
+  const m = models.building_tower_A_red;
+  const node = m.scene.clone(true);
+  node.scale.setScalar(fitScale(m, 3.2));
+  node.position.set(x, smoothHeightAt(x, z), z);
+  node.rotation.y = 0.35;
+  g.add(node);
   return g;
 }
 
 /**
- * The bridge — spans the real river, not an invented one. The wet span at
- * z=0 near the town is scanned live off isWater() rather than a hardcoded
- * width, so this keeps landing correctly if the terrain generator's river
- * math ever changes again.
+ * The bridge — spans the REAL river, not an invented one. The wet span at
+ * z=0 is scanned live off isWater() rather than hardcoded, so this keeps
+ * landing correctly if the terrain generator's river maths ever changes.
+ *
+ * The model is one hex tile's worth of bridge, so the span is TILED along
+ * its own length rather than stretched: scaling a single 1.9-unit model
+ * across a nine-unit river would smear its planks and stretch its railings
+ * into nonsense. Repeating the segment keeps the plank spacing and the
+ * railing posts at their modelled size the whole way across, which is the
+ * entire reason for using a modelled bridge instead of a box.
  */
-function buildBridge() {
+function buildBridge(models) {
   const g = new Group();
   const z = 0;
   let lo = null, hi = null;
-  for (let x = -20; x <= 30; x++) {
+  for (let x = -20; x <= 40; x++) {
     if (isWater(x, z)) { if (lo === null) lo = x; hi = x; }
   }
   if (lo === null) return g; // river moved out of range — nothing to span, not an error
-  const margin = 2.2;
-  const spanLo = lo - margin, spanHi = hi + margin;
-  const len = spanHi - spanLo;
-  const cx = (spanLo + spanHi) / 2;
-  const bankH = Math.max(smoothHeightAt(spanLo, z), smoothHeightAt(spanHi, z));
-  const deckY = bankH + 0.5;
-  const deck = new Mesh(new BoxGeometry(len, 0.3, 2.1), WOOD);
-  deck.position.set(cx, deckY, z);
-  const railGeo = new BoxGeometry(len, 0.28, 0.12);
-  const railA = new Mesh(railGeo, WOOD); railA.position.set(cx, deckY + 0.28, z - 1.05);
-  const railB = new Mesh(railGeo, WOOD); railB.position.set(cx, deckY + 0.28, z + 1.05);
-  for (const m of [deck, railA, railB]) { m.castShadow = true; m.receiveShadow = true; }
-  g.add(deck, railA, railB);
+
+  const m = models.building_bridge_A;
+  // Scale set by the walkway width, so the crossing stays a sensible size for
+  // the people on it whatever the river happens to be doing.
+  const scale = 2.6 / m.size.x;
+  const segLen = m.size.z * scale;
+
+  const margin = 1.6;
+  const from = lo - margin, to = hi + 1 + margin;
+  const span = to - from;
+
+  // Segments are spaced CLOSER than their own length and never stretched.
+  // The first version stretched each one to exactly fill its share of the
+  // span, which should have tiled seamlessly and did not: the model's
+  // bounding box is wider than its actual deck (the arch's stonework stops
+  // short of the box the railings define), so spacing by the box left a real
+  // gap of open air between every arch. Overlapping slightly is invisible on
+  // stonework and cannot gap; stretching a modelled arch to hide it would
+  // have smeared the very detail the model is here for.
+  const OVERLAP = 0.84;
+  const count = Math.max(1, Math.ceil(span / (segLen * OVERLAP)));
+  const spacing = span / count;
+
+  // Sit the DECK at bank level, not the model's origin: the walking surface
+  // is box.max.y up from the origin, so placing the origin at the bank would
+  // float the road a scaled metre above the ground it is supposed to join.
+  const bankH = Math.max(smoothHeightAt(from, z), smoothHeightAt(to, z));
+  const originY = bankH + 0.08 - m.box.max.y * scale;
+
+  for (let i = 0; i < count; i++) {
+    const node = m.scene.clone(true);
+    node.scale.setScalar(scale);
+    node.position.set(from + (i + 0.5) * spacing, originY, z);
+    node.rotation.y = Math.PI / 2;
+    g.add(node);
+  }
   return g;
 }
 
-/** The great gate — where the road out of the square passes the edge of the town. */
-function buildGate() {
+/** The great gate — where the road out of the village passes the settlement's edge. */
+function buildGate(models) {
   const g = new Group();
-  const x = 30, z = -8;
-  const h = smoothHeightAt(x, z);
-  const pillarGeo = new BoxGeometry(0.9, 3.2, 0.9);
-  const pA = new Mesh(pillarGeo, STONE); pA.position.set(x - 2.1, h + 1.6, z);
-  const pB = new Mesh(pillarGeo, STONE); pB.position.set(x + 2.1, h + 1.6, z);
-  const lintel = new Mesh(new BoxGeometry(5.4, 0.8, 1.0), STONE);
-  lintel.position.set(x, h + 3.4, z);
-  const cap = new Mesh(new ConeGeometry(0.75, 0.9, 4), ROOF);
-  cap.rotation.y = Math.PI / 4;
-  cap.position.set(x, h + 4.2, z);
-  for (const m of [pA, pB, lintel, cap]) { m.castShadow = true; m.receiveShadow = true; }
-  g.add(pA, pB, lintel, cap);
+  const x = -31, z = -5.1;
+  const m = models.wall_straight_gate;
+  const node = m.scene.clone(true);
+  node.scale.setScalar(fitScale(m, 6.0));
+  node.position.set(x, smoothHeightAt(x, z), z);
+  node.rotation.y = Math.PI / 2;
+  g.add(node);
   return g;
 }
 
-/** The second dome — the furthest-off milestone, a real dome shape once it lands. */
-function buildDome() {
+/** The keep — the furthest-off milestone, the settlement's own stronghold. */
+function buildDome(models) {
   const g = new Group();
-  const x = 6, z = -22;
-  const h = smoothHeightAt(x, z);
-  const base = new Mesh(new CylinderGeometry(2.4, 2.6, 1.6, 16), STONE);
-  base.position.set(x, h + 0.8, z);
-  // A real hemisphere — thetaLength capped at PI/2 keeps only the top half
-  // of the sphere, which is what a dome actually is, not a cylinder wedge.
-  const dome = new Mesh(new SphereGeometry(2.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), GOLD);
-  dome.position.set(x, h + 1.6, z);
-  for (const m of [base, dome]) { m.castShadow = true; m.receiveShadow = true; }
-  g.add(base, dome);
+  const x = 2, z = -24;
+  const m = models.building_castle_green;
+  const node = m.scene.clone(true);
+  node.scale.setScalar(fitScale(m, 7.0));
+  node.position.set(x, smoothHeightAt(x, z), z);
+  node.rotation.y = 0.8;
+  g.add(node);
   return g;
 }
 
@@ -143,16 +152,25 @@ export class Landmarks3D {
   constructor(scene) {
     this.scene = scene;
     this.built = new Set();
+    this.ready = false;
+    this._pending = null;
+    this._loading = loadModels(MODELS).then((models) => {
+      this.models = models;
+      this.ready = true;
+      if (this._pending) this.sync(this._pending);
+    });
   }
 
-  /** Adds whichever earned milestone isn't already standing — never rebuilds one that's already up. */
+  /** Adds whichever earned milestone isn't already standing — never rebuilds one that's up. */
   sync(town) {
     if (!town || !town.milestones) return;
+    this._pending = town;
+    if (!this.ready) return;
     for (const m of town.milestones) {
       if (this.built.has(m.key)) continue;
       const build = BUILDERS[m.key];
       if (!build) continue;
-      this.scene.add(build());
+      this.scene.add(build(this.models));
       this.built.add(m.key);
     }
   }

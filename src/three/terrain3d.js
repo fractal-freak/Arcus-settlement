@@ -38,6 +38,7 @@ import {
 } from 'three';
 import { CHUNK, chunkKey } from '../app/iso.js';
 import { groundAt, smoothHeightAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
+import { isReserved } from '../app/village.js';
 
 /** Vertices per tile edge. 2 is one extra vertex per tile — enough to round off a shelf into a slope. */
 const SUB = 2;
@@ -74,6 +75,39 @@ const BASE = {
 };
 const ROCKY = new Color(0x8a7058);   // what a steep slope exposes, regardless of the ground kind on it
 const BEACH = new Color(0xe3d5a0);   // the rim right at the waterline
+
+/**
+ * The one height that is BOTH "this tile counts as wet" and "the water
+ * surface is drawn here". These used to be two different numbers — a tile
+ * counted as wet below WATER_LEVEL + STEP*0.5 (0.275) while the surface was
+ * drawn at WATER_LEVEL + 0.03 — so every tile whose real ground sat between
+ * those two levels was classified as river and then had its own riverbed
+ * drawn standing ABOVE the water covering it. That is the "deep but not
+ * filled to the top" trench: the channel is cut correctly, the water just
+ * wasn't reaching it. Deriving both from one constant is what stops the two
+ * drifting apart again.
+ *
+ * WET_MARGIN then extends the surface one tile PAST the last wet tile. Water
+ * is a flat quad per whole tile while the land is a smooth subdivided mesh,
+ * so the square water tiles could never follow a curving bank: the pale
+ * beach-coloured land showed through between them as a row of sawtooth
+ * triangles all along the river. The extra ring is hidden under the bank
+ * wherever the bank is higher — which is everywhere it should be — and fills
+ * those gaps wherever it isn't.
+ */
+const SURFACE_Y = WATER_LEVEL + STEP * 0.5;
+
+/** How deep the water has to get before the shore foam has faded out entirely. */
+const FOAM_DEPTH = 0.75;
+
+/**
+ * How many tiles the water surface runs PAST the last wet tile, to be hidden
+ * under the bank. One was not enough: wherever the bank still sat below the
+ * surface a tile out, the water mesh's own square outer edge was left showing
+ * as a hard stair-stepped line along the shore. Two puts that edge properly
+ * inside the hillside.
+ */
+const WET_MARGIN = 2;
 
 const tmpC = new Color();
 
@@ -178,13 +212,19 @@ const waterFrag = `
     float lit = max(0.0, dot(normal, sunDir));
     float band = lit > 0.55 ? 1.0 : (lit > 0.22 ? 0.62 : 0.38);
 
-    vec3 base = mix(uDeep, uShallow, 0.35) * band;
+    // vFoam now carries real depth (1 at the waterline, 0 once it is deep),
+    // so it doubles as the shallow/deep blend: a river reads light over its
+    // shallows at the bank and darkens toward the channel, which is most of
+    // what makes water look like water rather than a blue sheet.
+    vec3 base = mix(uDeep, uShallow, clamp(vFoam, 0.0, 1.0) * 0.75 + 0.12) * band;
     float glint = pow(max(0.0, dot(normal, sunDir)), 28.0);
     base += uSunColor * glint * 0.55;
 
-    // Foam breathes rather than sitting painted in place.
+    // Foam breathes rather than sitting painted in place. Kept to a narrow
+    // band right at the edge — it used to cover any tile with a few dry
+    // neighbours, which at a diagonal bank meant broad white wedges.
     float breathe = 0.5 + 0.5 * sin(uTime * 1.8 + vWorldXZ.x * 0.5 + vWorldXZ.y * 0.5);
-    float foamAmt = smoothstep(0.35, 0.85, vFoam + breathe * 0.18);
+    float foamAmt = smoothstep(0.66, 0.95, vFoam + breathe * 0.10);
     vec3 color = mix(base, uFoamColor, foamAmt);
 
     gl_FragColor = vec4(color, mix(uOpacity, 1.0, foamAmt * 0.6));
@@ -445,23 +485,37 @@ export class Terrain3D {
     const foam = [];
     const idx = [];
     let n = 0;
-    const wetAt = (tx, tz) => smoothHeightAt(tx + 0.5, tz + 0.5) < WATER_LEVEL + STEP * 0.5;
+    const wetAt = (tx, tz) => smoothHeightAt(tx + 0.5, tz + 0.5) < SURFACE_Y;
+    /** 1 right at the waterline, easing to 0 once the water is FOAM_DEPTH deep. */
+    const foamAt = (x, z) => {
+      const depth = SURFACE_Y - smoothHeightAt(x, z);
+      return Math.max(0, Math.min(1, 1 - depth / FOAM_DEPTH));
+    };
+    /** A dry tile still gets a quad if a wet one is within WET_MARGIN — see SURFACE_Y. */
+    const nearWater = (tx, tz) => {
+      for (let dj = -WET_MARGIN; dj <= WET_MARGIN; dj++) {
+        for (let di = -WET_MARGIN; di <= WET_MARGIN; di++) if (wetAt(tx + di, tz + dj)) return true;
+      }
+      return false;
+    };
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
-        if (!wetAt(tx, tz)) continue;
-        const y = WATER_LEVEL + 0.03; // a hair above the bed, so it never z-fights the land dipping to meet it
-        let dry = 0;
-        for (let dj = -1; dj <= 1; dj++) {
-          for (let di = -1; di <= 1; di++) {
-            if (di === 0 && dj === 0) continue;
-            if (!wetAt(tx + di, tz + dj)) dry++;
-          }
-        }
-        const f = dry / 8;
+        if (!nearWater(tx, tz)) continue;
+        const y = SURFACE_Y;
         const a = n, b = n + 1, c = n + 2, d = n + 3;
         positions.push(tx, y, tz, tx + 1, y, tz, tx, y, tz + 1, tx + 1, y, tz + 1);
-        foam.push(f, f, f, f);
+        // Foam per CORNER, from the real depth of water over the real bed at
+        // that exact point. It used to be one value for the whole tile —
+        // "how many of my eight neighbours are dry", so nine possible values,
+        // constant across the quad, and with each quad carrying its own
+        // unshared vertices there was nothing to interpolate between them
+        // either. That is precisely the row of hard white sawtooth triangles
+        // along both banks: foam snapping between flat per-tile values on a
+        // square grid, under a shoreline that curves. Depth is continuous, so
+        // this is too, and it follows the real waterline rather than the
+        // tile edges.
+        foam.push(foamAt(tx, tz), foamAt(tx + 1, tz), foamAt(tx, tz + 1), foamAt(tx + 1, tz + 1));
         idx.push(a, c, b, b, c, d);
         n += 4;
       }
@@ -490,6 +544,7 @@ export class Terrain3D {
         const tx = t0x + i, tz = t0y + j;
         const g = groundAt(tx, tz);
         if (g.kind !== GROUND.grass && g.kind !== GROUND.meadow) continue;
+        if (isReserved(tx, tz)) continue; // village ground — a street and a doorstep are not meadow
         const density = 3 + Math.floor(hash2(tx, tz, 40) * 3); // 3-5 blades a tile
         for (let b = 0; b < density; b++) {
           const jx = (hash2(tx * 4 + b, tz, 41) - 0.5) * 0.92;
@@ -531,7 +586,12 @@ export class Terrain3D {
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
-        if (smoothHeightAt(tx + 0.5, tz + 0.5) < WATER_LEVEL + STEP * 0.5) continue; // submerged — never mind what propAt guessed
+        if (smoothHeightAt(tx + 0.5, tz + 0.5) < SURFACE_Y) continue; // submerged — never mind what propAt guessed
+        // Village ground is spoken for. propAt() rolls trees off a pure
+        // noise field that knows nothing about the settlement, so without
+        // this a tree whose roll landed inside a house simply grew through
+        // the roof — which is exactly what it was doing.
+        if (isReserved(tx, tz)) continue;
         const p = propAt(tx, tz);
         if (!p) continue;
         // A little jitter off the tile centre, deterministic, so a forest

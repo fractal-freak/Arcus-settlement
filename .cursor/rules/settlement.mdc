@@ -1,0 +1,8 @@
+---
+description: How this world works and what must never be published
+alwaysApply: true
+---
+
+Read AGENTS.md in the repository root before changing anything. It carries the
+rules this project has actually been bitten by, the verification commands, and
+the two kinds of data that must never appear in this public repository.

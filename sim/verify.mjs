@@ -64,7 +64,11 @@ export async function check() {
   const keys = new Set();
   for (const p of projects) {
     const at = `job "${p?.key ?? '?'}"`;
-    if (!p || typeof p.key !== 'string' || !/^[a-z][a-z0-9]{2,23}$/.test(p.key)) { fail(problems, `${at}: bad key`); continue; }
+    // Underscores allowed. The first critic run wrote five perfectly good jobs
+    // — plant_water_reeds, scatter_waterlilies — and every one was thrown out
+    // by a pattern that only permitted letters and digits. A gate that refuses
+    // good work for a reason that is not about the world is a bug in the gate.
+    if (!p || typeof p.key !== 'string' || !/^[a-z][a-z0-9_]{2,29}$/.test(p.key)) { fail(problems, `${at}: bad key "${p?.key}"`); continue; }
     if (keys.has(p.key)) fail(problems, `${at}: two jobs share this name`);
     keys.add(p.key);
     if (typeof p.want !== 'string' || !p.want.startsWith('to ') || p.want.length > 70) fail(problems, `${at}: "want" must start with "to " and be short`);
@@ -80,7 +84,7 @@ export async function check() {
 
   for (const d of dims) {
     const at = `dimension "${d?.key ?? '?'}"`;
-    if (!d || typeof d.key !== 'string' || !/^[a-z][a-zA-Z0-9]{2,19}$/.test(d.key)) { fail(problems, `${at}: bad key`); continue; }
+    if (!d || typeof d.key !== 'string' || !/^[a-z][a-zA-Z0-9_]{2,23}$/.test(d.key)) { fail(problems, `${at}: bad key "${d?.key}"`); continue; }
     if (typeof d.name !== 'string' || d.name.length > 24) fail(problems, `${at}: "name" must fit the panel`);
     if (typeof d.why !== 'string' || d.why.length < 20 || d.why.length > 180) fail(problems, `${at}: "why" must be one real sentence`);
     if (!TAGS.includes(d.tag)) fail(problems, `${at}: "${d.tag}" is not a tag`);

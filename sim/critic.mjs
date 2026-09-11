@@ -113,12 +113,29 @@ async function ask(state, shot) {
     content.push({ type: 'image_url', image_url: { url: `data:image/png;base64,${shot}` } });
   }
 
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, temperature: 0.8, messages: [{ role: 'user', content }] }),
-  });
-  if (!res.ok) { console.log(`critic unavailable: ${res.status} ${await res.text()}`.slice(0, 400)); return null; }
+  // A free tier says "busy" often enough that one attempt is not an attempt.
+  // The very first run with a working key came back 503 UNAVAILABLE and the
+  // settlement went uncriticised for half an hour over nothing. Three tries,
+  // backing off, and only on the codes that mean "try again" — a 401 is a bad
+  // key and a 404 is a retired model, and repeating either just wastes time.
+  const RETRY_ON = new Set([408, 429, 500, 502, 503, 504]);
+  let res = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, attempt * 9000));
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: MODEL, temperature: 0.8, messages: [{ role: 'user', content }] }),
+    }).catch(() => null);
+    if (res?.ok) break;
+    const code = res?.status ?? 0;
+    console.log(`critic attempt ${attempt + 1}: ${code || 'no answer'}`);
+    if (res && !RETRY_ON.has(code)) break;
+  }
+  if (!res?.ok) {
+    console.log(`critic unavailable: ${res?.status ?? 'no answer'} ${res ? (await res.text()).slice(0, 300) : ''}`);
+    return null;
+  }
   const body = await res.json();
   const text = body.choices?.[0]?.message?.content ?? '';
   const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);

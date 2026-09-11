@@ -43,10 +43,94 @@
  */
 
 /** New jobs the citizens can take on. */
-export const EXTRA_PROJECTS = [];
+export const EXTRA_PROJECTS = [
+  {
+    "key": "plant_water_reeds",
+    "dim": "waterfront",
+    "want": "to fill the empty river edge with reeds and river flora",
+    "needs": 35,
+    "place": "water",
+    "tag": "edge",
+    "n": 4,
+    "kinds": [
+      "waterplant_A",
+      "waterplant_B"
+    ]
+  },
+  {
+    "key": "scatter_waterlilies",
+    "dim": "waterfront",
+    "want": "to break up the flat blue water surface near the bank",
+    "needs": 30,
+    "place": "water",
+    "tag": "edge",
+    "n": 3,
+    "kinds": [
+      "waterlily_A",
+      "waterlily_B"
+    ]
+  },
+  {
+    "key": "dockside_staging",
+    "dim": "waterfront",
+    "want": "to place freight and cargo staging along the river margin",
+    "needs": 50,
+    "place": "rim",
+    "tag": "edge",
+    "n": 3,
+    "kinds": [
+      "crate_long_A",
+      "barrel",
+      "pallet"
+    ]
+  },
+  {
+    "key": "raise_heraldic_flags",
+    "dim": "heraldry",
+    "want": "to give verticality and high contrast to rooftops and open lanes",
+    "needs": 40,
+    "place": "byLane",
+    "tag": "tall",
+    "n": 4,
+    "kinds": [
+      "flag_red",
+      "flag_blue",
+      "flag_yellow",
+      "flag_green"
+    ]
+  },
+  {
+    "key": "skyline_scaffolding",
+    "dim": "heraldry",
+    "want": "to extend unfinished structures into the upper skyline",
+    "needs": 60,
+    "place": "byPlot",
+    "tag": "tall",
+    "n": 2,
+    "kinds": [
+      "building_scaffolding",
+      "ladder"
+    ]
+  }
+];
 
 /** New things for the settlement to care about. */
-export const EXTRA_DIMENSIONS = [];
+export const EXTRA_DIMENSIONS = [
+  {
+    "key": "waterfront",
+    "name": "river margin",
+    "why": "The riverbank drops directly into water with no reeds, lilies, or dockside edge features.",
+    "tag": "edge",
+    "target": 60
+  },
+  {
+    "key": "heraldry",
+    "name": "heraldic height",
+    "why": "The settlement skyline is flat apart from isolated towers, lacking tall flags and scaffolding to break the roofline.",
+    "tag": "tall",
+    "target": 40
+  }
+];
 
 /**
  * Written by the critic each time it changes something: what it saw, what it
@@ -54,4 +138,10 @@ export const EXTRA_DIMENSIONS = [];
  * stop repeating itself — this, rather than the model, is the part that
  * actually gets better over time. Newest first, capped at forty.
  */
-export const JOURNAL = [];
+export const JOURNAL = [
+  {
+    "at": "2026-09-11",
+    "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",
+    "added": "waterfront, heraldry, plant_water_reeds, scatter_waterlilies, dockside_staging, raise_heraldic_flags, skyline_scaffolding"
+  }
+];

@@ -29,9 +29,10 @@
  * get real assets in now and reconcile style/detail later.
  */
 
-import { Group, InstancedMesh, Object3D } from 'three';
+import { Group, InstancedMesh, Object3D, Shape, ExtrudeGeometry, MeshToonMaterial } from 'three';
 import { smoothHeightAt, isWater, hash2, noise } from '../app/terrain.js';
 import { loadPieces } from './assets.js';
+import { toonRamp } from './terrain3d.js';
 
 const GOLDEN_ANGLE = 2.399963;
 // First pass, spacing 2.35 against a footprint that could reach 2.38 wide,
@@ -77,6 +78,38 @@ function rotatedOffset(dx, dz, rot) {
   return { x: dx * c - dz * s, z: dx * s + dz * c };
 }
 
+// A quarter-unit push straight out along each corner's own diagonal. Wall
+// tiles are full 1x1x1 blocks (confirmed off their own bounding box, same
+// as everywhere else in this file), so the two tiles meeting at a corner
+// already overlap there and completely fill it — a column placed exactly
+// AT the corner point would sit fully embedded inside that already-solid
+// intersection and never be seen. Pushed out along the diagonal instead,
+// it stands proud of the wall the way a real corner post or pilaster
+// would, rather than disappearing into masonry that doesn't need it.
+const CORNER_PUSH = 0.25;
+
+/**
+ * The grand tier's one hand-added flourish: a real corner post at each of
+ * a building's four corners. Grand buildings have no solid "fortified"
+ * wall piece to fall back on (see the TIERS comment), so what actually
+ * reads as grander here is architecture, not a different texture — four
+ * posts flanking the walls the way a keep's corner turrets or pilasters
+ * would, on a piece independently confirmed solid the same way the walls
+ * themselves were.
+ */
+function placeCornerColumns(place, dummy, cx, cz, wTiles, dTiles, rot, wallHeight, h) {
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const off = rotatedOffset(sx * (wTiles / 2 + CORNER_PUSH), sz * (dTiles / 2 + CORNER_PUSH), rot);
+      dummy.position.set(cx + off.x, h, cz + off.z);
+      dummy.scale.set(1, wallHeight, 1);
+      dummy.rotation.set(0, rot, 0);
+      dummy.updateMatrix();
+      place('column', dummy.matrix);
+    }
+  }
+}
+
 const dummy = new Object3D();
 
 // Kenney's kit is built on a 1-unit grid (verified against the loaded
@@ -86,17 +119,18 @@ const TILE = 1;
 
 // 'roof' turned out, on loading it, to be an open decorative gable TRUSS,
 // not a solid roof panel — confirmed live from a real screenshot showing
-// bare timber wireframe over every building, not shingles. 'roof-side'
-// (a solid shingled slope) and 'roof-side-corner' (its matching solid
-// triangular end cap — NOT 'roof-edge', which turned out on loading it,
-// live, to be an open decorative truss with the same visual family as
-// 'roof' and 'roof-corner': all three share a 4-primitive/100+-vertex
-// signature, where every confirmed-solid piece here has 3 primitives and
-// far fewer vertices. Confirmed by painting the loaded instances magenta
-// and cyan and looking at a real screenshot, not by the preview thumbnail
-// alone — a small thumbnail had already been wrong once this same pass.)
-// are the actual roof surface pieces; both confirmed by their preview
-// images before ever touching the tiling code below.
+// bare timber wireframe over every building, not shingles. 'roof-side' (a
+// solid shingled A-frame cross-section — it spans the FULL building width
+// in one tile, both slopes meeting at a centred ridge, which is why it's
+// scaled by wTiles in X below rather than also tiled across that axis) is
+// the real roof surface. Its matching 'roof-side-corner' end cap turned
+// out, on that same live paint-and-isolate check, to ALSO be a thin open
+// ridge beam rather than a solid triangle — every gable end was standing
+// open behind it, the exact "crossed beams through empty building tops"
+// Kevin flagged from a real screenshot. No piece in this kit is a
+// reliable solid end cap, so the gable end below is hand-built instead: a
+// flat triangular prism (GABLE_GEO), scaled to roof-side's own real
+// measured rise (RISE, computed in _rebuild) rather than assumed.
 //
 // Three wealth tiers, real data driving which one a building gets: `weight`
 // is the number of distinct files its commits actually touched (clamped at
@@ -107,17 +141,62 @@ const TILE = 1;
 // the real distribution put 79 of 133 in the top tier and only 4 in the
 // bottom, nothing like the "fancy stone down to very low income" spread
 // asked for.
+//
+// wall/wall-door/wall-window and wall-paint/wall-paint-door/wall-paint-window
+// are the only two genuinely SOLID full wall panels this kit turned out to
+// have, of every one checked — not assumed, checked, the same way
+// roof-side-corner's assumed solidity turned out wrong: a small standalone
+// script flood-fills each piece's real loaded geometry by shared vertex
+// position to count actual disconnected chunks. A plain box is exactly 1;
+// wall and wall-paint both came back 1, wall-door/wall-window/wall-paint-
+// door/wall-paint-window all came back a matching 5 (a real door or window
+// opening legitimately IS several solid parts — frame, jamb, leaf — so 5
+// vs 5 is agreement, not a red flag). Every single wall-fortified* and
+// wall-pane* piece came back 4-6 — a genuinely fragmented, non-solid mesh
+// each time, which is exactly the open, see-through look Kevin flagged
+// live. No solid "fortified" wall exists in this kit, so the grand tier
+// reuses plain 'wall' for its wall panel and is told apart by real
+// architecture instead — corner columns (also checked solid) and its own
+// already-taller wallHeight — rather than by a piece that doesn't exist.
 const TIERS = [
-  { key: 'humble', max: 27, wall: 'wall-pane-wood', door: 'wall-pane-wood-door', window: 'wall-pane-wood-window', maxTiles: 2 },
+  { key: 'humble', max: 27, wall: 'wall-paint', door: 'wall-paint-door', window: 'wall-paint-window', maxTiles: 2 },
   { key: 'plain', max: 44, wall: 'wall', door: 'wall-door', window: 'wall-window', maxTiles: 3 },
-  { key: 'grand', max: Infinity, wall: 'wall-fortified', door: 'wall-fortified-door', window: 'wall-fortified-window', maxTiles: 3 },
+  { key: 'grand', max: Infinity, wall: 'wall', door: 'wall-door', window: 'wall-window', maxTiles: 3 },
 ];
 function tierFor(weight) { return TIERS.find((t) => weight <= t.max) ?? TIERS[TIERS.length - 1]; }
 
 const PIECES = [
   ...new Set(TIERS.flatMap((t) => [t.wall, t.door, t.window])),
-  'roof-side', 'roof-side-corner', 'tower-base', 'tower-top', 'column-damaged',
+  'roof-side', 'tower-base', 'tower-top', 'column-damaged', 'column',
 ];
+
+// The gable end cap, hand-built — see the comment above PIECES for why no
+// Kenney piece here works for this. A unit isoceles triangle (base -0.5 to
+// 0.5, apex at (0,1)), matching roof-side's own full-width cross-section
+// shape so the two meet flush; instanced and scaled per building exactly
+// like every other roof piece (scale.x = wTiles, scale.y = the real RISE).
+// Extruded a thin 0.15 in Z rather than left a flat plane, so it reads as
+// a real infilled wall — plaster/wattle behind the timber frame, the
+// actual medieval material a gable like this would be — not a paper cutout,
+// and centred in Z so it sits astride the same ridge-line slot
+// roof-side-corner used to.
+const GABLE_GEO = (() => {
+  const shape = new Shape();
+  shape.moveTo(-0.5, 0);
+  shape.lineTo(0.5, 0);
+  shape.lineTo(0, 1);
+  shape.closePath();
+  const geo = new ExtrudeGeometry(shape, { depth: 0.15, bevelEnabled: false, curveSegments: 1 });
+  geo.translate(0, 0, -0.075);
+  geo.computeVertexNormals();
+  return geo;
+})();
+// A flat toon-shaded colour rather than a Kenney texture — this shape has
+// no UVs a Kenney texture atlas would map onto correctly, and plaster
+// infill is genuinely a different material from the timber/stone wall
+// below it in real half-timber construction, not a compromise standing in
+// for one.
+const GABLE_MAT = new MeshToonMaterial({ color: 0xc9bb95, gradientMap: toonRamp });
 
 /**
  * Every wall placement around one building's rectangular footprint, in the
@@ -190,6 +269,12 @@ export class Town3D {
 
     const A = this.assets;
     const n = buildings.length;
+    // roof-side's real measured rise, not an assumed round number — read
+    // off the bounding box assets.js already captured on load, the same
+    // "real data over a guess" rule the wealth tiers below already follow.
+    // The gable end's own apex is scaled to this exact height so it meets
+    // roof-side's real ridge line, not a guessed one.
+    const RISE = A['roof-side'].box.max.y - A['roof-side'].box.min.y;
     // One InstancedMesh per PIECE NAME (walls/doors/windows across all
     // three wealth tiers, plus the two roof pieces) rather than per
     // semantic role — a 'humble' building's wall and a 'grand' one's are
@@ -199,14 +284,24 @@ export class Town3D {
     // exactly up front — a one-time waste of unused buffer capacity on a
     // rebuild that happens once per 20 commits, not a per-frame cost.
     this.meshes = new Map();
-    const capFor = (name) => (name.startsWith('roof') ? n * 3 : n * 4);
-    for (const name of PIECES) {
-      const piece = A[name];
+    // Every piece now gets the same generous n*4 — 'roof-side' used to get
+    // a tighter n*3 on the assumption of at most (maxTiles-2) slices per
+    // building, which broke the moment the roof loop below started tiling
+    // EVERY ridge slot rather than skipping the endmost ones.
+    const capFor = () => n * 4;
+    // 'gable' isn't a Kenney piece loaded into A — it's the hand-built
+    // GABLE_GEO/GABLE_MAT pair above — so it's added alongside PIECES here
+    // rather than folded into that list, which stays exactly "the names to
+    // fetch from the kit."
+    const pieceNames = [...PIECES, 'gable'];
+    const pieceAsset = (name) => (name === 'gable' ? { geometry: GABLE_GEO, material: GABLE_MAT } : A[name]);
+    for (const name of pieceNames) {
+      const piece = pieceAsset(name);
       const mesh = new InstancedMesh(piece.geometry, piece.material, capFor(name));
       mesh.castShadow = true; mesh.receiveShadow = true;
       this.meshes.set(name, mesh);
     }
-    const counts = new Map(PIECES.map((name) => [name, 0]));
+    const counts = new Map(pieceNames.map((name) => [name, 0]));
     const place = (name, matrix) => {
       const mesh = this.meshes.get(name);
       const i = counts.get(name);
@@ -246,28 +341,36 @@ export class Town3D {
         dummy.updateMatrix();
         place(t.kind, dummy.matrix);
       }
+      if (tier.key === 'grand') placeCornerColumns(place, dummy, x, z, wTiles, dTiles, rot, wallHeight, h);
 
-      // A real hip roof along the Z ridge: a triangular roof-side-corner
-      // cap at each end, roof-side slope tiles filling anywhere between
-      // them. Each tile scaled by wTiles in X to span the building's width
-      // in one piece rather than also tiling across that axis — the one
-      // simplification kept from the first pass, everything along the
-      // ridge is now real tiled geometry.
+      // A real gable roof along the Z ridge (not a hip roof — there are no
+      // slopes on the short ends, just the vertical gable triangle):
+      // roof-side A-frame slices tile the FULL ridge, one per depth slot,
+      // no exceptions at the ends — earlier this skipped the endmost slots
+      // in favour of a gable there instead, which left a dTiles=2 building
+      // with no roof-side at all (both its slots counted as "endmost") and
+      // even a wider one with its roof-side surface simply missing above
+      // the two end slots. A gable is a separate, additive thing: two thin
+      // end-wall caps at the building's true ends (z=±hd exactly, not slot
+      // centres), closing the vertical triangular gap under the eaves —
+      // not a replacement for the roof surface above that same slot.
       const roofY = h + wallHeight;
       for (let j = 0; j < dTiles; j++) {
         const lz = -dTiles / 2 + j + 0.5;
         const off = rotatedOffset(0, lz, rot);
-        dummy.scale.set(wTiles, 1, 1);
         dummy.position.set(x + off.x, roofY, z + off.z);
-        if (j === 0 || j === dTiles - 1) {
-          dummy.rotation.set(0, rot + (j === 0 ? Math.PI : 0), 0);
-          dummy.updateMatrix();
-          place('roof-side-corner', dummy.matrix);
-        } else {
-          dummy.rotation.set(0, rot, 0);
-          dummy.updateMatrix();
-          place('roof-side', dummy.matrix);
-        }
+        dummy.scale.set(wTiles, 1, 1);
+        dummy.rotation.set(0, rot, 0);
+        dummy.updateMatrix();
+        place('roof-side', dummy.matrix);
+      }
+      for (const end of [-1, 1]) {
+        const off = rotatedOffset(0, end * dTiles / 2, rot);
+        dummy.position.set(x + off.x, roofY, z + off.z);
+        dummy.scale.set(wTiles, RISE, 1);
+        dummy.rotation.set(0, rot + (end === -1 ? Math.PI : 0), 0);
+        dummy.updateMatrix();
+        place('gable', dummy.matrix);
       }
     });
 
@@ -293,21 +396,24 @@ export class Town3D {
         dummy.updateMatrix();
         place(t.kind, dummy.matrix);
       }
+      placeCornerColumns(place, dummy, cx, cz, cwTiles, cdTiles, crot, cWallHeight, ch);
       const cRoofY = ch + cWallHeight;
       for (let j = 0; j < cdTiles; j++) {
         const lz = -cdTiles / 2 + j + 0.5;
         const off = rotatedOffset(0, lz, crot);
-        dummy.scale.set(cwTiles, 1, 1);
         dummy.position.set(cx + off.x, cRoofY, cz + off.z);
-        if (j === 0 || j === cdTiles - 1) {
-          dummy.rotation.set(0, crot + (j === 0 ? Math.PI : 0), 0);
-          dummy.updateMatrix();
-          place('roof-side-corner', dummy.matrix);
-        } else {
-          dummy.rotation.set(0, crot, 0);
-          dummy.updateMatrix();
-          place('roof-side', dummy.matrix);
-        }
+        dummy.scale.set(cwTiles, 1, 1);
+        dummy.rotation.set(0, crot, 0);
+        dummy.updateMatrix();
+        place('roof-side', dummy.matrix);
+      }
+      for (const end of [-1, 1]) {
+        const off = rotatedOffset(0, end * cdTiles / 2, crot);
+        dummy.position.set(cx + off.x, cRoofY, cz + off.z);
+        dummy.scale.set(cwTiles, RISE, 1);
+        dummy.rotation.set(0, crot + (end === -1 ? Math.PI : 0), 0);
+        dummy.updateMatrix();
+        place('gable', dummy.matrix);
       }
       // The tower, rising directly off the roof ridge. First version added
       // an extra 0.9-unit gap here before the tower even started, on top of

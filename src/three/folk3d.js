@@ -28,8 +28,8 @@
  */
 
 import { Group } from 'three';
-import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { PLOTS, CIVIC, propNear } from '../app/village.js';
+import { smoothHeightAt, hash2 } from '../app/terrain.js';
+import { blocked, onPlacementsChanged } from '../app/occupied.js';
 import { loadCharacters, makeCharacter, kindFor } from './characters.js';
 
 /** Shorter than a session figure (1.8) — a real, readable difference at a glance. */
@@ -39,42 +39,67 @@ const HEIGHT = 1.55;
 const MIXERS_PER_FRAME = 8;
 
 /**
- * Somewhere a person genuinely cannot stand: inside a house, or below the
- * waterline. The height test is the one that was missing — isWater() asks
- * whether a whole TILE counts as river, so a villager could pass it standing
- * on a bank whose actual ground sits under the surface, and end up shin-deep
- * in the water. Buildings are bigger now too, so the clearances grew with them.
+ * A home near the built-up middle, and a circle of ground they can actually
+ * pace without walking through anything.
+ *
+ * TWO REASONS THIS KEPT FAILING, both fixed here.
+ *
+ * The first: the clear-ground test was given `wanderR + 0.6`, but the loop
+ * below is two out-of-phase sines on X and Z, so its real reach is the
+ * DIAGONAL — up to 1.42 times the radius. The far corners of every villager's
+ * walk were never tested, which is precisely where they were found standing
+ * inside trees.
+ *
+ * The second: eighteen tries, and if all eighteen failed it used the last one
+ * ANYWAY. That was survivable when the valley was empty; with four hundred
+ * things the citizens have built standing around, a villager whose hash keeps
+ * landing in the settlement ran out of tries and was simply placed inside
+ * whatever it last hit. It now keeps looking, and pulls its circle in as it
+ * goes: somebody in a tight corner paces a tighter round, which is what a
+ * person in a tight corner does.
  */
-const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
-
-function unstandable(x, z, clear = 1.0) {
-  if (isWater(Math.round(x), Math.round(z))) return true;
-  if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
-  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
-  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
-  // And no standing inside a tree. `clear` covers the villager's whole wander
-  // loop, not just the spot they start on — they pace a circle around home,
-  // so testing the centre alone let them walk straight through a bush on the
-  // far side of it.
-  if (propNear(x, z, clear)) return true;
-  return false;
-}
-
-/** A home near the built-up middle — folk live where there is somewhere to live. */
 function homeFor(i) {
   const seed = hash2(i, 41, 131);
-  let angle = hash2(i, 43, 132) * Math.PI * 2;
-  let radius = 6 + hash2(i, 45, 133) * 32;
-  // The wander radius is decided here rather than later, so the clear-ground
-  // test can cover the whole loop this villager will actually walk.
-  const wanderR = 1.2 + (Math.floor(seed * 100000) % 7) / 4;
-  let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 18 && unstandable(x, z, wanderR + 0.6); tries++) {
-    angle = hash2(i, 47 + tries, 134) * Math.PI * 2;
-    radius = 6 + hash2(i, 49 + tries, 135) * 34;
-    x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
+  const want = 1.2 + (Math.floor(seed * 100000) % 7) / 4;
+  for (let tries = 0; tries < 46; tries++) {
+    // The circle shrinks as the search wears on, down to a shuffle on the spot.
+    const wanderR = want * Math.max(0.2, 1 - tries / 34);
+    // Every retry has to move this villager somewhere genuinely different, and
+    // somewhere different from every OTHER villager's retry. Salting only the
+    // second and third arguments made later attempts depend more on the try
+    // number than on who was trying, so six people who all had a bad first
+    // guess ended up standing in the same square metre.
+    const angle = hash2(i * 31 + tries, 43 + tries * 7, 132 + tries * 13) * Math.PI * 2;
+    const radius = 6 + hash2(i * 17 + tries, 45 + tries * 5, 133 + tries * 11) * 32;
+    const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+    // Cheap circle first, then the loop they will really walk. The circle is
+    // only an approximation of that path and was quietly letting a few
+    // through; the path itself is the actual question, so it settles it.
+    if (blocked(x, z, wanderR * 1.42 + 0.9)) continue;
+    if (pathBlocked(x, z, wanderR)) continue;
+    return { x, z, seed, wanderR };
   }
-  return { x, z, seed, wanderR };
+  // Nowhere at all. Better to leave this villager out than to stand them in a
+  // wall — the population is a count, and one fewer figure is invisible where
+  // one figure inside the well is the first thing you see.
+  return null;
+}
+
+/**
+ * The wander loop itself, sampled.
+ *
+ * `tick` below walks two out-of-phase sines, which traces a rounded figure
+ * that is not a circle and is not centred on home either. Testing a circle
+ * around home approximates it; testing the path tests it.
+ */
+function pathBlocked(hx, hz, wanderR) {
+  for (let k = 0; k < 14; k++) {
+    const t = (k / 14) * Math.PI * 2 * 5;   // five loops covers the phase drift
+    const x = hx + Math.sin(t) * wanderR;
+    const z = hz + Math.sin(t * 0.63 + 1.7) * wanderR;
+    if (blocked(x, z, 0.55)) return true;
+  }
+  return false;
 }
 
 export class Folk3D {
@@ -91,6 +116,11 @@ export class Folk3D {
       this.ready = true;
       if (this._pending) this.sync(this._pending);
     });
+    // Homes are chosen against ground that the citizens keep changing. When
+    // they finish something, everyone picks their spot again — otherwise a
+    // villager placed this morning is standing in a hedge planted this
+    // afternoon, and nothing would ever notice.
+    onPlacementsChanged(() => { if (this.ready && this.count >= 0) this._rebuild(this.count); });
   }
 
   /** Rebuilt only when the real population number changes — same rare-rebuild pattern as Town3D. */
@@ -111,6 +141,7 @@ export class Folk3D {
 
     for (let i = 0; i < n; i++) {
       const home = homeFor(i);
+      if (!home) continue;
       const seedInt = Math.floor(home.seed * 100000);
       const char = makeCharacter(kindFor(seedInt + i * 7), HEIGHT, { background: true });
       if (!char) continue;

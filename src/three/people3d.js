@@ -26,8 +26,7 @@ import {
   Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3, TorusGeometry,
 } from 'three';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { PLOTS, CIVIC, propNear, landmarkNear } from '../app/village.js';
-import { propRadius } from '../app/propSizes.js';
+import { blocked } from '../app/occupied.js';
 import { digFor } from '../app/digs.js';
 import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
 
@@ -49,7 +48,9 @@ import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
  * that stays still while everything else moves — the eye finds a stopped thing
  * in a field of moving ones faster than the other way round.
  */
-const ringGeo = new TorusGeometry(0.30, 0.022, 5, 30);
+const RING_R = 0.30;
+const TILT = 1.05;
+const ringGeo = new TorusGeometry(RING_R, 0.022, 5, 30);
 const beadGeo = new IcosahedronGeometry(0.075, 1);
 const RING_WORKING = new MeshBasicMaterial({ color: 0x8fd4ff, transparent: true, opacity: 0.72 });
 const RING_WAITING = new MeshBasicMaterial({ color: 0xffc94d, transparent: true, opacity: 0.85 });
@@ -100,32 +101,7 @@ function hashString(s) {
  */
 const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
 
-/**
- * Everything the citizens have put down, as circles to keep out of.
- *
- * The world grew four hundred crates, banners and hedges after this file was
- * written, and none of them were in any of the tests below — so sessions stood
- * inside barrels, and one stood in the wellhead. A figure claims about 0.5
- * units of ground, and each piece claims its own measured radius; the sum is
- * the distance to keep. Refreshed whenever the feed brings a new list, which is
- * a few times an hour at most.
- */
-let obstacles = [];
-
-export function setObstacles(placements) {
-  obstacles = (placements || []).map((p) => ({ x: p.x, z: p.z, r: propRadius(p.kind) + 0.5 }));
-}
-
-function unstandable(x, z) {
-  if (isWater(Math.round(x), Math.round(z))) return true;
-  if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
-  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
-  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
-  if (landmarkNear(x, z, 1.2)) return true;   // not inside the well, which happened
-  if (propNear(x, z, 1.0)) return true;       // not inside a tree
-  for (const o of obstacles) if (Math.hypot(o.x - x, o.z - z) < o.r) return true;
-  return false;
-}
+const unstandable = (x, z) => blocked(x, z, 0.6);
 
 /**
  * Where a session stands when it is NOT working: in the village, among the
@@ -140,15 +116,19 @@ function homeFor(id) {
   // along the lanes, so the place reads as somewhere people actually are.
   // Still hashed off the session id alone, so the same session stands in the
   // same spot on every reload.
-  let angle = hash2(seed, 17, 61) * Math.PI * 2;
-  let radius = 7 + hash2(seed, 19, 62) * 26;
-  let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 14 && unstandable(x, z); tries++) {
-    angle = hash2(seed, 20 + tries, 63) * Math.PI * 2;
-    radius = 7 + hash2(seed, 21 + tries, 64) * 30;
-    x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
+  // Fourteen tries and then it stood wherever the fourteenth landed, blocked
+  // or not — which was survivable in an empty valley and is not now that the
+  // citizens have put four hundred things in it. It keeps looking, and widens
+  // its search as it goes rather than drawing from the same ring every time.
+  let last = null;
+  for (let tries = 0; tries < 60; tries++) {
+    const angle = hash2(seed * 13 + tries, 17 + tries * 7, 61 + tries * 11) * Math.PI * 2;
+    const radius = 7 + hash2(seed * 7 + tries, 19 + tries * 5, 62 + tries * 13) * (26 + tries * 0.7);
+    const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+    last = { x, z };
+    if (!unstandable(x, z)) return { x, z };
   }
-  return { x, z };
+  return last;
 }
 
 /**
@@ -186,7 +166,7 @@ class Figure {
     this.sign = new Group();
     this.sign.position.y = HEIGHT + 0.52;
     this.ring = new Mesh(ringGeo, RING_WORKING);
-    this.ring.rotation.x = 1.05;
+    this.ring.rotation.x = TILT;
     this.bead = new Mesh(beadGeo, BEAD_WORKING);
     this.sign.add(this.ring, this.bead);
     this.sign.visible = false;
@@ -280,11 +260,16 @@ class Figure {
       // The ring turns and the bead runs its orbit — a body in motion.
       this.sign.rotation.y = p * 0.55;
       const a = p * 2.1;
-      this.bead.position.set(Math.cos(a) * 0.30, Math.sin(a) * 0.30 * Math.cos(1.05), Math.sin(a) * 0.30 * -Math.sin(1.05));
+      // ON the ring, not beside it. The ring is tilted by TILT about X, so a
+      // point of it is (cos, sin·cos TILT, sin·sin TILT) — the last term had
+      // the wrong sign and the bead floated clear of the circle it was
+      // supposed to be running round.
+      this.bead.position.set(Math.cos(a) * RING_R, Math.sin(a) * RING_R * Math.cos(TILT), Math.sin(a) * RING_R * Math.sin(TILT));
+      this.bead.scale.setScalar(1);
     } else {
       // Stopped at the top of its orbit, breathing. Your move.
       this.sign.rotation.y = 0;
-      this.bead.position.set(0, 0.30 * Math.cos(1.05), 0.30 * -Math.sin(1.05));
+      this.bead.position.set(0, RING_R * Math.cos(TILT), RING_R * Math.sin(TILT));
       const b = 1 + Math.sin(p * 2.4) * 0.28;
       this.bead.scale.setScalar(b);
       this.sign.position.y = HEIGHT + 0.52 + Math.sin(p * 1.6) * 0.05;

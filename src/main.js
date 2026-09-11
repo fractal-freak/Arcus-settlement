@@ -14,10 +14,12 @@ import { Vector3 } from 'three';
 import { Stage } from './three/stage.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
-import { People3D, setObstacles } from './three/people3d.js';
+import { People3D } from './three/people3d.js';
 import { Town3D } from './three/town3d.js';
 import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
+import { DigSite3D } from './three/digsite3d.js';
+import { setPlacements, blocked } from './app/occupied.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
 import { Built3D } from './three/built3d.js';
 import { Rig } from './three/controls.js';
@@ -32,6 +34,7 @@ const people = new People3D(stage.scene);
 const town3d = new Town3D(stage.scene);
 const landmarks = new Landmarks3D(stage.scene);
 const folk = new Folk3D(stage.scene);
+const digs = new DigSite3D(stage.scene);
 const settlementStone = new SettlementStone3D(stage.scene);
 const built = new Built3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
@@ -117,11 +120,9 @@ const feed = new Feed((d) => {
     syncChronicle(d.life);
     // Everything the citizens have finished, standing where they put it.
     built.sync(d.life.placements);
-    // And the same list again as ground nobody may stand in. Sessions were
-    // ending up inside barrels and, once, inside the wellhead — a figure's
-    // spot is chosen by a test that knew about houses and trees and had never
-    // heard of the four hundred things the citizens had put down since.
-    setObstacles(d.life.placements);
+    // And the same list again as ground nobody may stand in — sessions and
+    // villagers alike, through the one shared test in app/occupied.js.
+    setPlacements(d.life.placements);
   }
   if (d.people) {
     people.sync(d.people);
@@ -552,7 +553,10 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, town3d, built, landmarks, folk, settlementStone, rig, feed,
+  stage, sky, terrain, people, town3d, built, landmarks, folk, digs, settlementStone, rig, feed,
+  // Exposed so a check can ask the world the same question the world asked
+  // itself when it put somebody somewhere — see the note on step().
+  blocked,
   step(frames = 1, ms = 16) {
     for (let i = 0; i < frames; i++) frame(ms);
     return this.stats();

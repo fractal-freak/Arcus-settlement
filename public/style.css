@@ -137,11 +137,27 @@ canvas { display: block; }
   margin-left: auto; letter-spacing: 0.04em; text-transform: none;
   font-weight: 500; color: #8a7457;
 }
-/* Shut: the board rolls up to its own header and stops taking the corner. */
-#crew.shut { max-height: none; }
-#crew.shut #crewBody { display: none; }
-#crew.shut #crewToggle { margin-bottom: 0; padding-bottom: 2px; border-bottom: 0; }
+/* Shut: the board slides OFF THE SIDE it came from and leaves a tab.
+   It used to keep its full width and only hide its rows, so a shut board was
+   still a 236px slab across the corner of the valley — which is not what shut
+   means. Now it goes where it lives, and the tab is what brings it back. */
+#crew, #chron { transition: transform 0.22s ease; }
+#crew.shut, #chron.shut { max-height: none; overflow: visible; }
+#crew.shut #crewBody, #chron.shut #chronBody { display: none; }
+#crew.shut { transform: translateX(calc(-100% + 30px)); }
+#chron.shut { transform: translateX(calc(100% - 30px)); }
+/* Everything but the arrow goes with it, so the tab is an arrow and nothing
+   else — a strip of parchment down the edge with a way back in. */
+#crew.shut #crewToggle, #chron.shut #chronToggle {
+  margin-bottom: 0; padding-bottom: 2px; border-bottom: 0;
+}
+#crew.shut #crewToggle > :not(.arrow),
+#chron.shut #chronToggle > :not(.arrow) { display: none; }
+#crew.shut #crewToggle { justify-content: flex-end; }
 #crew.shut #crewToggle .arrow { transform: rotate(-90deg); }
+#chron.shut #chronToggle .arrow { transform: rotate(90deg); }
+/* The tab has to stay clickable where the panel no longer is. */
+#crew.shut #crewToggle, #chron.shut #chronToggle { min-height: 16px; }
 #crew .row {
   display: block; width: 100%; text-align: left; cursor: pointer;
   background: none; border: 0; border-radius: 3px; padding: 5px 6px;
@@ -205,9 +221,7 @@ canvas { display: block; }
   margin-left: auto; letter-spacing: 0.03em; text-transform: none;
   font-weight: 500; color: #8a7457;
 }
-#chron.shut #chronBody { display: none; }
-#chron.shut #chronToggle { margin-bottom: 0; padding-bottom: 2px; border-bottom: 0; }
-#chron.shut #chronToggle .arrow { transform: rotate(-90deg); }
+/* Shut behaviour for both boards is set once, with the crew panel above. */
 #chron .e { padding: 5px 3px; border-bottom: 1px solid rgba(107, 85, 53, 0.14); }
 #chron .e:last-child { border-bottom: 0; }
 #chron .d { font-size: 9.5px; color: #8a7457; margin-bottom: 1px; }

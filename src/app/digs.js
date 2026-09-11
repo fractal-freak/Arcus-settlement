@@ -98,8 +98,11 @@ export function digFor(id) {
   if (!sites.length) return null;
   const h = hashId(id);
   const site = sites[h % sites.length];
+  // Clear of the ruin itself. The excavated building is 7.7 by 6.5 world
+  // units, so anything inside about 3.9 of the site centre is standing IN it;
+  // the crew work the edge of the cutting, which is where you would.
   const a = hash2(h, 7, 41) * Math.PI * 2;
-  const r = 2.2 + hash2(h, 11, 42) * 1.6;
+  const r = 5.0 + hash2(h, 11, 42) * 1.2;
   return {
     ...site,
     x: site.x + Math.cos(a) * r,

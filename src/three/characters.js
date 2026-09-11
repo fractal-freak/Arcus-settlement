@@ -197,7 +197,12 @@ export function makePickaxe() {
   head.position.y = 0.66;
   head.rotation.z = 0.12;
   g.add(haft, head);
-  g.rotation.set(Math.PI / 2, 0, 0);   // laid along the grip rather than out of the fist
+  // Head hanging BELOW the hand, down the haft. Measured, not guessed: with
+  // the kit's grip bone, (PI, 0, 0) is the one orientation of the eight tried
+  // that puts the head 0.64 straight down and only 0.15 sideways. Every other
+  // one lays the pick across the body, which is what made the swing look like
+  // somebody waving a broom.
+  g.rotation.set(Math.PI, 0, 0);
   return g;
 }
 

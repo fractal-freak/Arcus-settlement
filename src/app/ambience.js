@@ -166,12 +166,12 @@ export class Ambience {
    * would be a workshop, not a landscape.
    */
   clank(distance) {
-    if (!this.ready || !this.on || distance > 42) return;
+    if (!this.ready || !this.on || distance > 95) return;
     const ctx = this.ctx;
     const t = ctx.currentTime;
-    const near = Math.max(0, 1 - distance / 42) ** 2;
+    const near = Math.max(0, 1 - distance / 95) ** 1.6;
     const out = ctx.createGain();
-    out.gain.value = 0.5 * near;
+    out.gain.value = 1.5 * near;
     out.connect(this.master);
 
     const src = ctx.createBufferSource();
@@ -199,24 +199,44 @@ export class Ambience {
     }
   }
 
-  /** One short call by a bird, built out of two sines and gone in half a second. */
+  /**
+   * A bird, somewhere off in the trees.
+   *
+   * The first version was a bare sine sweeping between 1.5 and 3.3 kHz with a
+   * twelve-millisecond attack, which is not a bird, it is a smoke alarm —
+   * Kevin's word was "awful" and he was right. Sitting right in the ear's most
+   * sensitive band with a hard edge on it and nothing above or below to soften
+   * it, every call stuck out of the mix like a pin.
+   *
+   * What it is now: a triangle an octave lower, taken down by a lowpass so the
+   * harshness above 2 kHz is gone, eased in and out rather than switched on,
+   * a third of the level, and heard from across the valley rather than at your
+   * shoulder — a bird you notice, not one you flinch at.
+   */
   _bird() {
     const ctx = this.ctx;
     const t = ctx.currentTime;
     const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    const base = 1500 + Math.random() * 1800;
+    o.type = 'triangle';
+    const base = 760 + Math.random() * 620;
     o.frequency.setValueAtTime(base, t);
-    o.frequency.exponentialRampToValueAtTime(base * (0.55 + Math.random() * 1.1), t + 0.09);
-    o.type = 'sine';
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.055, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
-    o.connect(g).connect(this.master);
+    o.frequency.exponentialRampToValueAtTime(base * (0.7 + Math.random() * 0.6), t + 0.13);
+
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1900;
+    lp.Q.value = 0.4;
+
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.016, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+
+    o.connect(lp).connect(g).connect(this.master);
     o.start(t);
-    o.stop(t + 0.3);
-    // Most calls are two or three notes, not one.
-    if (Math.random() < 0.6) setTimeout(() => this.on && this._bird(), 130 + Math.random() * 180);
+    o.stop(t + 0.4);
+    // A second note now and then, not a whole song.
+    if (Math.random() < 0.35) setTimeout(() => this.on && this._bird(), 220 + Math.random() * 260);
   }
 
   /**
@@ -270,7 +290,7 @@ export class Ambience {
     // not speed up when the frame rate does.
     this.birdAt -= dtS;
     if (this.birdAt <= 0) {
-      this.birdAt = 2.5 + Math.random() * 7;
+      this.birdAt = 9 + Math.random() * 18;
       if (light > 0.35 && Math.random() < light) this._bird();
     }
   }

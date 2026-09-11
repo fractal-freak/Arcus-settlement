@@ -264,20 +264,26 @@ class Figure {
   _swing(elapsedS) {
     if (!this.arm || this.state !== 'working') return;
     const period = 1.35;
-    const phase = ((elapsedS * 1.0 + this.seed * 4) % period) / period;
+    const clock = elapsedS + this.seed * 4;
+    const phase = (clock % period) / period;
     // 0 at the top of the lift, 1 at the moment of impact.
     const down = phase < 0.24 ? (phase / 0.24) ** 1.9 : 1 - ((phase - 0.24) / 0.76) ** 0.85;
-    // Big enough that the head of the pick actually reaches the ground. A
-    // polite little movement of the wrist reads as somebody gesturing at the
-    // soil, which is not what anyone came out here to do.
-    this.arm.rotation.x -= 1.85 * down - 0.62;
-    if (this.forearm) this.forearm.rotation.x -= 1.05 * down - 0.34;
+    // AXES, MEASURED. Rotating each bone on each axis in turn and watching
+    // where the head of the pick actually went: the upper arm's X is almost
+    // purely vertical (0.31 down against 0.05 sideways) and POSITIVE swings
+    // it down; the forearm's Z lifts. The first version used X on both and
+    // subtracted, so the stroke went up and out to the side — which is
+    // exactly what Kevin described.
+    this.arm.rotation.x += 1.75 * down - 0.55;
+    if (this.forearm) this.forearm.rotation.z -= 0.85 * down - 0.30;
     // The body goes with it. Digging is done with the back, not the elbow.
     if (this.char) this.char.root.rotation.x = 0.30 * down - 0.06;
 
-    // One clank per stroke, at the bottom, once.
-    const struck = Math.floor(elapsedS * 1.0 + this.seed * 4);
-    if (phase >= 0.24 && phase < 0.4 && struck !== this._lastStrike) {
+    // One clank per stroke, at the bottom, once. Counted off the SAME clock
+    // the swing runs on — the first version floored whole seconds against a
+    // 1.35-second stroke, so the two drifted and a stroke could ring twice.
+    const struck = Math.floor(clock / period);
+    if (phase >= 0.24 && phase < 0.42 && struck !== this._lastStrike) {
       this._lastStrike = struck;
       onStrike?.(this.group.position);
     }

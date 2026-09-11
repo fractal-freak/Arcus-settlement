@@ -111,6 +111,49 @@ export const EXTRA_PROJECTS = [
       "building_scaffolding",
       "ladder"
     ]
+  },
+  {
+    "key": "build_stone_enclosure",
+    "dim": "fortification",
+    "want": "to partition inner plot boundaries with low stone walls",
+    "needs": 45,
+    "place": "byPlot",
+    "tag": "edge",
+    "n": 3,
+    "kinds": [
+      "fence_stone_straight"
+    ]
+  },
+  {
+    "key": "assemble_goods_depot",
+    "dim": "industry",
+    "want": "to stack trade crates, barrels, and pallets around the craft plaza",
+    "needs": 50,
+    "place": "square",
+    "tag": "clutter",
+    "n": 5,
+    "kinds": [
+      "crate_A_big",
+      "crate_B_small",
+      "barrel",
+      "pallet",
+      "wheelbarrow"
+    ]
+  },
+  {
+    "key": "stockpile_resources",
+    "dim": "industry",
+    "want": "to lay down timber and stone stockpiles along work lanes",
+    "needs": 60,
+    "place": "byLane",
+    "tag": "clutter",
+    "n": 4,
+    "kinds": [
+      "resource_lumber",
+      "resource_stone",
+      "crate_long_A",
+      "crate_open"
+    ]
   }
 ];
 
@@ -129,6 +172,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "The settlement skyline is flat apart from isolated towers, lacking tall flags and scaffolding to break the roofline.",
     "tag": "tall",
     "target": 40
+  },
+  {
+    "key": "fortification",
+    "name": "fortification",
+    "why": "The town features tall towers and rich halls but lacks stone perimeter walls and gated boundaries to define its edges.",
+    "tag": "edge",
+    "target": 80
+  },
+  {
+    "key": "industry",
+    "name": "industry",
+    "why": "Lanes and yards around the craft buildings remain bare dirt, missing stored timber, stone piles, and trade crates that convey economic wealth.",
+    "tag": "clutter",
+    "target": 90
   }
 ];
 
@@ -139,6 +196,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-11",
+    "seen": "A dense clump of identical small trees dominates the foreground while major structures like the red tower stand exposed on bare grass without defensive stone boundaries or organized staging yards.",
+    "added": "fortification, industry, build_curtain_wall, build_stone_enclosure, assemble_goods_depot, stockpile_resources"
+  },
   {
     "at": "2026-09-11",
     "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",

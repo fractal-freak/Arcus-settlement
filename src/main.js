@@ -17,6 +17,7 @@ import { Sky3D } from './three/sky3d.js';
 import { People3D } from './three/people3d.js';
 import { Town3D } from './three/town3d.js';
 import { Landmarks3D } from './three/landmarks3d.js';
+import { Folk3D } from './three/folk3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { smoothHeightAt } from './app/terrain.js';
@@ -27,6 +28,7 @@ const terrain = new Terrain3D(stage.scene);
 const people = new People3D(stage.scene);
 const town3d = new Town3D(stage.scene);
 const landmarks = new Landmarks3D(stage.scene);
+const folk = new Folk3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
 
 rig.target.set(0, smoothHeightAt(0, 0), 0);
@@ -104,6 +106,7 @@ const feed = new Feed((d) => {
       `${d.town.folk} living here · ${d.counts.working} working · ${d.counts.waiting} waiting on you`;
     town3d.sync(d.town);
     landmarks.sync(d.town);
+    folk.sync(d.town);
   }
   if (d.people) people.sync(d.people);
 });
@@ -233,6 +236,7 @@ function frame(dtMs) {
   rig.update(dtMs);
   clampAboveGround();
   people.tick(dtMs);
+  folk.tick(elapsed / 1000);
 
   const t = rig.target;
   // How much DETAILED land (cliffs, trees, water) to keep loaded. Zoomed out
@@ -290,7 +294,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, town3d, landmarks, rig, feed,
+  stage, sky, terrain, people, town3d, landmarks, folk, rig, feed,
   step(frames = 1, ms = 16) {
     for (let i = 0; i < frames; i++) frame(ms);
     return this.stats();

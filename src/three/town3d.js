@@ -22,7 +22,7 @@ import {
   Group, BoxGeometry, ConeGeometry, MeshToonMaterial, InstancedMesh,
   Object3D, Color,
 } from 'three';
-import { smoothHeightAt, isWater, hash2 } from '../app/terrain.js';
+import { smoothHeightAt, isWater, hash2, noise } from '../app/terrain.js';
 import { toonRamp } from './terrain3d.js';
 
 const GOLDEN_ANGLE = 2.399963;
@@ -36,13 +36,37 @@ const SPACING = 3.4;
 const TRADE_COLOR = { app: 0x6a5390, site: 0x8a5f6e, proof: 0x4f6a7d, vault: 0x8a7550, lore: 0x56707a, stores: 0x746f52 };
 const ROOF_COLOR = { app: 0x8a6fb5, site: 0xa1707f, proof: 0x6b8ba1, vault: 0xa08c63, lore: 0x74919c, stores: 0x8f8a67 };
 
-/** Deterministic from the building's own index, so a rebuild never reshuffles the town. */
+// The same forestAt() formula terrain.js's own propAt() uses to decide
+// where trees cluster (not exported itself, but built entirely from noise(),
+// which is) — a building checks it for exactly the reason a tree does:
+// so a house doesn't land in the middle of a real forest and end up
+// poking up through the canopy. Threshold set above terrain.js's own
+// clearing cutoffs (0.40-0.46), comfortably inside "this is really forest,"
+// not the lighter shading forestAt also produces at ordinary open ground.
+const FOREST_CLEAR = 0.55;
+const forestAt = (tx, ty) => noise(tx / 42, ty / 42, 60);
+
+/**
+ * Deterministic from the building's own index, so a rebuild never reshuffles
+ * the town. A retry only ever pushes radius outward AND jitters the angle a
+ * little (hashed off n and the retry count, so still fully deterministic) —
+ * pure radial pushing alone left a real fraction still landing in forest
+ * (verified: 24 of 133 real buildings), because a forest patch that happens
+ * to run roughly radially just gets re-crossed at every step along the same
+ * ray. Angle jitter explores a real 2D neighbourhood instead of one line,
+ * which measured down to 11 of 133 — better, not perfect; a spiral this
+ * tightly packed will still rarely have anywhere clear within 10 tries.
+ */
 function positionFor(n) {
-  const angle = n * GOLDEN_ANGLE;
+  const baseAngle = n * GOLDEN_ANGLE;
+  let angle = baseAngle;
   let radius = SPACING * Math.sqrt(n + 1);
   let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 5 && isWater(Math.round(x), Math.round(z)); tries++) {
-    radius += 1.6;
+  for (let tries = 0; tries < 10
+    && (isWater(Math.round(x), Math.round(z)) || forestAt(x, z) > FOREST_CLEAR)
+    ; tries++) {
+    radius += 1.4;
+    angle = baseAngle + (hash2(n, tries, 91) - 0.5) * 1.1;
     x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
   }
   return { x, z };

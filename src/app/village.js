@@ -35,7 +35,7 @@
 import { smoothHeightAt, isWater, groundAt, GROUND } from './terrain.js';
 
 /** The square: open ground around the Settlement Stone, never built on. */
-export const SQUARE = { x: 0, z: 0, r: 9.5 };
+export const SQUARE = { x: 0, z: 0, r: 12.0 };
 
 /**
  * Authored street skeleton. Angles are world radians, (cos, sin) → (x, z).
@@ -50,15 +50,15 @@ export const SQUARE = { x: 0, z: 0, r: 9.5 };
  * far the village actually reaches.
  */
 const STREETS = [
-  { key: 'bridge', angle: 0, from: 10.0, to: 15, halfWidth: 2.3 },
-  { key: 'west', angle: Math.PI, from: 10.0, to: 48, halfWidth: 2.3 },
-  { key: 'north', angle: -Math.PI / 2 - 0.30, from: 10.0, to: 42, halfWidth: 2.0 },
-  { key: 'south', angle: Math.PI / 2 + 0.22, from: 10.0, to: 34, halfWidth: 2.0 },
+  { key: 'bridge', angle: 0, from: 13.0, to: 20, halfWidth: 2.6 },
+  { key: 'west', angle: Math.PI, from: 13.0, to: 64, halfWidth: 2.6 },
+  { key: 'north', angle: -Math.PI / 2 - 0.30, from: 13.0, to: 56, halfWidth: 2.3 },
+  { key: 'south', angle: Math.PI / 2 + 0.22, from: 13.0, to: 46, halfWidth: 2.3 },
 ];
 
 /** How far apart plots sit along a street, and how far back from its centre. */
-const PITCH = 9.5;
-const SETBACK = 5.6;
+const PITCH = 13.0;
+const SETBACK = 7.4;
 
 /** A plot's own footprint, in world units. Houses are placed to fit inside this. */
 export const PLOT = { w: 7.0, d: 7.0 };
@@ -126,7 +126,7 @@ function footprintOk(cx, cz, w, d, rot) {
  * greedily: nearest the square wins the ground, anything too close to an
  * already-accepted plot is dropped.
  */
-const MIN_GAP = 8.5;
+const MIN_GAP = 11.5;
 
 /**
  * The civic plot: a single larger site on the rim of the square, for the
@@ -166,7 +166,7 @@ function findCivic() {
 export const CIVIC = findCivic();
 
 /** Clearance a house plot must keep from the capital's own footprint. */
-const CIVIC_CLEAR = 11.0;
+const CIVIC_CLEAR = 14.0;
 
 function buildPlan() {
   const candidates = [];

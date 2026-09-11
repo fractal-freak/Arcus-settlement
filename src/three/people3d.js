@@ -133,8 +133,11 @@ class Figure {
   }
 
   setHover(on) {
+    // Deliberately does NOT resize the figure. Growing a character under the
+    // pointer made it lunge at you and shoved its own neighbours' labels
+    // around; the pill above its head already brightens, which is enough to
+    // say which one you are pointing at.
     this.hovered = on;
-    this.group.scale.setScalar(on ? 1.14 : 1);
   }
 
   place(scene) {

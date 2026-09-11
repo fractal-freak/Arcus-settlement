@@ -42,13 +42,21 @@ import {
 } from 'three';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
 import { GLYPHS, GLYPH_UPM } from '../app/glyphs.js';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { loadPiece } from './assets.js';
 
 const SIGNS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
+/**
+ * The seven traditional planets, and only those: the bodies anyone standing
+ * in this square could actually have SEEN. Uranus, Neptune and Pluto are gone
+ * from the stone, and so is the Node, which is a point rather than a planet.
+ * The feed still carries all eleven; the carving is a deliberate choice about
+ * what belongs on a rock this old.
+ */
 const PLANET_GLYPH = {
-  Sun: '☉', Moon: '☽', Mercury: '☿', Venus: '♀', Mars: '♂', Jupiter: '♃',
-  Saturn: '♄', Uranus: '♅', Neptune: '♆', Pluto: '♇', Node: '☊',
+  Sun: '☉', Moon: '☽', Mercury: '☿', Venus: '♀', Mars: '♂', Jupiter: '♃', Saturn: '♄',
 };
+const TRADITIONAL = Object.keys(PLANET_GLYPH);
 
 // ── Glyph drawing ─────────────────────────────────────────────────────────
 
@@ -248,10 +256,41 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
     ctx.restore();
   }
 
+  // THE ANGLES. The horizon the settlement was founded on, and the meridian
+  // above it — the Ascendant/Descendant axis and the MC/IC. Drawn heavier
+  // than a sign division because that is what they are: the frame the whole
+  // chart hangs on, not another line in it. The Ascendant end carries a
+  // cut mark, since of the four it is the one that says where this is.
+  const handAxis = (lon, w, seed) => {
+    handSpoke(lon, 0, rRim, w, seed);
+    handSpoke(lon + 180, 0, rRim, w, seed + 5);
+  };
+  handAxis(founding.asc, size * 0.0082, 101);
+  handAxis(founding.mc, size * 0.0070, 111);
+
+  // The Ascendant's own mark: a short arrowhead cut into the rim, so the one
+  // point that fixes the chart in place can be found without measuring.
+  {
+    const a = angleFor(founding.asc);
+    const tip = at(founding.asc, rRim * 1.005);
+    ctx.lineWidth = size * 0.0072 * weight;
+    for (const side of [-1, 1]) {
+      const b = {
+        x: tip.x - Math.cos(a) * rRim * 0.085 - Math.sin(a) * side * rRim * 0.055,
+        y: tip.y + Math.sin(a) * rRim * 0.085 - Math.cos(a) * side * rRim * 0.055,
+      };
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+  }
+
   // Bodies, sitting just inside their own sign's wedge so the pairing reads
   // without counting round the rim.
   const rBody = rSignIn * 0.80;
-  placeBodies(founding.bodies ?? []).forEach((p, i) => {
+  const traditional = (founding.bodies ?? []).filter(([name]) => TRADITIONAL.includes(name));
+  placeBodies(traditional).forEach((p, i) => {
     const q = at(p.show, rBody);
     ctx.save();
     ctx.translate(q.x, q.y);
@@ -432,7 +471,15 @@ function lumps(x, y, z) {
  * actually involves.
  */
 function makeBoulder(dressZ, dressR) {
-  const geo = new IcosahedronGeometry(ROCK_R, 4);
+  // WELDED, and that is the whole difference between a rock and a
+  // twenty-sided die. IcosahedronGeometry hands back an unindexed mesh — every
+  // triangle carries its own three vertices — so computeVertexNormals can only
+  // give each face one flat normal, and the boulder came out as a heap of big
+  // flat facets. Merging coincident vertices first lets the normals average
+  // across the faces that meet at each point, so the surface shades as one
+  // continuous rock, and the moss painted on those vertices blends instead of
+  // stopping dead at every triangle edge.
+  const geo = mergeVertices(new IcosahedronGeometry(ROCK_R, 5), 1e-4);
   const pos = geo.attributes.position;
   const v = new Vector3();
   for (let i = 0; i < pos.count; i++) {

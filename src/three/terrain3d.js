@@ -346,7 +346,11 @@ export class Terrain3D {
     const floorMat = new MeshToonMaterial({ color: BASE.grass, gradientMap: toonRamp });
     this.floor = new Mesh(new PlaneGeometry(1, 1), floorMat);
     this.floor.rotation.x = -Math.PI / 2;
-    this.floor.position.y = -6;
+    // Just under the riverbed rather than six units down. It has to stay
+    // below the lowest real ground or it would surface inside the river, but
+    // at -6 the step where the streamed chunks ran out was a visible cliff
+    // the moment the haze was thinned enough to see it.
+    this.floor.position.y = -2.0;
     this.floor.receiveShadow = true;
     this.floor.renderOrder = -1;
     // Layer 1, not the default 0 — kept OUT of stage.js's depth-only

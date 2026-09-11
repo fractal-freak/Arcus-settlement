@@ -38,18 +38,22 @@ canvas { display: block; }
   display: block;
   transform: translate(-50%, -100%) translateY(-6px) scale(var(--pscale));
   opacity: var(--fade);
-  padding: 2px 7px; border-radius: 6px;
-  background: rgba(10, 9, 20, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 10.5px; color: #d6d1e6; white-space: nowrap;
+  padding: 3px 8px; border-radius: 6px;
+  /* Solid, not a tint. These sit over grass, water, pale stone and a white
+     sun-glare in turn, and a translucent chip took the colour of whatever
+     was behind it — legible over the river and invisible over the road. */
+  background: #14121f; border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 11px; font-weight: 500; color: #eceaf5; white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.15s, transform 0.15s;
 }
 .who.waiting .tag {
-  background: rgba(255, 215, 106, 0.16); border-color: rgba(255, 215, 106, 0.5);
+  background: #4a3c12; border-color: rgba(255, 215, 106, 0.72);
   color: #ffe9ae;
 }
-.who.busy .tag { border-color: rgba(255, 255, 255, 0.22); }
+.who.busy .tag { border-color: rgba(150, 226, 255, 0.55); }
 .who.on .tag::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 5px; border-radius: 50%; background: #ff8a6a; }
-.who:hover .tag, .who:focus .tag { background: rgba(20, 18, 34, 0.88); border-color: rgba(255, 255, 255, 0.3); }
+.who:hover .tag, .who:focus .tag { background: #241f3a; border-color: rgba(255, 255, 255, 0.55); }
 
 #card {
   position: fixed; z-index: 6; max-width: 240px;
@@ -64,3 +68,38 @@ canvas { display: block; }
 #card .m b { color: #e8e3f0; font-weight: 600; }
 #card .m .doing { color: #9fd0ff; }
 #card .go { margin-top: 6px; font-size: 10.5px; color: #7d7796; }
+
+
+/* ── The crew panel ───────────────────────────────────────────────────────
+   Every session at work, always on screen, and every row flies the camera to
+   whoever it names. Without it the only way to find a session was to spot its
+   pill somewhere in the landscape and hope it was facing you. */
+#crew {
+  position: fixed; left: 12px; top: 92px; z-index: 5;
+  width: 232px; max-height: calc(100vh - 180px); overflow-y: auto;
+  background: rgba(12, 11, 22, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px; padding: 8px; backdrop-filter: blur(6px);
+  font-size: 11.5px; color: #c7c2da;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+#crew h2 {
+  margin: 2px 4px 7px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #7d7796;
+}
+#crew .row {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: none; border: 0; border-radius: 7px; padding: 6px 7px;
+  color: inherit; font: inherit; margin-bottom: 2px;
+}
+#crew .row:hover, #crew .row:focus { background: rgba(255, 255, 255, 0.07); outline: none; }
+#crew .row.here { background: rgba(255, 255, 255, 0.11); }
+#crew .n { display: flex; align-items: center; gap: 6px; }
+#crew .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: #6f6a86; }
+#crew .row.working .dot { background: #7fd4ff; }
+#crew .row.waiting .dot { background: #ffd76a; }
+#crew .nm {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: #e6e2f2;
+}
+#crew .sub { margin: 2px 0 0 13px; font-size: 10px; color: #837da0; }
+#crew .empty { padding: 6px 7px; color: #7d7796; }

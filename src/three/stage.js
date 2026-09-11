@@ -526,13 +526,17 @@ export class Stage {
    */
   _fogZoomFactor() {
     const d = this.camera.position.y;
-    const t = Math.min(1, Math.max(0, (d - 34) / 130));
-    // Bottoms out around a third rather than at nothing. Thinning it away
-    // entirely did make the town legible from high up, and then showed the
-    // ragged edge of the streamed chunks out past the horizon, which the haze
-    // had been quietly covering. A third is clear enough to read the
-    // settlement and still thick enough to lose that edge in.
-    return 1 - t * 0.68;
+    // Ramps over the range people actually zoom through, not a long lazy
+    // slope out to the stratosphere. The first version spread the falloff
+    // over 130 units of camera height, so at a normal pulled-back view it had
+    // thinned the haze by under a fifth — which is why it still looked as
+    // foggy as before. It is most of the way thinned by the time the camera
+    // is sixty up, and holds a little haze past that to soften the far edge of
+    // the streamed world. Tuned twice: the first two attempts both ramped too
+    // slowly and had barely touched the haze at the height people actually
+    // pull back to, which is why it still looked exactly as foggy as before.
+    const t = Math.min(1, Math.max(0, (d - 14) / 44));
+    return 1 - t * 0.82;
   }
 
   render() {

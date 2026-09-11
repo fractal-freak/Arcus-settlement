@@ -110,7 +110,12 @@ const feed = new Feed((d) => {
     landmarks.sync(d.town);
     folk.sync(d.town);
   }
-  if (d.people) people.sync(d.people);
+  if (d.people) {
+    people.sync(d.people);
+    // Once per feed tick, not once per frame: this writes DOM, and the list
+    // only changes when the feed does.
+    syncCrew();
+  }
   if (d.founding) settlementStone.sync(d.founding);
 });
 feed.start();
@@ -126,8 +131,11 @@ feed.start();
 
 const peopleLayer = document.getElementById('people');
 const card = document.getElementById('card');
+const crew = document.getElementById('crew');
 const pills = new Map(); // session id -> <a>
+const crewRows = new Map(); // session id -> <button>
 let hoveredId = null;
+let followId = null;
 const tmpProj = new Vector3();
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -148,6 +156,13 @@ function ago(ms) {
   return `${Math.round(h / 24)}d ago`;
 }
 
+/** 809307 -> "809k". Nobody reads the last three digits of a context window. */
+function tokens(n) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n < 10_000_000 ? 1 : 0)}M`;
+  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  return String(n);
+}
+
 function showCard(p, x, y) {
   const doing = p.state === 'working' ? 'Working right now'
     : p.state === 'waiting' ? 'Open, waiting on you' : 'Resting';
@@ -159,6 +174,12 @@ function showCard(p, x, y) {
   bits.push(b.commits || b.files
     ? `Built: <b>${b.commits}</b> commit${b.commits === 1 ? '' : 's'}, <b>${b.files}</b> file${b.files === 1 ? '' : 's'} changed`
     : 'Nothing committed on this branch yet');
+  if (p.tokens && p.tokens.context) {
+    // What the session is CARRYING, not a running total. See the hub's
+    // contextTokensOf: almost all of a turn's input is the same context read
+    // back from cache, so summing turns would report billions.
+    bits.push(`Context: <b>${tokens(p.tokens.context)}</b> tokens`);
+  }
   if (p.branch) bits.push(esc(p.branch));
   bits.push(`${p.turns} turn${p.turns === 1 ? '' : 's'} · ${ago(p.idleMs)}`);
   card.innerHTML =
@@ -174,6 +195,83 @@ function showCard(p, x, y) {
   card.style.top = `${top}px`;
 }
 function hideCard() { card.classList.remove('show'); }
+
+/**
+ * Fly the camera to one session and hold there.
+ *
+ * The anchors carry each figure's real world position, so this is a straight
+ * look() at the ground under it rather than anything clever. `followId` is
+ * remembered so the row stays lit and so a later feed tick can keep the
+ * camera on a figure that has since wandered.
+ */
+function goTo(id) {
+  const a = people.anchors().find((p) => p.id === id);
+  if (!a) return;
+  followId = id;
+  // The same three calls the debug hook's look() makes. There is no
+  // rig.look() — reaching for one is what made the first version of this
+  // throw on every click and quietly do nothing at all.
+  rig.target.set(a.position.x, smoothHeightAt(a.position.x, a.position.z), a.position.z);
+  rig.autoTilt = true;
+  rig.setDistance(18);
+  syncCrew();
+}
+
+/**
+ * The crew panel: every session, always on screen, sorted the way the feed
+ * already sorts them — working first, then waiting on Kevin, then resting.
+ *
+ * This exists because a session could previously only be found by spotting
+ * its pill somewhere in the landscape, which meant knowing where to look and
+ * having the camera pointed that way. A list cannot be behind you.
+ */
+function syncCrew() {
+  const list = people.anchors()
+    .map((a) => a.data)
+    .filter(Boolean);
+  const rank = { working: 0, waiting: 1, resting: 2 };
+  list.sort((a, b) => (rank[a.state] - rank[b.state]) || (a.idleMs - b.idleMs));
+
+  if (!crew.firstChild) {
+    const h = document.createElement('h2');
+    h.textContent = 'At work';
+    crew.appendChild(h);
+  }
+
+  const seen = new Set();
+  for (const p of list) {
+    seen.add(p.id);
+    let row = crewRows.get(p.id);
+    if (!row) {
+      row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'row';
+      row.innerHTML = '<span class="n"><i class="dot"></i><span class="nm"></span></span><div class="sub"></div>';
+      row.addEventListener('click', () => goTo(p.id));
+      row.addEventListener('dblclick', () => openSession(p.id));
+      row.addEventListener('pointerenter', () => { hoveredId = p.id; people.setHover(p.id); });
+      row.addEventListener('pointerleave', () => {
+        if (hoveredId === p.id) { hoveredId = null; people.setHover(null); hideCard(); }
+      });
+      crewRows.set(p.id, row);
+    }
+    crew.appendChild(row); // re-appending also re-orders
+    row.className = `row ${p.state}${followId === p.id ? ' here' : ''}`;
+    row.title = `${p.title || p.worktree || 'session'} — click to fly there, double-click to open the chat`;
+    const nm = row.querySelector('.nm');
+    const name = p.title || p.worktree || 'session';
+    if (nm.textContent !== name) nm.textContent = name;
+    const sub = row.querySelector('.sub');
+    const line = [
+      p.state === 'working' ? 'working' : p.state === 'waiting' ? 'waiting on you' : ago(p.idleMs),
+      p.tokens && p.tokens.context ? `${tokens(p.tokens.context)} ctx` : null,
+    ].filter(Boolean).join(' · ');
+    if (sub.textContent !== line) sub.textContent = line;
+  }
+  for (const [id, row] of crewRows) {
+    if (!seen.has(id)) { row.remove(); crewRows.delete(id); }
+  }
+}
 
 function syncPeopleOverlay() {
   const seen = new Set();

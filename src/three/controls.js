@@ -40,8 +40,15 @@ export class Rig {
     c.rotateSpeed = 0.75;
     c.zoomSpeed = 0.9;
 
-    c.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE };
-    c.touches = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE };
+    // LEFT ORBITS. It used to pan, on the reasoning that crossing the ground
+    // is what you want most often — which was true when the world was an even
+    // carpet of buildings and there was nothing to walk round. With one
+    // settlement to look at, the thing you want most often is to SEE THE
+    // OTHER SIDE of it, and nobody discovers that it lives on the right
+    // button: the on-screen hint only ever said "drag to move", so the world
+    // could only be viewed from the one angle it opened at.
+    c.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN };
+    c.touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
 
     c.target.set(0, 1.1, 0);
 
@@ -49,7 +56,7 @@ export class Rig {
     this.autoTilt = true;
     domElement.addEventListener('wheel', () => { this.autoTilt = true; }, { passive: true });
     domElement.addEventListener('pointerdown', (e) => {
-      if (e.button === 2 || e.shiftKey) this.autoTilt = false;
+      if (e.button === 0 || e.shiftKey) this.autoTilt = false;
     });
 
     this._v = new Vector3();

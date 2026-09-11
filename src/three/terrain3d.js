@@ -37,7 +37,7 @@ import {
   Object3D, Color, Vector3, CanvasTexture, NearestFilter, DoubleSide,
 } from 'three';
 import { CHUNK, chunkKey } from '../app/iso.js';
-import { groundAt, smoothHeightAt, naturalHeightAt, digAmountAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
+import { groundAt, smoothHeightAt, naturalHeightAt, digAmountAt, nearPit, anyPitWithin, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
 import { isReserved, isPlotTile, pathAmountAt } from '../app/village.js';
 
 /** Vertices per tile edge. 2 is one extra vertex per tile — enough to round off a shelf into a slope. */
@@ -112,7 +112,7 @@ const tmpC = new Color();
  * now resolves it once per TILE and hands the same value to every vertex that
  * shares it.
  */
-function paletteAt(wx, wz, h, kind) {
+function paletteAt(wx, wz, h, kind, dug = true) {
   const base = BASE[kind] ?? BASE.grass;
 
   const hx = smoothHeightAt(wx + EPS, wz);
@@ -133,9 +133,13 @@ function paletteAt(wx, wz, h, kind) {
   if (path > 0) tmpC.lerp(PATH, path * 0.88);
 
   // Turned earth, where a trench has been cut. Same idea as the lanes above —
-  // worn into the ground itself rather than laid on top of it.
-  const dug = digAmountAt(wx, wz);
-  if (dug > 0) tmpC.lerp(SPOIL, Math.min(1, dug * 1.35));
+  // worn into the ground itself rather than laid on top of it. `dug` is false
+  // for the whole chunk when there is no cutting anywhere near it, which is
+  // almost every chunk.
+  if (dug) {
+    const cut = digAmountAt(wx, wz);
+    if (cut > 0) tmpC.lerp(SPOIL, Math.min(1, cut * 1.35));
+  }
   return tmpC;
 }
 
@@ -442,6 +446,9 @@ export class Terrain3D {
       return k;
     };
 
+    // One question for the whole chunk, instead of thirty per vertex.
+    const dug = anyPitWithin(t0x + CHUNK / 2, t0y + CHUNK / 2, CHUNK);
+
     let p = 0;
     for (let j = 0; j <= n; j++) {
       for (let i = 0; i <= n; i++) {
@@ -449,7 +456,7 @@ export class Terrain3D {
         const wz = t0y + j / SUB;
         const h = smoothHeightAt(wx, wz);
         positions[p] = wx; positions[p + 1] = h; positions[p + 2] = wz;
-        const col = paletteAt(wx, wz, h, kindAt(wx, wz));
+        const col = paletteAt(wx, wz, h, kindAt(wx, wz), dug);
         colors[p] = col.r; colors[p + 1] = col.g; colors[p + 2] = col.b;
         p += 3;
       }
@@ -568,6 +575,7 @@ export class Terrain3D {
    */
   buildGrass(t0x, t0y) {
     const blades = [];
+    const dugHere = anyPitWithin(t0x + CHUNK / 2, t0y + CHUNK / 2, CHUNK + 3);
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
@@ -576,8 +584,12 @@ export class Terrain3D {
         // Off the lanes and off the plots, but not off the whole settlement —
         // grass growing up to a lane's edge is what gives the lane an edge.
         if (isPlotTile(tx, tz) || pathAmountAt(tx + 0.5, tz + 0.5) > 0.3) continue;
-        // Nothing grows in a hole that was dug this week.
-        if (digAmountAt(tx + 0.5, tz + 0.5) > 0.12) continue;
+        // Nothing grows in a hole that was dug this week, or on the spoil
+        // thrown out around it. The margin matters: the cut itself eases to
+        // nothing at the rim, so testing only the depth left a fringe of
+        // waist-high grass standing exactly where people have been walking
+        // and tipping barrows for a month.
+        if (dugHere && nearPit(tx + 0.5, tz + 0.5, 2.2)) continue;
         const density = 3 + Math.floor(hash2(tx, tz, 40) * 3); // 3-5 blades a tile
         for (let b = 0; b < density; b++) {
           const jx = (hash2(tx * 4 + b, tz, 41) - 0.5) * 0.92;
@@ -616,6 +628,7 @@ export class Terrain3D {
   /** Trees, bushes, rocks, ruins: instanced per chunk, grounded on the same smooth surface as the land mesh. */
   buildProps(t0x, t0y) {
     const trees = [], rocks = [], ruins = [];
+    const dugNear = anyPitWithin(t0x + CHUNK / 2, t0y + CHUNK / 2, CHUNK + 2);
     for (let j = 0; j < CHUNK; j++) {
       for (let i = 0; i < CHUNK; i++) {
         const tx = t0x + i, tz = t0y + j;
@@ -627,6 +640,7 @@ export class Terrain3D {
         if (isReserved(tx, tz)) continue;
         const p = propAt(tx, tz);
         if (!p) continue;
+        if (dugNear && nearPit(tx + 0.5, tz + 0.5, 1.0)) continue;   // nothing standing in the cut
         // A little jitter off the tile centre, deterministic, so a forest
         // does not read as a grid. Grounded at ITS jittered spot, not the
         // tile centre, or a tree on a slope would float or sink at the edges.

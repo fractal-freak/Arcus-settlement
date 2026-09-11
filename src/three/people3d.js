@@ -104,6 +104,14 @@ const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
 const unstandable = (x, z) => blocked(x, z, 0.6);
 
 /**
+ * Told when somebody's pick hits the ground, so the world can make the noise.
+ * A callback rather than an import, because this module has no business
+ * knowing there is an audio system at all.
+ */
+let onStrike = null;
+export function setStrikeListener(fn) { onStrike = fn; }
+
+/**
  * Where a session stands when it is NOT working: in the village, among the
  * houses, where you can see at a glance who is waiting on you.
  */
@@ -167,6 +175,10 @@ class Figure {
       this.pick = makePickaxe();
       this.pick.visible = false;
       this.char.hold(this.pick, 'r');
+      // Held so the swing can be driven by hand — no clip in either animation
+      // file is a person striking the ground, so the arm is moved here.
+      this.arm = this.char.bone('upperarmr');
+      this.forearm = this.char.bone('lowerarmr');
     }
 
     this.sign = new Group();
@@ -236,6 +248,41 @@ class Figure {
       ? this.site.look : this.seed * 6.283;
   }
 
+  /**
+   * Digging: a stroke of the pick into the ground, and the sound of it.
+   *
+   * Neither animation file has anybody striking anything — the kit ships
+   * idles, walks, jumps and a crouch, and its combat clips are not in the two
+   * rigs this project loads. So the stroke is driven here, applied AFTER
+   * `mixer.update` because the mixer rewrites every bone it owns each frame
+   * and anything set before it is simply overwritten.
+   *
+   * The arc is deliberately uneven: most of the cycle is the lift, the strike
+   * itself is fast, and there is a beat of nothing at the bottom. An even sine
+   * reads as waving, not working.
+   */
+  _swing(elapsedS) {
+    if (!this.arm || this.state !== 'working') return;
+    const period = 1.35;
+    const phase = ((elapsedS * 1.0 + this.seed * 4) % period) / period;
+    // 0 at the top of the lift, 1 at the moment of impact.
+    const down = phase < 0.24 ? (phase / 0.24) ** 1.9 : 1 - ((phase - 0.24) / 0.76) ** 0.85;
+    // Big enough that the head of the pick actually reaches the ground. A
+    // polite little movement of the wrist reads as somebody gesturing at the
+    // soil, which is not what anyone came out here to do.
+    this.arm.rotation.x -= 1.85 * down - 0.62;
+    if (this.forearm) this.forearm.rotation.x -= 1.05 * down - 0.34;
+    // The body goes with it. Digging is done with the back, not the elbow.
+    if (this.char) this.char.root.rotation.x = 0.30 * down - 0.06;
+
+    // One clank per stroke, at the bottom, once.
+    const struck = Math.floor(elapsedS * 1.0 + this.seed * 4);
+    if (phase >= 0.24 && phase < 0.4 && struck !== this._lastStrike) {
+      this._lastStrike = struck;
+      onStrike?.(this.group.position);
+    }
+  }
+
   dispose(scene) {
     scene.remove(this.group);
     if (this.char) this.char.dispose();
@@ -245,6 +292,7 @@ class Figure {
     // The skeleton does the moving now; the old sine-wave bob and sway were
     // standing in for animation this had no way to do.
     if (this.char) this.char.update(dtS);
+    this._swing(elapsedS);
 
     // Sink, change ground, rise. Half a second each way.
     if (this.moveTo) {

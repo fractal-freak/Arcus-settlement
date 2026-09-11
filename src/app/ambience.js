@@ -111,7 +111,7 @@ export class Ambience {
     this.master.connect(ctx.destination);
     this.master.connect(air).connect(wet).connect(ctx.destination);
 
-    const buf = noiseBuffer(ctx);
+    const buf = this.noise = noiseBuffer(ctx);
     this.wind = noiseVoice(ctx, buf, { type: 'lowpass', freq: 420, q: 0.7 });
     this.river = noiseVoice(ctx, buf, { type: 'bandpass', freq: 900, q: 0.9 });
     this.leaves = noiseVoice(ctx, buf, { type: 'bandpass', freq: 2400, q: 0.6 });
@@ -153,6 +153,50 @@ export class Ambience {
 
     this.birdAt = 0;
     this.ready = true;
+  }
+
+  /**
+   * A pick hitting stone.
+   *
+   * Metal on rock is a hard, inharmonic clack with a short ring on top, so:
+   * a filtered noise burst for the strike itself and two detuned high sines
+   * for the ring, both gone inside a third of a second. Level falls off with
+   * how far the camera is from the person swinging, and past forty units it
+   * does not play at all — a valley of thirty dig sites all clanking at once
+   * would be a workshop, not a landscape.
+   */
+  clank(distance) {
+    if (!this.ready || !this.on || distance > 42) return;
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const near = Math.max(0, 1 - distance / 42) ** 2;
+    const out = ctx.createGain();
+    out.gain.value = 0.5 * near;
+    out.connect(this.master);
+
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2600 + Math.random() * 1400;
+    bp.Q.value = 2.2;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.22, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    src.connect(bp).connect(g).connect(out);
+    src.start(t); src.stop(t + 0.16);
+
+    for (const [f, lvl, len] of [[3100, 0.05, 0.26], [4630, 0.03, 0.19]]) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f * (0.94 + Math.random() * 0.12);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(lvl, t + 0.004);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(og).connect(out);
+      o.start(t); o.stop(t + len + 0.02);
+    }
   }
 
   /** One short call by a bird, built out of two sines and gone in half a second. */

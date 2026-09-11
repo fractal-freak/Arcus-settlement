@@ -14,7 +14,7 @@ import { Vector3 } from 'three';
 import { Stage } from './three/stage.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
-import { People3D } from './three/people3d.js';
+import { People3D, setStrikeListener } from './three/people3d.js';
 import { Town3D } from './three/town3d.js';
 import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
@@ -37,6 +37,9 @@ const landmarks = new Landmarks3D(stage.scene);
 const folk = new Folk3D(stage.scene);
 const digs = new DigSite3D(stage.scene);
 const ambience = new Ambience();
+// Every pick that hits the ground makes a noise, and how loud depends on how
+// far away you are standing.
+setStrikeListener((at) => ambience.clank(stage.camera.position.distanceTo(at)));
 const settlementStone = new SettlementStone3D(stage.scene);
 const built = new Built3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);

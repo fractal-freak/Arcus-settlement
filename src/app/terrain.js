@@ -238,6 +238,26 @@ export const naturalHeightAt = (x, z) => rawHeightAt(x, z);
  * somebody has just dug up and to paint what is left as bare earth — without
  * it a hole in a meadow is a hole full of meadow, which reads as a dent.
  */
+/**
+ * Is there any cutting at all in this neighbourhood?
+ *
+ * Asked ONCE per chunk, so the per-tile and per-vertex tests below can be
+ * skipped entirely for the overwhelming majority of the valley that nobody
+ * has dug. Without it, building a chunk meant thirty distance checks for
+ * every tile AND every vertex of it, which is fifty thousand of them for a
+ * chunk that contains no hole — and chunk builds happen while you are
+ * panning, which is exactly when a frame cannot afford it.
+ */
+export function anyPitWithin(x, z, radius) {
+  for (const p of pits) if (Math.hypot(x - p.x, z - p.z) < p.r + radius) return true;
+  return false;
+}
+
+export function nearPit(x, z, margin = 0) {
+  for (const p of pits) if (Math.hypot(x - p.x, z - p.z) < p.r + margin) return true;
+  return false;
+}
+
 export function digAmountAt(x, z) {
   if (!pits.length) return 0;
   let most = 0;

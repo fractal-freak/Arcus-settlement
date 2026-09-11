@@ -144,12 +144,29 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
    * shrink because its owner is short.
    */
   function hold(object, side = 'r') {
-    let slot = null;
-    root.traverse((o) => { if (!slot && o.name === `handslot.${side}`) slot = o; });
+    const slot = bone(`handslot${side}`);
     if (!slot) return false;
     object.scale.multiplyScalar(1 / (scale || 1));
     slot.add(object);
     return true;
+  }
+
+  /**
+   * A bone by name, ignoring punctuation.
+   *
+   * The kit calls these `handslot.r`; three.js's GLTF loader strips the dot
+   * when it sanitises node names for animation binding, so the bone in the
+   * scene is `handslotr`. Looking for the kit's spelling found nothing and
+   * `hold` quietly returned false — which is why every archaeologist was
+   * swinging an invisible pickaxe.
+   */
+  function bone(want) {
+    const key = want.toLowerCase().replace(/[^a-z0-9]/g, '');
+    let found = null;
+    root.traverse((o) => {
+      if (!found && o.isBone && o.name.toLowerCase().replace(/[^a-z0-9]/g, '') === key) found = o;
+    });
+    return found;
   }
 
   return {
@@ -157,6 +174,7 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
     mixer,
     play,
     hold,
+    bone,
     /** Advance the animation. Seconds, not milliseconds. */
     update: (dt) => mixer.update(dt),
     dispose: () => { mixer.stopAllAction(); mixer.uncacheRoot(root); },
@@ -173,10 +191,10 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
  */
 export function makePickaxe() {
   const g = new Group();
-  const haft = new Mesh(new CylinderGeometry(0.028, 0.034, 0.78, 6), new MeshLambertMaterial({ color: 0x7a5433 }));
-  haft.position.y = 0.12;
-  const head = new Mesh(new BoxGeometry(0.46, 0.07, 0.08), new MeshLambertMaterial({ color: 0x9aa2ad }));
-  head.position.y = 0.48;
+  const haft = new Mesh(new CylinderGeometry(0.030, 0.038, 1.02, 6), new MeshLambertMaterial({ color: 0x7a5433 }));
+  haft.position.y = 0.20;
+  const head = new Mesh(new BoxGeometry(0.52, 0.08, 0.09), new MeshLambertMaterial({ color: 0x9aa2ad }));
+  head.position.y = 0.66;
   head.rotation.z = 0.12;
   g.add(haft, head);
   g.rotation.set(Math.PI / 2, 0, 0);   // laid along the grip rather than out of the fist

@@ -113,11 +113,12 @@ export function digFor(id) {
   if (!sites.length) return null;
   const h = hashId(id);
   const site = sites[h % sites.length];
-  // On the lip of the trench, looking down into it. The hole is PIT.r across,
-  // so this is just outside it — close enough to be working it, not so close
-  // that they are standing in mid-air over the cut.
+  // IN the trench, not beside it. They were standing on the lip looking in,
+  // which is what a supervisor does; the people doing the digging are down in
+  // the cut. Well inside PIT.r, so the ground under them is the dug floor and
+  // the walls of the hole rise around them.
   const a = hash2(h, 7, 41) * Math.PI * 2;
-  const r = PIT.r + 0.5 + hash2(h, 11, 42) * 0.9;
+  const r = 0.9 + hash2(h, 11, 42) * 1.9;
   return {
     ...site,
     x: site.x + Math.cos(a) * r,

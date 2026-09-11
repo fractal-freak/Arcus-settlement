@@ -118,10 +118,6 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
   ctx.fillRect(0, 0, size, size);
 
   // Longitude increases COUNTER-CLOCKWISE from the Ascendant at the left.
-  // This ran the other way: signs and houses both climbed clockwise, which
-  // put the Midheaven at the bottom of the wheel instead of the top. Adding
-  // the offset rather than subtracting it is the whole fix — at ASC + 270
-  // the MC now lands at twelve o'clock, where a chart puts it.
   const angleFor = (lon) => Math.PI + ((lon - founding.asc + 360) % 360) * DEG;
   const at = (lon, r) => ({
     x: cx + Math.cos(angleFor(lon)) * r,
@@ -130,82 +126,79 @@ function drawChart(ctx, size, founding, ink, ground, weight = 1) {
 
   ctx.strokeStyle = ink;
   ctx.fillStyle = ink;
-  ctx.lineCap = 'butt';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-  const ring = (r, w) => {
-    ctx.lineWidth = w * weight;
+  /**
+   * Nothing here is drawn with arc() or a straight lineTo, and that is the
+   * point. A perfect circle is the single loudest tell that a thing was
+   * printed rather than cut — it was still reading as machine-made even after
+   * the wear passes, because underneath the chips the geometry was flawless.
+   * Every ring and every division is stepped out by hand with the radius
+   * wandering and the stroke breathing, the way a chisel actually tracks.
+   */
+  const handCircle = (r, w, jitter, seed) => {
+    const steps = 190;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    for (let i = 0; i <= steps; i++) {
+      const a = (i / steps) * Math.PI * 2;
+      const n = (hash2(i % steps, seed, 3) - 0.5) + (hash2((i % steps) * 3, seed, 7) - 0.5) * 0.6;
+      const rr = r * (1 + n * jitter);
+      const x = cx + Math.cos(a) * rr, y = cy - Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.lineWidth = w * weight;
     ctx.stroke();
   };
-  const spoke = (lon, r0, r1, w) => {
-    ctx.lineWidth = w * weight;
-    const a = at(lon, r0), b = at(lon, r1);
+
+  const handSpoke = (lon, r0, r1, w, seed) => {
+    const steps = 14;
+    const a = angleFor(lon);
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const rr = r0 + (r1 - r0) * t;
+      const off = (hash2(i, seed, 11) - 0.5) * size * 0.0035;
+      const x = cx + Math.cos(a) * rr - Math.sin(a) * off;
+      const y = cy - Math.sin(a) * rr - Math.cos(a) * off;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.lineWidth = w * weight;
     ctx.stroke();
   };
 
-  // Rings: outer rim, sign band, house band, and the inner court.
+  // TWO rings, and only two: the band the signs sit in. The degree ticks, the
+  // house cusps, the house ring and the inner court have all gone — asked for
+  // plainly, and the wheel is better for it. A stone carries what is worth the
+  // chisel, not everything a screen could show.
   const rRim = R;
-  const rSignIn = R * 0.845;
-  const rHouseIn = R * 0.66;
-  const rCourt = R * 0.60;
-  ring(rRim, size * 0.006);
-  ring(rSignIn, size * 0.004);
-  ring(rHouseIn, size * 0.0035);
-  ring(rCourt, size * 0.0025);
+  const rSignIn = R * 0.80;
+  handCircle(rRim, size * 0.0060, 0.006, 5);
+  handCircle(rSignIn, size * 0.0048, 0.007, 19);
 
-  // Degree ticks every 5°, longer every 10°, all the way round the sign band.
-  for (let d = 0; d < 360; d += 5) {
-    const long = d % 10 === 0;
-    spoke(d, rSignIn, rSignIn + (rRim - rSignIn) * (long ? 0.34 : 0.20), size * (long ? 0.0022 : 0.0015));
+  // The twelve signs: one division on each boundary, glyph at each midpoint.
+  for (let i = 0; i < 12; i++) {
+    handSpoke(i * 30, rSignIn, rRim, size * 0.0042, 31 + i);
+    const mid = at(i * 30 + 15, (rSignIn + rRim) / 2);
+    // Each glyph set a touch off square and a touch off size, because a hand
+    // cutting twelve of these into rock does not repeat itself exactly.
+    ctx.save();
+    ctx.translate(mid.x, mid.y);
+    ctx.rotate((hash2(i, 41, 13) - 0.5) * 0.16);
+    drawGlyph(ctx, SIGNS[i], 0, 0, size * 0.062 * (0.93 + hash2(i, 43, 17) * 0.14), ink);
+    ctx.restore();
   }
 
-  // The twelve signs: a divider on every 30° boundary, glyph at each midpoint.
-  for (let s = 0; s < 12; s++) {
-    spoke(s * 30, rSignIn, rRim, size * 0.004);
-    const mid = at(s * 30 + 15, (rSignIn + rRim) / 2);
-    drawGlyph(ctx, SIGNS[s], mid.x, mid.y, size * 0.052, ink);
-  }
-
-  // The twelve houses: equal from the Ascendant. Cusps only — the numerals
-  // are gone on request, and they were the one thing on this stone that
-  // could not be carved in the project's own letterforms anyway, since
-  // digits meant reaching for a system font.
-  for (let h = 0; h < 12; h++) {
-    const cusp = founding.asc + h * 30;
-    spoke(cusp, rHouseIn, rSignIn, size * (h % 3 === 0 ? 0.0050 : 0.0030));
-  }
-
-  // The angles. Drawn heavier than a cusp because they ARE the chart's frame:
-  // the horizon the settlement was founded on, and the meridian above it.
-  const axis = (lon, w) => {
-    ctx.lineWidth = w * weight;
-    const a = at(lon, rHouseIn), b = at(lon + 180, rHouseIn);
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-  };
-  axis(founding.asc, size * 0.0075);
-  axis(founding.mc, size * 0.0062);
-
-  // Every body at its real longitude: a tick on the house ring, a leader in,
-  // and the glyph itself standing in the court.
+  // Every body at its real longitude, standing in the open middle.
   const bodies = founding.bodies ?? [];
-  for (const [name, lon] of bodies) {
-    spoke(lon, rHouseIn - size * 0.012, rHouseIn, size * 0.0035);
-    const gp = at(lon, rCourt * 0.86);
-    drawGlyph(ctx, PLANET_GLYPH[name] ?? '☉', gp.x, gp.y, size * 0.050, ink);
-  }
-
-  // A small boss at the centre, so the court is not an empty hole.
-  ctx.lineWidth = size * 0.004 * weight;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R * 0.055, 0, Math.PI * 2);
-  ctx.stroke();
+  bodies.forEach(([name, lon], i) => {
+    const p = at(lon, rSignIn * 0.68);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((hash2(i, 47, 23) - 0.5) * 0.16);
+    drawGlyph(ctx, PLANET_GLYPH[name] ?? '☉', 0, 0, size * 0.058 * (0.93 + hash2(i, 53, 29) * 0.14), ink);
+    ctx.restore();
+  });
 }
 
 /**
@@ -224,11 +217,11 @@ function erode(ctx, size) {
   ctx.globalCompositeOperation = 'destination-out';
 
   // Broad soft patches: whole areas rubbed smooth.
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 52; i++) {
     const x = hash2(i, 3, 71) * size, y = hash2(i, 5, 72) * size;
-    const r = size * (0.03 + hash2(i, 7, 73) * 0.11);
+    const r = size * (0.035 + hash2(i, 7, 73) * 0.13);
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    const a = 0.35 + hash2(i, 9, 74) * 0.5;
+    const a = 0.40 + hash2(i, 9, 74) * 0.55;
     g.addColorStop(0, `rgba(0,0,0,${a})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
@@ -236,7 +229,7 @@ function erode(ctx, size) {
   }
 
   // Chips and pits: small hard bites out of the lines.
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < 1500; i++) {
     const x = hash2(i, 11, 75) * size, y = hash2(i, 13, 76) * size;
     const r = size * 0.0016 * (0.6 + hash2(i, 17, 77) * 3.4);
     ctx.fillStyle = `rgba(0,0,0,${0.5 + hash2(i, 19, 78) * 0.5})`;
@@ -245,7 +238,7 @@ function erode(ctx, size) {
 
   // A few long cracks running across the face, breaking strokes as they go.
   ctx.lineCap = 'round';
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 11; i++) {
     let x = hash2(i, 23, 79) * size, y = hash2(i, 29, 80) * size;
     let a = hash2(i, 31, 81) * Math.PI * 2;
     ctx.strokeStyle = `rgba(0,0,0,${0.45 + hash2(i, 37, 82) * 0.4})`;
@@ -373,21 +366,31 @@ function graniteTexture(size = 1024) {
  * the angle into whole segments and wrapping means both copies get the same
  * displacement.
  */
-function roughen(geo, segments, amount, seed) {
+function roughen(geo, segments, amount, seed, dressed = null) {
   const pos = geo.attributes.position;
   const TAU = Math.PI * 2;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const r = Math.hypot(x, z);
     if (r < 1e-4) continue; // the cap's centre pole — leave it on the axis
+    // A DRESSED band: the stretch of the shaft the chart is cut into is left
+    // very nearly true. A mason levels the panel before carving it, and there
+    // is a blunter reason too — the carving is a flat disc standing just off
+    // the face, so a face that wanders by five per cent of its own radius
+    // swallows half of it. That is exactly what ate the bottom of the wheel.
+    let amt = amount;
+    if (dressed && y > dressed.y0 && y < dressed.y1) {
+      const t = Math.min((y - dressed.y0) / dressed.fade, (dressed.y1 - y) / dressed.fade, 1);
+      amt = amount * (1 - 0.93 * Math.max(0, t));
+    }
     const ai = ((Math.round(((Math.atan2(z, x) + Math.PI) / TAU) * segments) % segments) + segments) % segments;
     const yi = Math.round(y * 2.6);
     const n = (hash2(ai, yi, seed) - 0.5)
       + (hash2(ai * 7 + 3, yi * 3 + 1, seed + 17) - 0.5) * 0.55;
-    const k = 1 + n * amount;
+    const k = 1 + n * amt;
     pos.setX(i, x * k);
     pos.setZ(i, z * k);
-    pos.setY(i, y + (hash2(ai * 5 + 2, yi * 11 + 7, seed + 29) - 0.5) * amount * 0.9);
+    pos.setY(i, y + (hash2(ai * 5 + 2, yi * 11 + 7, seed + 29) - 0.5) * amt * 0.9);
   }
   pos.needsUpdate = true;
   geo.computeVertexNormals();
@@ -415,6 +418,11 @@ export class SettlementStone3D {
     const group = new Group();
     const h = smoothHeightAt(0, 0);
 
+    // How far up the shaft the carving sits. Declared here because the stone
+    // itself has to know: the band it lands on is left dressed rather than
+    // weathered.
+    const FRAC = 0.34;
+
     const granite = graniteTexture();
     const stoneMat = new MeshStandardMaterial({
       map: granite, roughness: 0.93, metalness: 0.02,
@@ -434,7 +442,14 @@ export class SettlementStone3D {
 
     // Ten height segments give the shaft enough corners to wander off true
     // down its length; at one segment it could only ever lean, not weather.
-    const shaft = new Mesh(roughen(new CylinderGeometry(BASE_W * 0.74, BASE_W, SHAFT_H, 4, 10), 4, 0.075, 23), stoneMat);
+    // The dressed band is in the cylinder's OWN local Y, which runs from
+    // -SHAFT_H/2 to +SHAFT_H/2 about its middle — FRAC measures from the base,
+    // so it has to be shifted before it means anything here.
+    const bandMid = (FRAC - 0.5) * SHAFT_H;
+    const shaft = new Mesh(roughen(
+      new CylinderGeometry(BASE_W * 0.74, BASE_W, SHAFT_H, 4, 14), 4, 0.075, 23,
+      { y0: bandMid - 1.5, y1: bandMid + 1.5, fade: 0.7 },
+    ), stoneMat);
     shaft.rotation.y = Math.PI / 4;
     shaft.position.set(0, h + 1.08 + SHAFT_H / 2, 0);
 
@@ -457,13 +472,9 @@ export class SettlementStone3D {
     // moves inward as it rises. The first attempt used a flat fraction of the
     // base width and left the carving hovering a third of a unit in front of
     // the stone it was supposed to be cut into.
-    // Low enough to actually READ from the square. At 0.60 the carving sat
-    // seven units up and you had to fly to see it, which is no use for the
-    // one thing on this stone anybody is meant to look at.
-    const FRAC = 0.34;
     const faceY = h + 1.08 + SHAFT_H * FRAC;
     const rAtFace = BASE_W + (BASE_W * 0.74 - BASE_W) * FRAC;
-    const faceZ = rAtFace * Math.SQRT1_2 + 0.01;
+    const faceZ = rAtFace * Math.SQRT1_2 + 0.05;
     const rChart = rAtFace * 0.62;
 
     const chart = new Mesh(

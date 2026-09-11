@@ -34,7 +34,6 @@ permissions:
   contents: write
   pages: write
   id-token: write
-  models: read
 
 concurrency:
   group: settlement
@@ -77,7 +76,12 @@ jobs:
         id: critic
         continue-on-error: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Whichever provider Kevin has given a key for — see sim/critic.mjs
+          # for the two free ones that work. With no key the step says so and
+          # the settlement carries on without it.
+          CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
+          CRITIC_URL: ${{ vars.CRITIC_URL }}
+          CRITIC_MODEL: ${{ vars.CRITIC_MODEL }}
         run: node sim/critic.mjs
 
       - name: Check the new rules

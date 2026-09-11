@@ -16,11 +16,28 @@
  * verify.mjs before the world is rebuilt, and a rulebook that fails is thrown
  * away with the last good one kept. See the workflow.
  *
- * WHERE IT RUNS. GitHub Actions, on GitHub Models, on the repository's own
- * token — free, and nothing against Kevin's Claude usage. It is handed a real
- * screenshot of the world so its criticism is about THIS place rather than
- * about video games in general, which is the whole difference between a useful
- * note and a fortune cookie.
+ * WHERE IT RUNS. On a GitHub runner, against whichever model Kevin has given
+ * it a key for — nothing against his Claude usage, and nothing installed on
+ * his machine. It is handed a real screenshot of the world so its criticism is
+ * about THIS place rather than about video games in general, which is the
+ * whole difference between a useful note and a fortune cookie.
+ *
+ * NOT TIED TO ONE PROVIDER, and that is not future-proofing for its own sake:
+ * the first version used GitHub Models, on the repository's own token, and the
+ * very first scheduled run came back "GitHub Models is temporarily unavailable
+ * as part of a scheduled retirement brownout". A service that is being retired
+ * is a bad thing to hard-code. So it speaks the OpenAI chat-completions shape,
+ * which every provider worth using accepts, and the endpoint, model and key
+ * are three environment variables. Change provider by changing a secret.
+ *
+ * The known-good free ones, for whoever reads this next:
+ *   Google AI Studio  https://generativelanguage.googleapis.com/v1beta/openai
+ *                     model gemini-2.0-flash — free tier, sees images
+ *   Groq              https://api.groq.com/openai/v1
+ *                     model meta-llama/llama-4-scout-17b-16e-instruct
+ *
+ * With no key it does nothing and says so. The settlement's clock does not
+ * depend on it: the town lives whether or not anybody is criticising it.
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
@@ -30,8 +47,10 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RULEBOOK = join(HERE, 'rulebook.mjs');
 
-const ENDPOINT = 'https://models.github.ai/inference/chat/completions';
-const MODEL = process.env.CRITIC_MODEL || 'openai/gpt-4o';
+const BASE = (process.env.CRITIC_URL || 'https://generativelanguage.googleapis.com/v1beta/openai').replace(/\/$/, '');
+const ENDPOINT = `${BASE}/chat/completions`;
+const MODEL = process.env.CRITIC_MODEL || 'gemini-2.0-flash';
+const KEY = process.env.CRITIC_KEY;
 
 /** Every model the world really has. Naming one that is not here is refused. */
 function kinds() {
@@ -75,8 +94,10 @@ tag is one of: clutter tall edge accent plain sacred
 needs 20-110, n 1-8, target 10-160.`;
 
 async function ask(state, shot) {
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) { console.log('no token — critic skipped'); return null; }
+  if (!KEY) {
+    console.log('no CRITIC_KEY set — the town lives on, uncriticised');
+    return null;
+  }
 
   const content = [{ type: 'text', text:
     `${BRIEF}\n\nSCORES RIGHT NOW\n${JSON.stringify(state.quality, null, 1)}\n\n`
@@ -90,7 +111,7 @@ async function ask(state, shot) {
 
   const res = await fetch(ENDPOINT, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: MODEL, temperature: 0.8, messages: [{ role: 'user', content }] }),
   });
   if (!res.ok) { console.log(`critic unavailable: ${res.status} ${await res.text()}`.slice(0, 400)); return null; }

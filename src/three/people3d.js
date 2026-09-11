@@ -23,20 +23,28 @@
  */
 
 import {
-  Group, ConeGeometry, SphereGeometry, IcosahedronGeometry,
-  MeshToonMaterial, MeshBasicMaterial, Mesh, Color, Vector3,
+  Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3,
 } from 'three';
 import { smoothHeightAt, isWater, hash2 } from '../app/terrain.js';
-import { toonRamp } from './terrain3d.js';
+import { PLOTS, CIVIC } from '../app/village.js';
+import { loadCharacters, makeCharacter, kindFor } from './characters.js';
 
-const robeGeo = new ConeGeometry(0.32, 0.9, 8);
-const headGeo = new SphereGeometry(0.19, 10, 8);
-// A bare cone-and-sphere read as exactly that. A hood — a second, smaller
-// cone overlapping the head from above — and two angled sleeve-cones are
-// what actually make it read as a hooded figure rather than a toy.
-const hoodGeo = new ConeGeometry(0.27, 0.55, 8);
-const armGeo = new ConeGeometry(0.07, 0.48, 6);
 const markerGeo = new IcosahedronGeometry(0.1, 1);
+
+/** How tall a session stands, in world units. */
+const HEIGHT = 1.8;
+
+/**
+ * What each session's state looks like. `working` walks on the spot because
+ * a busy session should read as busy from across the square; `waiting` stands
+ * still under its marker, which is the one state Kevin is actually meant to
+ * notice and act on.
+ */
+const STATE_ANIM = {
+  working: { clip: 'Walking_A', timeScale: 1.0 },
+  waiting: { clip: 'Idle_A', timeScale: 1.0 },
+  resting: { clip: 'Idle_B', timeScale: 0.6 },
+};
 
 /** A simple string hash — session ids are stable strings, not numbers. */
 function hashString(s) {
@@ -53,29 +61,32 @@ function hashString(s) {
  * water if the hash happens to land in the river, since the town's centre
  * sits right against it.
  */
+/** Is this spot inside a building's footprint? A session standing in a wall reads as a bug. */
+function insideABuilding(x, z) {
+  for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 3.2) return true;
+  if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 4.5) return true;
+  return false;
+}
+
 function positionFor(id) {
   const seed = hashString(id) % 10007;
-  // Wide enough that even three dozen sessions at once don't stand shoulder
-  // to shoulder — verified live at 36 real sessions: the first, tighter
-  // radius packed their screen-space labels into an unreadable cluster at
-  // the default view. Spread is the fix that actually reduces overlap;
-  // fading distant labels (see main.js) only softens what wasn't spread.
+  // Sessions used to scatter across a 14-72 unit ring, which put most of them
+  // alone in empty wilderness with nothing around them — fine when the whole
+  // map was evenly covered in buildings, wrong now the settlement is a
+  // compact village. They gather in and around it instead, on the square and
+  // along the lanes, so the place reads as somewhere people actually are.
+  // Still hashed off the session id alone, so the same session stands in the
+  // same spot on every reload.
   let angle = hash2(seed, 17, 61) * Math.PI * 2;
-  let radius = 14 + hash2(seed, 19, 62) * 58;
+  let radius = 5 + hash2(seed, 19, 62) * 22;
   let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 6 && isWater(Math.round(x), Math.round(z)); tries++) {
+  for (let tries = 0; tries < 8
+    && (isWater(Math.round(x), Math.round(z)) || insideABuilding(x, z)); tries++) {
     angle = hash2(seed, 20 + tries, 63) * Math.PI * 2;
-    radius = 10 + hash2(seed, 21 + tries, 64) * 64;
+    radius = 5 + hash2(seed, 21 + tries, 64) * 24;
     x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
   }
   return { x, z };
-}
-
-/** Muted jewel tones for robes — a hooded traveller's palette, not a rainbow. */
-function robeColor(id) {
-  const seed = hashString(id);
-  const hue = ((seed >>> 8) % 360) / 360;
-  return new Color().setHSL(hue, 0.38, 0.34 + ((seed >>> 3) % 10) / 100);
 }
 
 class Figure {
@@ -87,51 +98,27 @@ class Figure {
     this.baseZ = z;
     this.seed = (hashString(id) % 1000) / 1000;
 
-    this.robeMat = new MeshToonMaterial({ color: 0x888888, gradientMap: toonRamp });
-    const robe = new Mesh(robeGeo, this.robeMat);
-    robe.position.y = 0.45;
-    robe.castShadow = true;
-    robe.receiveShadow = true;
-    this.headMat = new MeshToonMaterial({ color: 0xd9b98a, gradientMap: toonRamp });
-    const head = new Mesh(headGeo, this.headMat);
-    head.position.y = 1.0;
-    head.castShadow = true;
-    // The hood's base sits at the head's lower half and its point rises
-    // just above the crown — the head peeks out from underneath rather
-    // than the two shapes merely touching.
-    const hood = new Mesh(hoodGeo, this.robeMat);
-    hood.position.y = 1.08;
-    hood.castShadow = true;
-    // Sleeves: angled out and slightly down from where the robe is already
-    // wide, so they read as arms hanging at the figure's sides, not rods
-    // buried inside the cone.
-    const armL = new Mesh(armGeo, this.robeMat);
-    armL.position.set(-0.27, 0.6, 0);
-    armL.rotation.z = 0.45;
-    armL.castShadow = true;
-    const armR = new Mesh(armGeo, this.robeMat);
-    armR.position.set(0.27, 0.6, 0);
-    armR.rotation.z = -0.45;
-    armR.castShadow = true;
-    this.group.add(robe, head, hood, armL, armR);
+    // Which of the six this session is — hashed off its own id, so a session
+    // keeps the same face across reloads the same way it keeps the same spot.
+    this.char = makeCharacter(kindFor(hashString(id)), HEIGHT);
+    if (this.char) {
+      this.group.add(this.char.root);
+      this.char.root.rotation.y = this.seed * 6.283;
+    }
 
     this.markerMat = new MeshBasicMaterial({ color: 0xffd76a });
     this.marker = new Mesh(markerGeo, this.markerMat);
-    this.marker.position.y = 1.5;
+    this.marker.position.y = HEIGHT + 0.45;
     this.marker.visible = false;
     this.group.add(this.marker);
-
-    this.robeMat.color.copy(robeColor(id));
-    this._baseColor = this.robeMat.color.clone();
   }
 
   setState(state) {
     if (this.state === state) return;
     this.state = state;
     this.marker.visible = state === 'waiting';
-    const dim = state === 'resting';
-    this.robeMat.color.copy(this._baseColor).multiplyScalar(dim ? 0.62 : 1);
-    this.headMat.color.setHex(dim ? 0xa89578 : 0xd9b98a);
+    const anim = STATE_ANIM[state] ?? STATE_ANIM.resting;
+    if (this.char) this.char.play(anim.clip, { timeScale: anim.timeScale });
   }
 
   setHover(on) {
@@ -147,21 +134,18 @@ class Figure {
 
   dispose(scene) {
     scene.remove(this.group);
-    this.robeMat.dispose();
-    this.headMat.dispose();
+    if (this.char) this.char.dispose();
     this.markerMat.dispose();
   }
 
-  tick(elapsedS) {
-    const t = elapsedS * (this.state === 'working' ? 2.6 : 1.1) + this.seed * 10;
-    const bob = this.state === 'resting' ? 0 : Math.sin(t) * (this.state === 'working' ? 0.05 : 0.025);
-    this.group.position.y = this.h + bob;
-    this.group.rotation.y = this.state === 'resting' ? this.seed * 6.283 : this.seed * 6.283 + Math.sin(t * 0.5) * 0.25;
+  tick(elapsedS, dtS) {
+    // The skeleton does the moving now; the old sine-wave bob and sway were
+    // standing in for animation this had no way to do.
+    if (this.char) this.char.update(dtS);
     if (this.marker.visible) {
       const p = elapsedS * 3 + this.seed * 10;
-      this.marker.position.y = 1.5 + Math.sin(p) * 0.06;
-      const s = 1 + Math.sin(p * 1.7) * 0.22;
-      this.marker.scale.setScalar(s);
+      this.marker.position.y = HEIGHT + 0.45 + Math.sin(p) * 0.06;
+      this.marker.scale.setScalar(1 + Math.sin(p * 1.7) * 0.22);
     }
   }
 }
@@ -170,10 +154,22 @@ export class People3D {
   constructor(scene) {
     this.scene = scene;
     this.figures = new Map(); // id -> Figure
+    this.ready = false;
+    this._pending = null;
+    loadCharacters().then(() => {
+      this.ready = true;
+      // Build from whatever the feed already delivered while the characters
+      // were downloading — the feed only reports a CHANGED people list, so a
+      // sync that lands before the models are ready is not repeated.
+      if (this._pending) this.sync(this._pending);
+    });
   }
 
   /** Reconcile against the latest `people` array from the feed. */
   sync(people) {
+    if (!people) return;
+    this._pending = people;
+    if (!this.ready) return;
     const seen = new Set();
     for (const p of people) {
       seen.add(p.id);
@@ -192,15 +188,16 @@ export class People3D {
   }
 
   tick(dtMs) {
-    this._elapsed = (this._elapsed ?? 0) + dtMs / 1000;
-    for (const f of this.figures.values()) f.tick(this._elapsed);
+    const dtS = dtMs / 1000;
+    this._elapsed = (this._elapsed ?? 0) + dtS;
+    for (const f of this.figures.values()) f.tick(this._elapsed, dtS);
   }
 
   /** World-space head position of every current figure, for screen projection. */
   anchors() {
     const out = [];
     for (const f of this.figures.values()) {
-      out.push({ id: f.id, data: f.data, position: new Vector3(f.group.position.x, f.h + 1.25, f.group.position.z) });
+      out.push({ id: f.id, data: f.data, position: new Vector3(f.group.position.x, f.h + HEIGHT + 0.2, f.group.position.z) });
     }
     return out;
   }

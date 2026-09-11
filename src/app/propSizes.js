@@ -98,6 +98,12 @@ export function propRadius(kind) {
   return Math.max(s[0], s[2]) * KIT_SCALE * 0.5;
 }
 
+/** How tall a piece stands, in world units. Unknown kinds are treated as low. */
+export function propHeight(kind) {
+  const s = PROP_SIZE[kind];
+  return s ? s[1] * KIT_SCALE : 1.0;
+}
+
 /**
  * How far apart two pieces must stand.
  *

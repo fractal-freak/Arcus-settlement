@@ -297,7 +297,14 @@ export class Stage {
     // painterly halo on sunlight and water than the first pass of this had;
     // resolution stays quartered (see the note above the size line below),
     // since that is what performance actually measured against, not these.
-    this.bloom = new UnrealBloomPass(new Vector2(Math.round(w / 4), Math.round(h / 4)), 0.55, 0.6, 0.85);
+    // Threshold near the very top of the range, and half the strength.
+    //
+    // At 0.85 the threshold sat BELOW what plain sunlit ground reaches: the
+    // sun runs at 2.27 intensity, so any slope turned toward it clipped past
+    // the cut and bloomed, smearing big soft white holes across the middle of
+    // perfectly ordinary grass. Bloom should be for the sun and the glint off
+    // the water, which are genuinely brighter than white, and nothing else.
+    this.bloom = new UnrealBloomPass(new Vector2(Math.round(w / 4), Math.round(h / 4)), 0.28, 0.5, 0.98);
     this.composer.addPass(this.bloom);
 
     this.outlinePass = new ShaderPass(outlineShader);
@@ -409,7 +416,10 @@ export class Stage {
     // Colour: warm and low near the horizon, pale and high at noon.
     const lowness = Math.max(0, 1 - Math.max(0, sky.sun.alt) / 22);
     this.sun.color.copy(SUN_HIGH).lerp(SUN_LOW, lowness * 0.85);
-    this.sun.intensity = 0.12 + 2.15 * l;
+    // 2.27 at noon drove lit ground clean past white before tone mapping had
+    // any say; 1.62 keeps the cel bands reading as bands instead of as one
+    // blown highlight.
+    this.sun.intensity = 0.10 + 1.52 * l;
 
     // The sky itself, not just the light: cool blue when the sun sits high,
     // golden when it is low — the SAME lowness number driving everything

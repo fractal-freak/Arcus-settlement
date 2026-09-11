@@ -94,7 +94,7 @@ const PATH  = new Color(0x9a8362);   // packed earth, worn by everyone walking t
 const SURFACE_Y = WATER_LEVEL + STEP * 0.5;
 
 /** How deep the water has to get before the shore foam has faded out entirely. */
-const FOAM_DEPTH = 0.75;
+const FOAM_DEPTH = 0.45;
 
 const tmpC = new Color();
 
@@ -219,10 +219,15 @@ const waterFrag = `
     // band right at the edge — it used to cover any tile with a few dry
     // neighbours, which at a diagonal bank meant broad white wedges.
     float breathe = 0.5 + 0.5 * sin(uTime * 1.8 + vWorldXZ.x * 0.5 + vWorldXZ.y * 0.5);
-    float foamAmt = smoothstep(0.66, 0.95, vFoam + breathe * 0.10);
+    // CAPPED, and that cap is the fix for the white holes scattered over the
+    // map. vFoam is depth-derived, so a pond that is shallow everywhere was
+    // foam everywhere — mixed all the way to the foam colour it came out as a
+    // solid white patch on the landscape rather than a small body of water.
+    // A shore gets a bright rim; nothing ever goes fully white.
+    float foamAmt = min(0.58, smoothstep(0.70, 0.97, vFoam + breathe * 0.08));
     vec3 color = mix(base, uFoamColor, foamAmt);
 
-    gl_FragColor = vec4(color, mix(uOpacity, 1.0, foamAmt * 0.6));
+    gl_FragColor = vec4(color, mix(uOpacity, 1.0, foamAmt * 0.5));
   }
 `;
 const waterMat = new ShaderMaterial({

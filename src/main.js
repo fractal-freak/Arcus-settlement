@@ -21,6 +21,7 @@ import { Folk3D } from './three/folk3d.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
+import { Raycaster } from 'three';
 import { smoothHeightAt } from './app/terrain.js';
 
 const stage = new Stage(document.body);
@@ -273,9 +274,46 @@ function syncCrew() {
   }
 }
 
+/**
+ * Which session labels are behind something solid.
+ *
+ * The pills are DOM, drawn over the canvas, so they know nothing about the
+ * world in front of them — a session on the far side of the settlement had
+ * its label sitting brightly on top of the building hiding it, which read as
+ * a bug because it is one. A ray from the camera to each figure's head, and
+ * anything solid closer than the figure means the label is out of sight.
+ *
+ * Throttled: the answer only changes when the camera or a figure moves, and
+ * a ray through the terrain's chunk meshes is the most expensive thing this
+ * overlay does. Every fourth frame is far faster than the eye.
+ */
+const ray = new Raycaster();
+const tmpDir = new Vector3();
+const occluded = new Set();
+let occludeTick = 0;
+
+function updateOcclusion(anchors) {
+  if (occludeTick++ % 4 !== 0) return;
+  // Buildings, landmarks and the stone — plus the land itself, so a figure
+  // over the brow of a hill is hidden too.
+  const solid = [town3d.group, ...terrain.chunks.values()];
+  const from = stage.camera.position;
+  for (const a of anchors) {
+    tmpDir.subVectors(a.position, from);
+    const reach = tmpDir.length();
+    tmpDir.divideScalar(reach || 1);
+    ray.set(from, tmpDir);
+    ray.far = reach - 0.45; // stop just short, or the figure's own ground hits
+    const hit = ray.intersectObjects(solid, true);
+    if (hit.length) occluded.add(a.id); else occluded.delete(a.id);
+  }
+}
+
 function syncPeopleOverlay() {
+  const anchors = people.anchors();
+  updateOcclusion(anchors);
   const seen = new Set();
-  for (const a of people.anchors()) {
+  for (const a of anchors) {
     seen.add(a.id);
     let el = pills.get(a.id);
     if (!el) {
@@ -297,8 +335,11 @@ function syncPeopleOverlay() {
     }
     tmpProj.copy(a.position).project(stage.camera);
     const behind = tmpProj.z > 1;
-    el.style.display = behind ? 'none' : '';
-    if (behind) continue;
+    // Out of sight is out of sight, whether that is behind the camera or
+    // behind a tavern.
+    const hidden = behind || occluded.has(a.id);
+    el.style.display = hidden ? 'none' : '';
+    if (hidden) continue;
     const sx = (tmpProj.x * 0.5 + 0.5) * innerWidth;
     const sy = (-tmpProj.y * 0.5 + 0.5) * innerHeight;
     el.style.transform = `translate(${sx}px, ${sy}px)`;

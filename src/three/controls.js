@@ -40,15 +40,17 @@ export class Rig {
     c.rotateSpeed = 0.75;
     c.zoomSpeed = 0.9;
 
-    // LEFT ORBITS. It used to pan, on the reasoning that crossing the ground
-    // is what you want most often — which was true when the world was an even
-    // carpet of buildings and there was nothing to walk round. With one
-    // settlement to look at, the thing you want most often is to SEE THE
-    // OTHER SIDE of it, and nobody discovers that it lives on the right
-    // button: the on-screen hint only ever said "drag to move", so the world
-    // could only be viewed from the one angle it opened at.
-    c.mouseButtons = { LEFT: MOUSE.ROTATE, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN };
-    c.touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_PAN };
+    // Drag moves; SHIFT-drag spins. Crossing the ground is what you want
+    // ninety times in a hundred, so it keeps the plain drag.
+    //
+    // The shift half is free: OrbitControls already swaps ROTATE and PAN when
+    // ctrl, meta or shift is held, so binding LEFT to PAN gives shift-drag
+    // rotation with no extra code. It always had — the reason the world could
+    // only ever be seen from one angle was never the bindings, it was that
+    // the on-screen hint said "drag to move" and stopped there, so there was
+    // nothing to tell anyone the other half existed.
+    c.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE };
+    c.touches = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_ROTATE };
 
     c.target.set(0, 1.1, 0);
 
@@ -56,7 +58,7 @@ export class Rig {
     this.autoTilt = true;
     domElement.addEventListener('wheel', () => { this.autoTilt = true; }, { passive: true });
     domElement.addEventListener('pointerdown', (e) => {
-      if (e.button === 0 || e.shiftKey) this.autoTilt = false;
+      if (e.button === 2 || e.shiftKey) this.autoTilt = false;
     });
 
     this._v = new Vector3();

@@ -32,7 +32,7 @@
  * at all. The plan is the same on every load.
  */
 
-import { smoothHeightAt, isWater, groundAt, GROUND } from './terrain.js';
+import { smoothHeightAt, isWater, groundAt, propAt, GROUND } from './terrain.js';
 
 /** The square: open ground around the Settlement Stone, never built on. */
 export const SQUARE = { x: 0, z: 0, r: 12.0 };
@@ -351,4 +351,38 @@ export function pathAmountAt(x, z) {
   }
   if (best <= 0) return 1;
   return Math.max(0, 1 - best / PATH_EDGE);
+}
+
+
+/**
+ * Is there actually a tree, bush, rock or ruin standing on this tile?
+ *
+ * ONE source of truth for that question, because there are two answers and
+ * only one of them is true on screen: propAt() says what the landscape
+ * generator WANTS on a tile, but terrain3d.js skips props on village ground,
+ * so inside the settlement the generator's answer is routinely overruled.
+ * Anything that needs to keep out of the scenery has to ask the same question
+ * the renderer answered, or it will dodge trees that were never drawn and
+ * walk through ones that were.
+ */
+export function propStandsAt(tx, tz) {
+  if (isReserved(tx, tz)) return false;
+  return !!propAt(tx, tz);
+}
+
+/** Is any prop close enough to `radius` of this point to overlap something standing there? */
+export function propNear(x, z, radius) {
+  const r = Math.ceil(radius) + 1;
+  const cx = Math.round(x), cz = Math.round(z);
+  for (let dx = -r; dx <= r; dx++) {
+    for (let dz = -r; dz <= r; dz++) {
+      const tx = cx + dx, tz = cz + dz;
+      // Props are jittered off their tile centre by up to 0.31 either way
+      // (terrain3d.js), so the test allows for that rather than assuming the
+      // tree stands exactly in the middle of its tile.
+      if (Math.hypot(tx + 0.5 - x, tz + 0.5 - z) > radius + 0.85) continue;
+      if (propStandsAt(tx, tz)) return true;
+    }
+  }
+  return false;
 }

@@ -19,6 +19,8 @@ canvas { display: block; }
   position: fixed; right: 14px; bottom: 12px; z-index: 5;
   font-size: 11px; color: #6e6888; pointer-events: none;
 }
+/* The half nobody would otherwise find. */
+#hint b { color: #a9a2c6; font-weight: 600; }
 
 /* One pill per open Claude Code session, positioned every frame by
    projecting its 3D figure through the camera (see syncPeopleOverlay in
@@ -73,33 +75,57 @@ canvas { display: block; }
 /* ── The crew panel ───────────────────────────────────────────────────────
    Every session at work, always on screen, and every row flies the camera to
    whoever it names. Without it the only way to find a session was to spot its
-   pill somewhere in the landscape and hope it was facing you. */
+   pill somewhere in the landscape and hope it was facing you.
+
+   Dressed as a notice board in the square rather than a dark app panel: aged
+   paper, ink, a timber edge. The world it sits over is warm stone and wood at
+   golden hour, and a sheet of cold blue-black glass in the corner of it read
+   as a browser window someone had left open on top. */
 #crew {
   position: fixed; left: 12px; top: 92px; z-index: 5;
-  width: 232px; max-height: calc(100vh - 180px); overflow-y: auto;
-  background: rgba(12, 11, 22, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px; padding: 8px; backdrop-filter: blur(6px);
-  font-size: 11.5px; color: #c7c2da;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  width: 236px; max-height: calc(100vh - 180px); overflow-y: auto;
+  /* Parchment, warmed unevenly the way a real sheet is. */
+  background:
+    radial-gradient(120% 80% at 18% 0%, rgba(255, 250, 232, 0.96), rgba(0, 0, 0, 0) 60%),
+    radial-gradient(90% 70% at 95% 100%, rgba(198, 172, 126, 0.55), rgba(0, 0, 0, 0) 55%),
+    #e6d8b8;
+  border: 1px solid #6b5535;
+  border-radius: 4px;
+  padding: 9px 9px 10px;
+  font-size: 11.5px; color: #4a3c28;
+  /* The timber edge, and the shadow it casts on the ground behind it. */
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 252, 240, 0.5),
+    inset 0 0 22px rgba(120, 92, 52, 0.22),
+    0 10px 26px rgba(28, 20, 10, 0.45);
 }
 #crew h2 {
-  margin: 2px 4px 7px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: #7d7796;
+  margin: 1px 3px 8px; padding-bottom: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #6b5535;
+  border-bottom: 1px solid rgba(107, 85, 53, 0.35);
 }
 #crew .row {
   display: block; width: 100%; text-align: left; cursor: pointer;
-  background: none; border: 0; border-radius: 7px; padding: 6px 7px;
-  color: inherit; font: inherit; margin-bottom: 2px;
+  background: none; border: 0; border-radius: 3px; padding: 5px 6px;
+  color: inherit; font: inherit; margin-bottom: 1px;
 }
-#crew .row:hover, #crew .row:focus { background: rgba(255, 255, 255, 0.07); outline: none; }
-#crew .row.here { background: rgba(255, 255, 255, 0.11); }
+#crew .row:hover, #crew .row:focus { background: rgba(107, 85, 53, 0.13); outline: none; }
+#crew .row.here {
+  background: rgba(107, 85, 53, 0.2);
+  box-shadow: inset 2px 0 0 #8a6a2f;
+}
 #crew .n { display: flex; align-items: center; gap: 6px; }
-#crew .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: #6f6a86; }
-#crew .row.working .dot { background: #7fd4ff; }
-#crew .row.waiting .dot { background: #ffd76a; }
+#crew .dot {
+  width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+  background: #9a8a70;
+  box-shadow: 0 0 0 1px rgba(74, 60, 40, 0.35);
+}
+#crew .row.working .dot { background: #3f7f4a; box-shadow: 0 0 0 1px rgba(30, 70, 36, 0.5); }
+#crew .row.waiting .dot { background: #c8912a; box-shadow: 0 0 0 1px rgba(120, 80, 16, 0.5); }
 #crew .nm {
   flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; color: #e6e2f2;
+  white-space: nowrap; color: #35291a; font-weight: 500;
 }
-#crew .sub { margin: 2px 0 0 13px; font-size: 10px; color: #837da0; }
-#crew .empty { padding: 6px 7px; color: #7d7796; }
+#crew .sub { margin: 1px 0 0 13px; font-size: 10px; color: #7a674b; }
+#crew .empty { padding: 6px 7px; color: #7a674b; }

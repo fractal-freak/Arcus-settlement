@@ -26,7 +26,7 @@ import {
   Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3,
 } from 'three';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { PLOTS, CIVIC } from '../app/village.js';
+import { PLOTS, CIVIC, propNear } from '../app/village.js';
 import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
 
 const markerGeo = new IcosahedronGeometry(0.1, 1);
@@ -75,6 +75,7 @@ function unstandable(x, z) {
   if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
   for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
   if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
+  if (propNear(x, z, 1.0)) return true; // not inside a tree
   return false;
 }
 

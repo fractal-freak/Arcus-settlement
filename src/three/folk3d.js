@@ -29,7 +29,7 @@
 
 import { Group } from 'three';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { PLOTS, CIVIC } from '../app/village.js';
+import { PLOTS, CIVIC, propNear } from '../app/village.js';
 import { loadCharacters, makeCharacter, kindFor } from './characters.js';
 
 /** Shorter than a session figure (1.8) — a real, readable difference at a glance. */
@@ -47,11 +47,16 @@ const MIXERS_PER_FRAME = 8;
  */
 const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
 
-function unstandable(x, z) {
+function unstandable(x, z, clear = 1.0) {
   if (isWater(Math.round(x), Math.round(z))) return true;
   if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
   for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
   if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
+  // And no standing inside a tree. `clear` covers the villager's whole wander
+  // loop, not just the spot they start on — they pace a circle around home,
+  // so testing the centre alone let them walk straight through a bush on the
+  // far side of it.
+  if (propNear(x, z, clear)) return true;
   return false;
 }
 
@@ -60,13 +65,16 @@ function homeFor(i) {
   const seed = hash2(i, 41, 131);
   let angle = hash2(i, 43, 132) * Math.PI * 2;
   let radius = 6 + hash2(i, 45, 133) * 32;
+  // The wander radius is decided here rather than later, so the clear-ground
+  // test can cover the whole loop this villager will actually walk.
+  const wanderR = 1.2 + (Math.floor(seed * 100000) % 7) / 4;
   let x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-  for (let tries = 0; tries < 14 && unstandable(x, z); tries++) {
+  for (let tries = 0; tries < 18 && unstandable(x, z, wanderR + 0.6); tries++) {
     angle = hash2(i, 47 + tries, 134) * Math.PI * 2;
     radius = 6 + hash2(i, 49 + tries, 135) * 34;
     x = Math.cos(angle) * radius; z = Math.sin(angle) * radius;
   }
-  return { x, z, seed };
+  return { x, z, seed, wanderR };
 }
 
 export class Folk3D {
@@ -115,7 +123,7 @@ export class Folk3D {
         char,
         home,
         phase: (seedInt % 1000) / 1000,
-        wanderR: 1.2 + (seedInt % 7) / 4,
+        wanderR: home.wanderR,
         speed: 0.35 + (seedInt % 11) / 40,
         lastTick: 0,
       });

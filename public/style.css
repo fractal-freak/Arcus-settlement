@@ -22,6 +22,26 @@ canvas { display: block; }
 /* The half nobody would otherwise find. */
 #hint b { color: #a9a2c6; font-weight: 600; }
 
+/* ── Sound ────────────────────────────────────────────────────────────────
+   Off until it is asked for, which is not a design choice: no browser will
+   make a sound before somebody has clicked something, and a page that tries
+   leaves a dead audio context behind. Sits by the camera hint because it
+   belongs to the same family of things — how you get around, and what you
+   hear while you do. */
+#sound {
+  position: fixed; right: 14px; bottom: 32px; z-index: 5;
+  padding: 4px 9px; border-radius: 3px;
+  background: rgba(20, 18, 31, 0.55); border: 1px solid rgba(255, 255, 255, 0.14);
+  font: inherit; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #8f89a8; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+#sound:hover { color: #d8d3ea; border-color: rgba(255, 255, 255, 0.34); }
+#sound .on { display: none; }
+#sound[aria-pressed="true"] { color: #cfe6ff; border-color: rgba(150, 226, 255, 0.45); }
+#sound[aria-pressed="true"] .on { display: inline; }
+#sound[aria-pressed="true"] .off { display: none; }
+
 /* One pill per open Claude Code session, positioned every frame by
    projecting its 3D figure through the camera (see syncPeopleOverlay in
    main.js) — the container never intercepts a click, only the pills do,

@@ -20,6 +20,7 @@ import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
 import { DigSite3D } from './three/digsite3d.js';
 import { setPlacements, blocked } from './app/occupied.js';
+import { Ambience } from './app/ambience.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
 import { Built3D } from './three/built3d.js';
 import { Rig } from './three/controls.js';
@@ -35,6 +36,7 @@ const town3d = new Town3D(stage.scene);
 const landmarks = new Landmarks3D(stage.scene);
 const folk = new Folk3D(stage.scene);
 const digs = new DigSite3D(stage.scene);
+const ambience = new Ambience();
 const settlementStone = new SettlementStone3D(stage.scene);
 const built = new Built3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
@@ -496,6 +498,7 @@ function frame(dtMs) {
   clampAboveGround();
   people.tick(dtMs);
   folk.tick(elapsed / 1000);
+  ambience.update(light, stage.camera, rig.target, elapsed / 1000);
 
   const t = rig.target;
   // How much DETAILED land (cliffs, trees, water) to keep loaded. Zoomed out
@@ -539,6 +542,28 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
+/**
+ * Sound, remembered.
+ *
+ * `resume()` has to happen inside a real gesture, so a page reloaded with
+ * sound already on still cannot start it by itself — it arms instead, and the
+ * next click anywhere in the world turns it on. That is one click rather than
+ * hunting for the button again.
+ */
+const soundBtn = document.getElementById('sound');
+let soundWanted = false;
+try { soundWanted = localStorage.getItem('sound') === '1'; } catch { /* private window */ }
+
+function showSound(on) {
+  soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  try { localStorage.setItem('sound', on ? '1' : '0'); } catch { /* private window */ }
+}
+soundBtn.addEventListener('click', () => { showSound(ambience.toggle()); });
+if (soundWanted) {
+  const arm = () => { showSound(ambience.resume()); removeEventListener('pointerdown', arm); };
+  addEventListener('pointerdown', arm);
+}
+
 addEventListener('keydown', (e) => {
   if (e.key === 'Home') {
     rig.target.set(0, smoothHeightAt(0, 0), 0);
@@ -553,7 +578,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, town3d, built, landmarks, folk, digs, settlementStone, rig, feed,
+  stage, sky, terrain, people, town3d, built, landmarks, folk, digs, ambience, settlementStone, rig, feed,
   // Exposed so a check can ask the world the same question the world asked
   // itself when it put somebody somewhere — see the note on step().
   blocked,

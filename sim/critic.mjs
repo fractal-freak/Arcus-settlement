@@ -32,7 +32,11 @@
  *
  * The known-good free ones, for whoever reads this next:
  *   Google AI Studio  https://generativelanguage.googleapis.com/v1beta/openai
- *                     model gemini-2.0-flash — free tier, sees images
+ *                     model gemini-3.6-flash — free tier, sees images.
+ *                     Model names there go stale fast: 2.0-flash was already
+ *                     retired the day this was written, and the API says so
+ *                     with a 404 that names its replacement. A 404 here means
+ *                     the model, not the key; 401 or 403 means the key.
  *   Groq              https://api.groq.com/openai/v1
  *                     model meta-llama/llama-4-scout-17b-16e-instruct
  *
@@ -49,7 +53,7 @@ const RULEBOOK = join(HERE, 'rulebook.mjs');
 
 const BASE = (process.env.CRITIC_URL || 'https://generativelanguage.googleapis.com/v1beta/openai').replace(/\/$/, '');
 const ENDPOINT = `${BASE}/chat/completions`;
-const MODEL = process.env.CRITIC_MODEL || 'gemini-2.0-flash';
+const MODEL = process.env.CRITIC_MODEL || 'gemini-3.6-flash';
 const KEY = process.env.CRITIC_KEY;
 
 /** Every model the world really has. Naming one that is not here is refused. */

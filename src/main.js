@@ -19,6 +19,7 @@ import { Town3D } from './three/town3d.js';
 import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
+import { Built3D } from './three/built3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { Raycaster } from 'three';
@@ -32,6 +33,7 @@ const town3d = new Town3D(stage.scene);
 const landmarks = new Landmarks3D(stage.scene);
 const folk = new Folk3D(stage.scene);
 const settlementStone = new SettlementStone3D(stage.scene);
+const built = new Built3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
 
 rig.target.set(0, smoothHeightAt(0, 0), 0);
@@ -111,7 +113,11 @@ const feed = new Feed((d) => {
     landmarks.sync(d.town);
     folk.sync(d.town);
   }
-  if (d.life) syncChronicle(d.life);
+  if (d.life) {
+    syncChronicle(d.life);
+    // Everything the citizens have finished, standing where they put it.
+    built.sync(d.life.placements);
+  }
   if (d.people) {
     people.sync(d.people);
     // Once per feed tick, not once per frame: this writes DOM, and the list
@@ -369,13 +375,41 @@ function syncChronicle(L) {
     body.innerHTML = '<div class="empty">Nothing has happened here yet. Come back in a while.</div>';
     return;
   }
-  const html = entries.slice(0, 40).map((e) =>
+  const html = standingHtml(L) + entries.slice(0, 40).map((e) =>
     `<div class="e ${esc(e.kind)}"><div class="d">${esc(e.at)}</div><div class="t">${esc(e.text)}</div></div>`,
   ).join('');
-  if (body.dataset.sig !== String(entries[0].tick) + entries.length) {
+  const sig = `${entries[0].tick}:${entries.length}:${L.quality?.overall ?? ''}`;
+  if (body.dataset.sig !== sig) {
     body.innerHTML = html;
-    body.dataset.sig = String(entries[0].tick) + entries.length;
+    body.dataset.sig = sig;
   }
+}
+
+/**
+ * How good this place has got, as the settlement itself scores it.
+ *
+ * The citizens' whole job is to make this look like somewhere expensive was
+ * spent, and they decide what to do next by grading themselves on seven things
+ * — see arcus-quality.mjs, which holds the rubric and the reasons. Showing the
+ * marks is what turns that from a hidden mechanic into something worth coming
+ * back to check: the bars move overnight, and the one they are worst at is the
+ * one they are all working on.
+ */
+function standingHtml(L) {
+  const q = L.quality;
+  if (!q || !Array.isArray(L.dimensions)) return '';
+  const rows = L.dimensions.map((d) => {
+    const v = q.scores[d.key] ?? 0;
+    const on = v >= 0.999;
+    return `<div class="sd${d.key === q.weakest ? ' now' : ''}${on ? ' full' : ''}" title="${esc(d.why)}">`
+      + `<span class="n">${esc(d.name)}</span>`
+      + `<span class="bar"><i style="width:${Math.round(v * 100)}%"></i></span></div>`;
+  }).join('');
+  const ask = (L.proposals || []).slice(-1)[0];
+  return '<div class="standing">'
+    + `<div class="sh"><span>The work</span><b>${(q.overall * 100).toFixed(0)}</b></div>${rows}`
+    + (ask ? `<div class="ask">${esc(ask.text)}</div>` : '')
+    + '</div>';
 }
 
 function syncPeopleOverlay() {
@@ -505,7 +539,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, town3d, landmarks, folk, settlementStone, rig, feed,
+  stage, sky, terrain, people, town3d, built, landmarks, folk, settlementStone, rig, feed,
   step(frames = 1, ms = 16) {
     for (let i = 0; i < frames; i++) frame(ms);
     return this.stats();

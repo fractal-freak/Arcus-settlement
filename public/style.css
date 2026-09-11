@@ -197,4 +197,48 @@ canvas { display: block; }
 #chron .e.peace .t::before { content: '☮ '; color: #3f7f4a; }
 #chron .e.find  .t::before { content: '◆ '; color: #8a6a2f; }
 #chron .e.arrival .t::before { content: '➤ '; color: #6b5535; }
+#chron .e.rework  .t::before { content: '⟳ '; color: #6b5535; }
+#chron .e.turn    .t::before { content: '↷ '; color: #6b5535; }
+#chron .e.stuck   .t::before { content: '⌁ '; color: #8a7457; }
 #chron .empty { padding: 8px 3px; color: #7a674b; }
+
+/* ── How the work is going ────────────────────────────────────────────────
+   The settlement's own marks out of seven, pinned above its history. Same
+   parchment, ruled off like a tally sheet, because that is what it is. */
+#chron .standing {
+  margin: -2px 0 9px; padding: 0 3px 8px;
+  border-bottom: 1px solid rgba(107, 85, 53, 0.35);
+}
+#chron .sh {
+  display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #6b5535;
+}
+#chron .sh b {
+  margin-left: auto; font-size: 15px; letter-spacing: 0;
+  font-weight: 700; color: #35291a;
+}
+#chron .sd { display: flex; align-items: center; gap: 7px; padding: 1.5px 0; }
+#chron .sd .n {
+  flex: 0 0 84px; font-size: 10px; color: #7a674b;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#chron .sd .bar {
+  flex: 1; height: 5px; border-radius: 3px;
+  background: rgba(107, 85, 53, 0.18);
+  box-shadow: inset 0 1px 1px rgba(74, 60, 40, 0.25);
+}
+#chron .sd .bar i { display: block; height: 100%; border-radius: 3px; background: #8a6a2f; }
+#chron .sd.full .bar i { background: #3f7f4a; }
+/* The one they are all working on right now. */
+#chron .sd.now .n { color: #35291a; font-weight: 700; }
+#chron .sd.now .bar i { background: #a5452b; }
+#chron .ask {
+  margin-top: 8px; padding: 6px 7px; border-radius: 3px;
+  background: rgba(107, 85, 53, 0.12);
+  font-size: 10.5px; line-height: 1.45; color: #5c4a30;
+}
+/* A manicule, the way a note in a margin has always been pointed at. Not an
+   emoji: the rest of this panel is set in text glyphs and a colour emoji in
+   among them reads as a different piece of software. */
+#chron .ask::before { content: '☞ '; color: #8a6a2f; }

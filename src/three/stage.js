@@ -433,8 +433,22 @@ export class Stage {
     this.ambient.intensity = 0.10 + 0.16 * l;
 
     this.scene.fog.color.copy(skyCol);
-    this._fogBase = 0.013 - 0.004 * l;
-    this.scene.fog.density = this._fogBase * this._fogZoomFactor();
+    /**
+     * Light enough to SEE THROUGH, at any distance and from any angle.
+     *
+     * This was 0.013 falling to 0.009 in daylight, which is a density tuned
+     * for looking thirty units across a courtyard. Three attempts to rescue
+     * it by easing the density off as the camera pulled back all failed for
+     * the same reason: they keyed off camera HEIGHT, and height is not view
+     * distance. Standing at ground level looking across the valley is the
+     * longest sightline in the world and the shortest camera height, so the
+     * one case that most needed thinning got full-strength haze.
+     *
+     * There is no clever model here now. The fog is simply light: enough to
+     * soften the treeline on the far horizon, never enough to hide the
+     * settlement from anywhere you might stand.
+     */
+    this.scene.fog.density = 0.0026 - 0.0008 * l;
     this.scene.background = skyCol;
 
     // Warm at low sun (dawn/dusk shafts), fading out near straight overhead
@@ -512,7 +526,7 @@ export class Stage {
     // effect: from high up the shafts have nothing to graze past and just
     // bloom into a white smear over the middle of the map, which was half of
     // what made a zoomed-out view hard to read.
-    const strength = inFront ? (this._rayBaseStrength ?? 0) * this._fogZoomFactor() : 0;
+    const strength = inFront ? (this._rayBaseStrength ?? 0) : 0;
     this.godRayPass.uniforms.rayStrength.value = strength;
     if (strength > 0) {
       this.godRayPass.uniforms.lightScreenPos.value.set(
@@ -522,39 +536,7 @@ export class Stage {
     }
   }
 
-  /**
-   * How much of the base fog density to actually apply, given how far out the
-   * camera has pulled.
-   *
-   * FogExp2 thickens with DISTANCE, so a density tuned to give a pleasant haze
-   * at walking height turns the whole settlement into a white sheet the moment
-   * the camera pulls back — which is exactly what zooming out was doing. The
-   * haze is worth keeping up close, where it gives the valley depth, so rather
-   * than thinning it everywhere the density is eased down as the camera
-   * retreats. Near the ground it is untouched; far out it drops to a quarter,
-   * enough to still soften the horizon without hiding the town.
-   */
-  _fogZoomFactor() {
-    const d = this.camera.position.y;
-    // Ramps over the range people actually zoom through, not a long lazy
-    // slope out to the stratosphere. The first version spread the falloff
-    // over 130 units of camera height, so at a normal pulled-back view it had
-    // thinned the haze by under a fifth — which is why it still looked as
-    // foggy as before. It is most of the way thinned by the time the camera
-    // is sixty up, and holds a little haze past that to soften the far edge of
-    // the streamed world. Tuned twice: the first two attempts both ramped too
-    // slowly and had barely touched the haze at the height people actually
-    // pull back to, which is why it still looked exactly as foggy as before.
-    const t = Math.min(1, Math.max(0, (d - 14) / 44));
-    return 1 - t * 0.82;
-  }
-
   render() {
-    // Re-evaluated every frame because it follows the CAMERA, not the sun;
-    // applySky only runs when the sky itself changes.
-    if (this._fogBase && this.scene.fog) {
-      this.scene.fog.density = this._fogBase * this._fogZoomFactor();
-    }
     this.renderer.info.reset();
     this._renderDepth();
     this._updateGodRays();

@@ -167,7 +167,9 @@ function tokens(n) {
 function showCard(p, x, y) {
   const doing = p.state === 'working' ? 'Working right now'
     : p.state === 'waiting' ? 'Open, waiting on you' : 'Resting';
-  const bits = [`<b>${doing}</b>`];
+  const bits = [];
+  if (p.who) bits.push(`<span class="who">${esc(p.who.name)}</span> · ${esc(p.who.temper)}`);
+  bits.push(`<b>${doing}</b>`);
   if (p.doing) {
     bits.push(`<span class="doing">${esc(p.doing.verb)}${p.doing.detail ? ' — ' + esc(p.doing.detail) : ''}</span>`);
   }
@@ -234,10 +236,27 @@ function syncCrew() {
   list.sort((a, b) => (rank[a.state] - rank[b.state]) || (a.idleMs - b.idleMs));
 
   if (!crew.firstChild) {
-    const h = document.createElement('h2');
-    h.textContent = 'At work';
+    // The header is the toggle. Kept in localStorage so a closed board stays
+    // closed across reloads — a panel that reopens itself every refresh is
+    // one you end up closing every refresh.
+    const h = document.createElement('button');
+    h.type = 'button';
+    h.id = 'crewToggle';
+    h.innerHTML = '<span class="arrow">▾</span><span>The settlement</span><span class="count"></span>';
+    h.addEventListener('click', () => {
+      const now = !crew.classList.contains('shut');
+      crew.classList.toggle('shut', now);
+      try { localStorage.setItem('crewShut', now ? '1' : '0'); } catch { /* private window */ }
+    });
     crew.appendChild(h);
+    const body = document.createElement('div');
+    body.id = 'crewBody';
+    crew.appendChild(body);
+    try { if (localStorage.getItem('crewShut') === '1') crew.classList.add('shut'); } catch { /* private window */ }
   }
+  const body = crew.querySelector('#crewBody');
+  const atWork = list.filter((p) => p.state !== 'resting').length;
+  crew.querySelector('.count').textContent = atWork ? `${atWork} at work` : `${list.length} here`;
 
   const seen = new Set();
   for (const p of list) {
@@ -247,7 +266,8 @@ function syncCrew() {
       row = document.createElement('button');
       row.type = 'button';
       row.className = 'row';
-      row.innerHTML = '<span class="n"><i class="dot"></i><span class="nm"></span></span><div class="sub"></div>';
+      row.innerHTML = '<span class="n"><i class="dot"></i><span class="nm"></span></span>'
+        + '<div class="job"></div><div class="sub"></div>';
       row.addEventListener('click', () => goTo(p.id));
       row.addEventListener('dblclick', () => openSession(p.id));
       row.addEventListener('pointerenter', () => { hoveredId = p.id; people.setHover(p.id); });
@@ -256,12 +276,17 @@ function syncCrew() {
       });
       crewRows.set(p.id, row);
     }
-    crew.appendChild(row); // re-appending also re-orders
+    body.appendChild(row); // re-appending also re-orders
     row.className = `row ${p.state}${followId === p.id ? ' here' : ''}`;
-    row.title = `${p.title || p.worktree || 'session'} — click to fly there, double-click to open the chat`;
+    row.title = `${p.who ? p.who.name + ' — ' : ''}${p.title || p.worktree || 'session'}\nClick to fly there, double-click to open the chat`;
+    // The person first, the work second. They are citizens of this place who
+    // happen to be working on something, not tasks that happen to have a face.
     const nm = row.querySelector('.nm');
-    const name = p.title || p.worktree || 'session';
-    if (nm.textContent !== name) nm.textContent = name;
+    const who = p.who ? p.who.name : (p.title || p.worktree || 'session');
+    if (nm.textContent !== who) nm.textContent = who;
+    const job = row.querySelector('.job');
+    const title = p.title || p.worktree || 'session';
+    if (job.textContent !== title) job.textContent = title;
     const sub = row.querySelector('.sub');
     const line = [
       p.state === 'working' ? 'working' : p.state === 'waiting' ? 'waiting on you' : ago(p.idleMs),

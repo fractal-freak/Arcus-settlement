@@ -70,6 +70,7 @@ canvas { display: block; }
 #card .m b { color: #e8e3f0; font-weight: 600; }
 #card .m .doing { color: #9fd0ff; }
 #card .go { margin-top: 6px; font-size: 10.5px; color: #7d7796; }
+#card .who { color: #efe9ff; font-weight: 600; }
 
 
 /* ── The crew panel ───────────────────────────────────────────────────────
@@ -99,12 +100,25 @@ canvas { display: block; }
     inset 0 0 22px rgba(120, 92, 52, 0.22),
     0 10px 26px rgba(28, 20, 10, 0.45);
 }
-#crew h2 {
-  margin: 1px 3px 8px; padding-bottom: 6px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+#crewToggle {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  margin: 0 0 8px; padding: 2px 3px 7px;
+  background: none; border: 0; border-bottom: 1px solid rgba(107, 85, 53, 0.35);
+  cursor: pointer; text-align: left;
+  font: inherit; font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
   text-transform: uppercase; color: #6b5535;
-  border-bottom: 1px solid rgba(107, 85, 53, 0.35);
 }
+#crewToggle:hover { color: #4a3c28; }
+#crewToggle .arrow { font-size: 9px; transition: transform 0.15s; }
+#crewToggle .count {
+  margin-left: auto; letter-spacing: 0.04em; text-transform: none;
+  font-weight: 500; color: #8a7457;
+}
+/* Shut: the board rolls up to its own header and stops taking the corner. */
+#crew.shut { max-height: none; }
+#crew.shut #crewBody { display: none; }
+#crew.shut #crewToggle { margin-bottom: 0; padding-bottom: 2px; border-bottom: 0; }
+#crew.shut #crewToggle .arrow { transform: rotate(-90deg); }
 #crew .row {
   display: block; width: 100%; text-align: left; cursor: pointer;
   background: none; border: 0; border-radius: 3px; padding: 5px 6px;
@@ -125,7 +139,12 @@ canvas { display: block; }
 #crew .row.waiting .dot { background: #c8912a; box-shadow: 0 0 0 1px rgba(120, 80, 16, 0.5); }
 #crew .nm {
   flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; color: #35291a; font-weight: 500;
+  white-space: nowrap; color: #2e2415; font-weight: 600;
 }
-#crew .sub { margin: 1px 0 0 13px; font-size: 10px; color: #7a674b; }
+/* What this citizen is working on, under their name. */
+#crew .job {
+  margin: 1px 0 0 13px; font-size: 10.5px; color: #5d4c33;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#crew .sub { margin: 1px 0 0 13px; font-size: 9.5px; color: #8a7457; }
 #crew .empty { padding: 6px 7px; color: #7a674b; }

@@ -23,6 +23,7 @@
 
 import { Group } from 'three';
 import { smoothHeightAt, isWater, WATER_LEVEL, STEP } from '../app/terrain.js';
+import { LANDMARKS } from '../app/village.js';
 
 /** The height the water surface is actually drawn at — see terrain3d.js's SURFACE_Y. */
 const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
@@ -38,30 +39,35 @@ function fitScale(model, target) {
   return target / Math.max(model.size.x, model.size.z);
 }
 
-/** The well — just off the square's centre, which belongs to the Settlement Stone. */
-function buildWell(models) {
-  const g = new Group();
-  const x = 6.2, z = 5.0;
-  const m = models.building_well_red;
+/**
+ * Where a milestone stands, and how much ground it claims — read from the
+ * village plan, never decided here. Everything else in the world tests against
+ * that same list to keep out of its way, so a number typed into this file
+ * instead would be a number only the renderer knows.
+ */
+const spot = (key) => LANDMARKS.find((L) => L.key === key);
+
+/** Stand a model on its plot, sized to the ground the plan says it claims. */
+function raise(models, name, key) {
+  const L = spot(key);
+  const m = models[name];
   const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 3.4));
-  node.position.set(x, smoothHeightAt(x, z), z);
-  node.rotation.y = -0.6;
+  node.scale.setScalar(fitScale(m, L.r * 2));
+  node.position.set(L.x, smoothHeightAt(L.x, L.z), L.z);
+  node.rotation.y = L.rot;
+  const g = new Group();
   g.add(node);
   return g;
 }
 
+/** The well — just off the square's centre, which belongs to the Settlement Stone. */
+function buildWell(models) {
+  return raise(models, 'building_well_red', 'well');
+}
+
 /** The clock tower — the tallest thing on the square, on purpose. */
 function buildTower(models) {
-  const g = new Group();
-  const x = -6.6, z = 4.8;
-  const m = models.building_tower_A_red;
-  const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 5.6));
-  node.position.set(x, smoothHeightAt(x, z), z);
-  node.rotation.y = 0.35;
-  g.add(node);
-  return g;
+  return raise(models, 'building_tower_A_red', 'tower');
 }
 
 /**
@@ -126,28 +132,12 @@ function buildBridge(models) {
 
 /** The great gate — where the road out of the village passes the settlement's edge. */
 function buildGate(models) {
-  const g = new Group();
-  const x = -47, z = -7.9;
-  const m = models.wall_straight_gate;
-  const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 9.0));
-  node.position.set(x, smoothHeightAt(x, z), z);
-  node.rotation.y = Math.PI / 2;
-  g.add(node);
-  return g;
+  return raise(models, 'wall_straight_gate', 'gate');
 }
 
 /** The keep — the furthest-off milestone, the settlement's own stronghold. */
 function buildDome(models) {
-  const g = new Group();
-  const x = 4, z = -34;
-  const m = models.building_castle_green;
-  const node = m.scene.clone(true);
-  node.scale.setScalar(fitScale(m, 11.0));
-  node.position.set(x, smoothHeightAt(x, z), z);
-  node.rotation.y = 0.8;
-  g.add(node);
-  return g;
+  return raise(models, 'building_castle_green', 'dome');
 }
 
 const BUILDERS = { well: buildWell, bridge: buildBridge, tower: buildTower, gate: buildGate, dome: buildDome };

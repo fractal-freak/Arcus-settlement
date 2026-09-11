@@ -49,13 +49,36 @@ canvas { display: block; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   transition: background 0.12s, border-color 0.12s, color 0.12s, opacity 0.15s, transform 0.15s;
 }
-.who.waiting .tag {
+
+/* ── The name only when you ask for it ────────────────────────────────────
+   Every figure used to wear a black chip of its own session title, clipped
+   mid-word, at all times — a dozen of them covered more of the valley than
+   the people did, and none of them could be read anyway. What says "somebody
+   is here" now is the ring turning over their head, which is a real object in
+   the world and so goes behind a building like everything else. The chip
+   stays as the thing you click, shrunk to a point until you reach for it. */
+.who .tag {
+  max-width: 0; padding-left: 0; padding-right: 0;
+  overflow: hidden; opacity: 0;
+  transition: max-width 0.16s ease, padding 0.16s ease, opacity 0.14s ease;
+}
+.who:hover .tag, .who:focus .tag {
+  max-width: 220px; padding-left: 8px; padding-right: 8px;
+  opacity: var(--fade);
+  background: #241f3a; border-color: rgba(255, 255, 255, 0.55);
+}
+/* The hit area stays where the chip was, so a figure is still easy to reach
+   even while its name is folded away. */
+.who::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 46px; height: 54px; transform: translate(-50%, -100%);
+}
+.who.waiting:hover .tag, .who.waiting:focus .tag {
   background: #4a3c12; border-color: rgba(255, 215, 106, 0.72);
   color: #ffe9ae;
 }
-.who.busy .tag { border-color: rgba(150, 226, 255, 0.55); }
+.who.busy:hover .tag { border-color: rgba(150, 226, 255, 0.55); }
 .who.on .tag::after { content: ''; display: inline-block; width: 5px; height: 5px; margin-left: 5px; border-radius: 50%; background: #ff8a6a; }
-.who:hover .tag, .who:focus .tag { background: #241f3a; border-color: rgba(255, 255, 255, 0.55); }
 
 #card {
   position: fixed; z-index: 6; max-width: 240px;
@@ -200,6 +223,21 @@ canvas { display: block; }
 #chron .e.rework  .t::before { content: '⟳ '; color: #6b5535; }
 #chron .e.turn    .t::before { content: '↷ '; color: #6b5535; }
 #chron .e.stuck   .t::before { content: '⌁ '; color: #8a7457; }
+#chron .e.unearth .t::before { content: '✦ '; color: #8a6a2f; }
+
+/* A line lifted out of the ground, set the way a quotation is set. */
+#chron .q {
+  margin: 5px 0 2px; padding: 6px 9px;
+  border-left: 2px solid rgba(107, 85, 53, 0.5);
+  background: rgba(255, 252, 240, 0.5);
+  font-family: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  font-size: 11.5px; font-style: italic; line-height: 1.5; color: #2f2417;
+}
+#chron .q cite {
+  display: block; margin-top: 4px;
+  font-family: inherit; font-style: normal;
+  font-size: 9.5px; letter-spacing: 0.02em; color: #8a7457;
+}
 #chron .empty { padding: 8px 3px; color: #7a674b; }
 
 /* ── How the work is going ────────────────────────────────────────────────

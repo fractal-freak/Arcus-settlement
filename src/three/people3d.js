@@ -23,25 +23,55 @@
  */
 
 import {
-  Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3,
+  Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3, TorusGeometry,
 } from 'three';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { PLOTS, CIVIC, propNear } from '../app/village.js';
+import { PLOTS, CIVIC, propNear, landmarkNear } from '../app/village.js';
+import { propRadius } from '../app/propSizes.js';
+import { digFor } from '../app/digs.js';
 import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
 
-const markerGeo = new IcosahedronGeometry(0.1, 1);
+/**
+ * The sign above an archaeologist's head.
+ *
+ * A ring with a bead running round it: a body on its orbit, which is the one
+ * shape this world could have and no other game would. It replaces a black
+ * pill of truncated session title that sat over every figure at all times and
+ * covered more of the valley than the figures did — the name is worth reading
+ * when you ask for it, and worth nothing when you did not.
+ *
+ * It is a real object in the scene, not an overlay, which is why a building
+ * hides it the way a building should. Three readings off one shape:
+ *   working  the ring turns and the bead runs, quickly
+ *   waiting  the ring holds still and the bead sits at the top and breathes
+ *   resting  nothing at all
+ * Waiting is the one state that means it is Kevin's move, so it is the one
+ * that stays still while everything else moves — the eye finds a stopped thing
+ * in a field of moving ones faster than the other way round.
+ */
+const ringGeo = new TorusGeometry(0.30, 0.022, 5, 30);
+const beadGeo = new IcosahedronGeometry(0.075, 1);
+const RING_WORKING = new MeshBasicMaterial({ color: 0x8fd4ff, transparent: true, opacity: 0.72 });
+const RING_WAITING = new MeshBasicMaterial({ color: 0xffc94d, transparent: true, opacity: 0.85 });
+const BEAD_WORKING = new MeshBasicMaterial({ color: 0xe8f6ff });
+const BEAD_WAITING = new MeshBasicMaterial({ color: 0xfff0c0 });
 
 /** How tall a session stands, in world units. */
 const HEIGHT = 1.8;
 
 /**
- * What each session's state looks like. `working` walks on the spot because
- * a busy session should read as busy from across the square; `waiting` stands
- * still under its marker, which is the one state Kevin is actually meant to
- * notice and act on.
+ * What each session's state looks like.
+ *
+ * `working` DIGS. It used to walk on the spot, which was the best a session
+ * standing on the square could do; now a working session is out at a real site
+ * with a real trench in front of it, so it crouches to the ground and works —
+ * which is what these people have always been said to be doing.
+ *
+ * `waiting` stands still in the village. That is the one state Kevin is meant
+ * to notice and act on, so it is deliberately the quietest thing in the world.
  */
 const STATE_ANIM = {
-  working: { clip: 'Walking_A', timeScale: 1.0 },
+  working: { clip: 'Interact', timeScale: 0.85 },
   waiting: { clip: 'Idle_A', timeScale: 1.0 },
   resting: { clip: 'Idle_B', timeScale: 0.6 },
 };
@@ -70,16 +100,38 @@ function hashString(s) {
  */
 const WATER_SURFACE = WATER_LEVEL + STEP * 0.5;
 
+/**
+ * Everything the citizens have put down, as circles to keep out of.
+ *
+ * The world grew four hundred crates, banners and hedges after this file was
+ * written, and none of them were in any of the tests below — so sessions stood
+ * inside barrels, and one stood in the wellhead. A figure claims about 0.5
+ * units of ground, and each piece claims its own measured radius; the sum is
+ * the distance to keep. Refreshed whenever the feed brings a new list, which is
+ * a few times an hour at most.
+ */
+let obstacles = [];
+
+export function setObstacles(placements) {
+  obstacles = (placements || []).map((p) => ({ x: p.x, z: p.z, r: propRadius(p.kind) + 0.5 }));
+}
+
 function unstandable(x, z) {
   if (isWater(Math.round(x), Math.round(z))) return true;
   if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
   for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 5.0) return true;
   if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.5) return true;
-  if (propNear(x, z, 1.0)) return true; // not inside a tree
+  if (landmarkNear(x, z, 1.2)) return true;   // not inside the well, which happened
+  if (propNear(x, z, 1.0)) return true;       // not inside a tree
+  for (const o of obstacles) if (Math.hypot(o.x - x, o.z - z) < o.r) return true;
   return false;
 }
 
-function positionFor(id) {
+/**
+ * Where a session stands when it is NOT working: in the village, among the
+ * houses, where you can see at a glance who is waiting on you.
+ */
+function homeFor(id) {
   const seed = hashString(id) % 10007;
   // Sessions used to scatter across a 14-72 unit ring, which put most of them
   // alone in empty wilderness with nothing around them — fine when the whole
@@ -99,13 +151,26 @@ function positionFor(id) {
   return { x, z };
 }
 
+/**
+ * Where a session stands when it IS working: out at its dig, a good hike past
+ * the last house. See app/digs.js — the sites are the ruins the terrain
+ * already has, and the same module tells the hub which site is whose, so the
+ * place the chronicle names is the place the figure is standing.
+ */
+function siteFor(id) {
+  const d = digFor(id);
+  if (!d) return homeFor(id);
+  return { x: d.x, z: d.z, look: d.look };
+}
+
 class Figure {
   constructor(id) {
     this.id = id;
     this.group = new Group();
-    const { x, z } = positionFor(id);
-    this.baseX = x;
-    this.baseZ = z;
+    this.home = homeFor(id);
+    this.site = siteFor(id);
+    this.baseX = this.home.x;
+    this.baseZ = this.home.z;
     this.seed = (hashString(id) % 1000) / 1000;
 
     // Every session wears the same outfit, on purpose. These are the dig
@@ -118,19 +183,44 @@ class Figure {
       this.char.root.rotation.y = this.seed * 6.283;
     }
 
-    this.markerMat = new MeshBasicMaterial({ color: 0xffd76a });
-    this.marker = new Mesh(markerGeo, this.markerMat);
-    this.marker.position.y = HEIGHT + 0.45;
-    this.marker.visible = false;
-    this.group.add(this.marker);
+    this.sign = new Group();
+    this.sign.position.y = HEIGHT + 0.52;
+    this.ring = new Mesh(ringGeo, RING_WORKING);
+    this.ring.rotation.x = 1.05;
+    this.bead = new Mesh(beadGeo, BEAD_WORKING);
+    this.sign.add(this.ring, this.bead);
+    this.sign.visible = false;
+    this.group.add(this.sign);
   }
 
   setState(state) {
     if (this.state === state) return;
+    const was = this.state;
     this.state = state;
-    this.marker.visible = state === 'waiting';
+
+    this.sign.visible = state === 'working' || state === 'waiting';
+    const busy = state === 'working';
+    this.ring.material = busy ? RING_WORKING : RING_WAITING;
+    this.bead.material = busy ? BEAD_WORKING : BEAD_WAITING;
+
     const anim = STATE_ANIM[state] ?? STATE_ANIM.resting;
     if (this.char) this.char.play(anim.clip, { timeScale: anim.timeScale });
+
+    // Out to the dig, or back to the village. The two are sixty units apart,
+    // so there is no honest way to WALK it — a straight line would cross the
+    // river and half the forest, and a path finder is a different project. It
+    // sinks into the ground here and rises there instead, which is the same
+    // trick terrain3d.js uses to bring a new chunk in: no clipping, nothing
+    // invented, and the change reads as a change rather than a glitch.
+    const want = busy ? this.site : this.home;
+    if (was !== undefined && (want.x !== this.baseX || want.z !== this.baseZ)) {
+      this.moveTo = want;
+      this.dip = 0;
+    } else {
+      this.baseX = want.x;
+      this.baseZ = want.z;
+      if (this.scene) this.settle();
+    }
   }
 
   setHover(on) {
@@ -142,25 +232,62 @@ class Figure {
   }
 
   place(scene) {
+    this.scene = scene;
+    this.settle();
+    scene.add(this.group);
+  }
+
+  /** Stand on the real ground at the current spot, facing the right way. */
+  settle() {
     this.h = smoothHeightAt(this.baseX, this.baseZ);
     this.group.position.set(this.baseX, this.h, this.baseZ);
-    scene.add(this.group);
+    if (!this.char) return;
+    // At the dig everyone faces the trench; in the village nobody has a reason
+    // to face anywhere in particular, so they keep their own hashed bearing.
+    const atSite = this.baseX === this.site.x && this.baseZ === this.site.z;
+    this.char.root.rotation.y = atSite && this.site.look !== undefined
+      ? this.site.look : this.seed * 6.283;
   }
 
   dispose(scene) {
     scene.remove(this.group);
     if (this.char) this.char.dispose();
-    this.markerMat.dispose();
   }
 
   tick(elapsedS, dtS) {
     // The skeleton does the moving now; the old sine-wave bob and sway were
     // standing in for animation this had no way to do.
     if (this.char) this.char.update(dtS);
-    if (this.marker.visible) {
-      const p = elapsedS * 3 + this.seed * 10;
-      this.marker.position.y = HEIGHT + 0.45 + Math.sin(p) * 0.06;
-      this.marker.scale.setScalar(1 + Math.sin(p * 1.7) * 0.22);
+
+    // Sink, change ground, rise. Half a second each way.
+    if (this.moveTo) {
+      this.dip += dtS / 0.5;
+      if (this.dip >= 1 && this.baseX !== this.moveTo.x) {
+        this.baseX = this.moveTo.x;
+        this.baseZ = this.moveTo.z;
+        this.settle();
+      }
+      if (this.dip >= 2) { this.moveTo = null; this.group.position.y = this.h; }
+      else {
+        const under = this.dip <= 1 ? this.dip : 2 - this.dip;
+        this.group.position.y = this.h - under * (HEIGHT + 0.9);
+      }
+    }
+
+    if (!this.sign.visible) return;
+    const p = elapsedS + this.seed * 10;
+    if (this.state === 'working') {
+      // The ring turns and the bead runs its orbit — a body in motion.
+      this.sign.rotation.y = p * 0.55;
+      const a = p * 2.1;
+      this.bead.position.set(Math.cos(a) * 0.30, Math.sin(a) * 0.30 * Math.cos(1.05), Math.sin(a) * 0.30 * -Math.sin(1.05));
+    } else {
+      // Stopped at the top of its orbit, breathing. Your move.
+      this.sign.rotation.y = 0;
+      this.bead.position.set(0, 0.30 * Math.cos(1.05), 0.30 * -Math.sin(1.05));
+      const b = 1 + Math.sin(p * 2.4) * 0.28;
+      this.bead.scale.setScalar(b);
+      this.sign.position.y = HEIGHT + 0.52 + Math.sin(p * 1.6) * 0.05;
     }
   }
 }

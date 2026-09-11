@@ -264,6 +264,13 @@ function forestAt(tx, ty) {
  * "elevated ground") or a genuine forest clearing (low `forest`, so it is
  * ringed by real trees, not an accident of the forest field itself being
  * thin there) — both far rarer than any other prop this function places.
+ *
+ * The thresholds were loosened once these became the archaeologists' actual
+ * WORKPLACES (see app/digs.js). At the original rarity the whole valley held
+ * six sites and the nearest one beyond the village was a hundred and twenty
+ * units out, so a session that went to work vanished off the edge of anything
+ * you would ever look at. Still rare — about three in a thousand eligible
+ * tiles — just no longer so rare that the world has nowhere to dig.
  */
 export function propAt(tx, ty) {
   const g = groundAt(tx, ty);
@@ -283,7 +290,7 @@ export function propAt(tx, ty) {
     // A dig site on the plateau: rarer than an ordinary boulder by two
     // orders of magnitude, and checked first so it never has to compete
     // with the much more common rock roll for the same high draw of r.
-    if (r > 0.999) return { kind: 'ruins', variant: (hash2(tx, ty, 29) * 3) | 0 };
+    if (r > 0.9972) return { kind: 'ruins', variant: (hash2(tx, ty, 29) * 3) | 0 };
     if (r > 0.88) return { kind: 'rock', variant: (hash2(tx, ty, 22) * 2) | 0 };
     return null;
   }
@@ -294,7 +301,7 @@ export function propAt(tx, ty) {
     // ever lands inside that clearing, on purpose — "hidden" means the
     // trees around it are real trees, not a gap in the forest field itself.
     if (forest < 0.46) {
-      if (r > 0.9996) return { kind: 'ruins', variant: (hash2(tx, ty, 29) * 3) | 0 };
+      if (r > 0.9986) return { kind: 'ruins', variant: (hash2(tx, ty, 29) * 3) | 0 };
       if (r > 0.985) return { kind: 'bush', variant: (hash2(tx, ty, 24) * 2) | 0 };
       return null;
     }

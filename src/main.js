@@ -14,7 +14,7 @@ import { Vector3 } from 'three';
 import { Stage } from './three/stage.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
-import { People3D } from './three/people3d.js';
+import { People3D, setObstacles } from './three/people3d.js';
 import { Town3D } from './three/town3d.js';
 import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
@@ -117,6 +117,11 @@ const feed = new Feed((d) => {
     syncChronicle(d.life);
     // Everything the citizens have finished, standing where they put it.
     built.sync(d.life.placements);
+    // And the same list again as ground nobody may stand in. Sessions were
+    // ending up inside barrels and, once, inside the wellhead — a figure's
+    // spot is chosen by a test that knew about houses and trees and had never
+    // heard of the four hundred things the citizens had put down since.
+    setObstacles(d.life.placements);
   }
   if (d.people) {
     people.sync(d.people);
@@ -375,9 +380,17 @@ function syncChronicle(L) {
     body.innerHTML = '<div class="empty">Nothing has happened here yet. Come back in a while.</div>';
     return;
   }
-  const html = standingHtml(L) + entries.slice(0, 40).map((e) =>
-    `<div class="e ${esc(e.kind)}"><div class="d">${esc(e.at)}</div><div class="t">${esc(e.text)}</div></div>`,
-  ).join('');
+  const html = standingHtml(L) + entries.slice(0, 40).map((e) => {
+    // A line out of the ground gets the line itself, and who wrote it. These
+    // are real quotations from real books (see arcus-finds.mjs, where every
+    // one was checked back against the scan it came from), so the attribution
+    // is not decoration — it is the thing that makes the quote worth anything.
+    const dug = e.quote
+      ? `<blockquote class="q">${esc(e.quote)}<cite>${esc(e.source || '')}</cite></blockquote>`
+      : '';
+    return `<div class="e ${esc(e.kind)}"><div class="d">${esc(e.at)}</div>`
+      + `<div class="t">${esc(e.text)}</div>${dug}</div>`;
+  }).join('');
   const sig = `${entries[0].tick}:${entries.length}:${L.quality?.overall ?? ''}`;
   if (body.dataset.sig !== sig) {
     body.innerHTML = html;

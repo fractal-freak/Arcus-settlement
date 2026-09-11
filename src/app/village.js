@@ -205,6 +205,36 @@ function buildPlan() {
 export const PLOTS = buildPlan();
 
 /**
+ * The milestones, and the ground each one stands on.
+ *
+ * These used to be five hardcoded pairs of numbers inside the renderer, which
+ * meant nothing else in the world knew they were there. A citizen laid a kerb
+ * stone through the wellhead and a session stood inside the well itself, both
+ * because every "may something stand here" test in the project consulted the
+ * house plots and the capital and simply had no idea the well existed. A
+ * position is a fact about the settlement, not a detail of how it is drawn, so
+ * it lives here with the rest of the plan and the renderer reads it.
+ *
+ * `r` is how much ground the piece claims, measured off the width the renderer
+ * fits each model to. The bridge is deliberately absent: it is a ROAD, and
+ * walking on it is the point.
+ */
+export const LANDMARKS = [
+  { key: 'well', x: 6.2, z: 5.0, r: 1.7, rot: -0.6 },
+  { key: 'tower', x: -6.6, z: 4.8, r: 2.8, rot: 0.35 },
+  { key: 'gate', x: -47, z: -7.9, r: 4.5, rot: Math.PI / 2 },
+  { key: 'dome', x: 4, z: -34, r: 5.5, rot: 0.8 },
+];
+
+/** Is (x, z) inside a milestone's own ground, allowing for the caller's size? */
+export function landmarkNear(x, z, margin = 0) {
+  for (const L of LANDMARKS) {
+    if (Math.hypot(L.x - x, L.z - z) < L.r + margin) return true;
+  }
+  return false;
+}
+
+/**
  * Tiles the village has spoken for — plot footprints, street surfaces and
  * the square. Built once, as a Set of tile keys, because terrain3d.js asks
  * this question for every tile of every chunk it streams in and a per-tile

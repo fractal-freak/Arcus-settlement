@@ -50,7 +50,14 @@ const OUT = process.env.CRITIC_SHOT || join(HERE, '..', 'state', 'world.png');
  * against and is always accepted.
  */
 const WORSE_BY = 1.4;     // a median this many times the last one is a regression
-const AND_AT_LEAST = 2;   // ...but ignore anything under this many ms of change
+const AND_AT_LEAST = 4;   // ...but ignore anything under this many ms of change
+
+// Two milliseconds was too tight to be meaningful. A good run on the laptop
+// measures 3ms and an ordinary one measures 5, which is a 1.8x "regression"
+// that is really just the machine having a different sort of afternoon — and
+// it refused a rulebook that had nothing wrong with it. A change has to be
+// both proportionally worse AND worth noticing in absolute terms before it is
+// a regression rather than weather.
 
 const TYPES = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',

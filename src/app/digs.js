@@ -21,7 +21,7 @@
  * ever written down that could drift.
  */
 
-import { propAt, groundAt, smoothHeightAt, isWater, hash2, GROUND, WATER_LEVEL, STEP } from './terrain.js';
+import { propAt, groundAt, heightAt, isWater, hash2, registerPits, GROUND, WATER_LEVEL, STEP } from './terrain.js';
 import { PLOTS, LANDMARKS, landmarkNear } from './village.js';
 
 /**
@@ -38,7 +38,7 @@ const EDGE = Math.max(
   ...PLOTS.map((p) => Math.hypot(p.x, p.z)),
   ...LANDMARKS.map((L) => Math.hypot(L.x, L.z) + L.r),
 );
-const BAND = { from: EDGE + 22, to: 165 };
+const BAND = { from: EDGE + 34, to: 180 };
 
 /** How far apart two sites must be to be two sites rather than one. */
 const APART = 14;
@@ -66,7 +66,7 @@ export function digSites() {
       if (d < BAND.from || d > BAND.to) continue;
       const p = propAt(x, z);
       if (!p || p.kind !== 'ruins') continue;
-      if (isWater(x, z) || smoothHeightAt(x, z) < WATER_SURFACE + 0.2) continue;
+      if (isWater(x, z) || heightAt(x, z) < WATER_SURFACE + 0.2) continue;
       if (landmarkNear(x, z, 8)) continue;
       if (found.some((s) => Math.hypot(s.x - x, s.z - z) < APART)) continue;
       const g = groundAt(x, z);
@@ -84,6 +84,21 @@ export function digSites() {
   return cached;
 }
 
+/** How big a hole the crew have dug at a site, in world units. */
+export const PIT = { r: 4.6, depth: 1.6, wall: 2.1 };
+
+/**
+ * Cut the trenches, once, before anything is drawn.
+ *
+ * Run at import rather than on demand: the ground mesh is built from
+ * `smoothHeightAt`, so a chunk built before the pits are registered would be
+ * flat where the hole is and would never be rebuilt. Everything that imports
+ * this module is imported from main.js, and module bodies run before the first
+ * frame, so by the time a chunk is built the ground already knows it has been
+ * dug.
+ */
+registerPits(digSites().map((s) => ({ x: s.x, z: s.z, ...PIT })));
+
 /**
  * Which site this session works, and exactly where they stand at it.
  *
@@ -98,11 +113,11 @@ export function digFor(id) {
   if (!sites.length) return null;
   const h = hashId(id);
   const site = sites[h % sites.length];
-  // Clear of the ruin itself. The excavated building is 7.7 by 6.5 world
-  // units, so anything inside about 3.9 of the site centre is standing IN it;
-  // the crew work the edge of the cutting, which is where you would.
+  // On the lip of the trench, looking down into it. The hole is PIT.r across,
+  // so this is just outside it — close enough to be working it, not so close
+  // that they are standing in mid-air over the cut.
   const a = hash2(h, 7, 41) * Math.PI * 2;
-  const r = 5.0 + hash2(h, 11, 42) * 1.2;
+  const r = PIT.r + 0.5 + hash2(h, 11, 42) * 0.9;
   return {
     ...site,
     x: site.x + Math.cos(a) * r,

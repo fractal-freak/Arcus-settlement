@@ -37,7 +37,7 @@ import {
   Object3D, Color, Vector3, CanvasTexture, NearestFilter, DoubleSide,
 } from 'three';
 import { CHUNK, chunkKey } from '../app/iso.js';
-import { groundAt, smoothHeightAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
+import { groundAt, smoothHeightAt, naturalHeightAt, digAmountAt, propAt, GROUND, STEP, WATER_LEVEL, hash2 } from '../app/terrain.js';
 import { isReserved, isPlotTile, pathAmountAt } from '../app/village.js';
 
 /** Vertices per tile edge. 2 is one extra vertex per tile — enough to round off a shelf into a slope. */
@@ -76,6 +76,7 @@ const BASE = {
 const ROCKY = new Color(0x8a7058);   // what a steep slope exposes, regardless of the ground kind on it
 const BEACH = new Color(0xe3d5a0);   // the rim right at the waterline
 const PATH  = new Color(0x9a8362);   // packed earth, worn by everyone walking the same way
+const SPOIL = new Color(0x6b5238);   // freshly turned earth at the bottom of a cutting
 
 /**
  * The one height that is BOTH "this tile counts as wet" and "the water
@@ -130,6 +131,11 @@ function paletteAt(wx, wz, h, kind) {
   // tile the way a per-tile test would.
   const path = pathAmountAt(wx, wz);
   if (path > 0) tmpC.lerp(PATH, path * 0.88);
+
+  // Turned earth, where a trench has been cut. Same idea as the lanes above —
+  // worn into the ground itself rather than laid on top of it.
+  const dug = digAmountAt(wx, wz);
+  if (dug > 0) tmpC.lerp(SPOIL, Math.min(1, dug * 1.35));
   return tmpC;
 }
 
@@ -514,7 +520,9 @@ export class Terrain3D {
     const needsWater = (tx, tz) => {
       for (let a = 0; a <= 2; a++) {
         for (let b = 0; b <= 2; b++) {
-          if (smoothHeightAt(tx + a * 0.5, tz + b * 0.5) < SURFACE_Y) return true;
+          // The NATURAL ground, not the dug one — a trench is a hole in dry
+          // land and does not become a pond because somebody made it.
+          if (naturalHeightAt(tx + a * 0.5, tz + b * 0.5) < SURFACE_Y) return true;
         }
       }
       return false;
@@ -568,6 +576,8 @@ export class Terrain3D {
         // Off the lanes and off the plots, but not off the whole settlement —
         // grass growing up to a lane's edge is what gives the lane an edge.
         if (isPlotTile(tx, tz) || pathAmountAt(tx + 0.5, tz + 0.5) > 0.3) continue;
+        // Nothing grows in a hole that was dug this week.
+        if (digAmountAt(tx + 0.5, tz + 0.5) > 0.12) continue;
         const density = 3 + Math.floor(hash2(tx, tz, 40) * 3); // 3-5 blades a tile
         for (let b = 0; b < density; b++) {
           const jx = (hash2(tx * 4 + b, tz, 41) - 0.5) * 0.92;

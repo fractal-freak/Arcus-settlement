@@ -179,13 +179,76 @@ const snap = (h) => Math.round(h / STEP) * STEP;
 export const heightAt = (tx, ty) => snap(rawHeightAt(tx, ty));
 
 /**
+ * The trenches, cut into the ground by the people digging them.
+ *
+ * THE ONE THING THIS FILE LETS ANYONE ELSE CHANGE, and it is deliberately
+ * push, not pull. A dig site is found by scanning for ruins, which asks this
+ * file where the ground is — so if this file asked back where the digs are,
+ * the two would chase each other forever. Instead app/digs.js does its scan
+ * against the natural ground and then hands the results here, once, before
+ * anything is drawn. Nothing in here imports anything.
+ *
+ * Registered pits change SMOOTH height only, which is the height everything
+ * standing on the ground uses. `rawHeightAt` stays the natural hillside, so a
+ * second scan would find the same sites in the same places.
+ */
+let pits = [];
+
+export function registerPits(list) {
+  pits = (list || []).map((p) => ({ x: p.x, z: p.z, r: p.r ?? 4.2, depth: p.depth ?? 1.5, wall: p.wall ?? 1.9 }));
+}
+
+function pitAt(x, z) {
+  let cut = 0;
+  for (const p of pits) {
+    const d = Math.hypot(x - p.x, z - p.z);
+    if (d >= p.r) continue;
+    // Flat floor in the middle, walls easing up to ground level at the rim —
+    // a cutting, not a crater.
+    const t = Math.min(1, (p.r - d) / p.wall);
+    cut = Math.max(cut, p.depth * t * t * (3 - 2 * t));
+  }
+  return cut;
+}
+
+/**
  * The smooth renderer's height: continuous, and meant to be sampled anywhere —
  * at a vertex a fraction of a tile apart from its neighbour, under a tree
  * jittered off the tile centre, under the camera. No two callers of this can
  * ever land on a different number for the same point, which is what makes
  * adjoining chunks of heightmap meet without a seam.
  */
-export const smoothHeightAt = (x, z) => rawHeightAt(x, z);
+export const smoothHeightAt = (x, z) => rawHeightAt(x, z) - (pits.length ? pitAt(x, z) : 0);
+
+/**
+ * The hillside as it was before anybody dug it.
+ *
+ * Water is the caller that needs this. A trench is a hole in dry ground, and
+ * the renderer decides where to draw a water surface by asking how low the
+ * ground is — so with the dug height it cheerfully filled every archaeological
+ * cutting in the valley with a neat blue pond. Whether there is water
+ * somewhere is a question about the LANDSCAPE, not about what has been done
+ * to it since.
+ */
+export const naturalHeightAt = (x, z) => rawHeightAt(x, z);
+
+/**
+ * How much of this point is inside a cutting: 0 on undisturbed ground, 1 on
+ * the floor of a trench. The renderer uses it to strip the grass off ground
+ * somebody has just dug up and to paint what is left as bare earth — without
+ * it a hole in a meadow is a hole full of meadow, which reads as a dent.
+ */
+export function digAmountAt(x, z) {
+  if (!pits.length) return 0;
+  let most = 0;
+  for (const p of pits) {
+    const d = Math.hypot(x - p.x, z - p.z);
+    if (d >= p.r) continue;
+    const t = Math.min(1, (p.r - d) / p.wall);
+    most = Math.max(most, t * t * (3 - 2 * t));
+  }
+  return most;
+}
 
 /** Is this point under water? Works with either height function's own notion of a tile. */
 export const isWater = (tx, ty) => rawHeightAt(tx, ty) < WATER_LEVEL + STEP * 0.5;

@@ -24,7 +24,7 @@
  *    load rather than assumed (see retarget()).
  */
 
-import { AnimationMixer, LoopRepeat } from 'three';
+import { AnimationMixer, LoopRepeat, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
@@ -133,14 +133,54 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
     return true;
   }
 
+  /**
+   * Put something in this character's hand.
+   *
+   * The rig carries empty `handslot.l` / `handslot.r` bones for exactly this —
+   * the kit ships its weapons as separate models and expects you to parent
+   * them here — so a tool follows the hand through every frame of every clip
+   * for free, with no per-frame work of our own. Scale is undone because the
+   * character itself was scaled to a target height, and a pickaxe should not
+   * shrink because its owner is short.
+   */
+  function hold(object, side = 'r') {
+    let slot = null;
+    root.traverse((o) => { if (!slot && o.name === `handslot.${side}`) slot = o; });
+    if (!slot) return false;
+    object.scale.multiplyScalar(1 / (scale || 1));
+    slot.add(object);
+    return true;
+  }
+
   return {
     root,
     mixer,
     play,
+    hold,
     /** Advance the animation. Seconds, not milliseconds. */
     update: (dt) => mixer.update(dt),
     dispose: () => { mixer.stopAllAction(); mixer.uncacheRoot(root); },
   };
+}
+
+/**
+ * A pickaxe, built rather than downloaded.
+ *
+ * Neither pack has one — the medieval kit has buckets, ladders and barrows but
+ * no tool a person holds, and the character pack ships swords and bows. It is
+ * a haft and a head, which is all a pickaxe is at this size, and it reads
+ * instantly at the one distance it is ever seen from.
+ */
+export function makePickaxe() {
+  const g = new Group();
+  const haft = new Mesh(new CylinderGeometry(0.028, 0.034, 0.78, 6), new MeshLambertMaterial({ color: 0x7a5433 }));
+  haft.position.y = 0.12;
+  const head = new Mesh(new BoxGeometry(0.46, 0.07, 0.08), new MeshLambertMaterial({ color: 0x9aa2ad }));
+  head.position.y = 0.48;
+  head.rotation.z = 0.12;
+  g.add(haft, head);
+  g.rotation.set(Math.PI / 2, 0, 0);   // laid along the grip rather than out of the fist
+  return g;
 }
 
 /** Pick a villager deterministically, so the same person is the same character every load. */

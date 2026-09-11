@@ -23,7 +23,7 @@
 
 import { Group, Object3D, InstancedMesh, Matrix4 } from 'three';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
-import { digSites } from '../app/digs.js';
+import { digSites, PIT } from '../app/digs.js';
 import { loadModels } from './assets.js';
 import { KIT_SCALE } from '../app/propSizes.js';
 
@@ -35,31 +35,43 @@ const dummy = new Object3D();
  * `at` is the bearing in turns and `out` the distance from the site centre, so
  * a camp reads as arranged around the work rather than scattered near it.
  *
- * THREE RINGS, and the distances are not free. The excavated building holds
- * the middle and is 7.7 units across, so its own ground reaches about 3.9 out;
- * the crew work the edge of the cutting at 5.0 to 6.2 (see digFor in
- * app/digs.js); the camp begins at 7 and the corner stakes stand at 9.6. Move
- * any one of those and the archaeologists end up kneeling inside a tent.
+ * THE HOLE IS THE MIDDLE, and nothing stands in it. The ground itself is cut
+ * away there — see `registerPits` in app/terrain.js, which is real geometry,
+ * not a dark disc laid on the grass — so the middle is a trench about nine
+ * units across and a metre and a half down. Everything here is arranged
+ * around its edge: the spoil thrown out on the rim, the crew on the lip
+ * looking in, the uncovered building at the far side, the camp behind that.
+ * Move any of these distances and somebody ends up standing in mid-air over
+ * the cut.
  */
 const CAMP = [
-  { kind: 'building_destroyed', at: 0.00, out: 0.0, face: 0.0 },
-  { kind: 'tent', at: 0.62, out: 8.2, face: 0.62 },
-  { kind: 'crate_open', at: 0.76, out: 7.6 },
-  { kind: 'crate_B_big', at: 0.82, out: 8.0 },
-  { kind: 'crate_A_small', at: 0.71, out: 8.4 },
-  { kind: 'pallet', at: 0.34, out: 7.4 },
-  { kind: 'resource_stone', at: 0.30, out: 7.9 },
-  { kind: 'rock_single_E', at: 0.22, out: 7.2 },
-  { kind: 'rock_single_C', at: 0.16, out: 7.8 },
-  { kind: 'ladder', at: 0.05, out: 7.0, face: 0.05 },
-  { kind: 'wheelbarrow', at: 0.46, out: 7.7 },
-  { kind: 'bucket_empty', at: 0.52, out: 7.1 },
-  { kind: 'sack', at: 0.88, out: 7.3 },
-  // Stakes on the four corners of the cutting.
-  { kind: 'flag_yellow', at: 0.125, out: 9.6 },
-  { kind: 'flag_yellow', at: 0.375, out: 9.6 },
-  { kind: 'flag_yellow', at: 0.625, out: 9.6 },
-  { kind: 'flag_yellow', at: 0.875, out: 9.6 },
+  // The ruin they are digging OUT, standing at the trench's lip rather than
+  // in the middle of it — the hole is the work, the building is what the hole
+  // has uncovered.
+  { kind: 'building_destroyed', at: 0.52, out: 8.0, face: true },
+  // A ladder down into the cut, leaning on the near wall.
+  { kind: 'ladder', at: 0.00, out: PIT.r - 0.2, face: true },
+  // The spoil: what came out of the hole, heaped on the rim where it was
+  // thrown. This is most of what makes a hole read as a hole somebody dug
+  // rather than a dent in the ground.
+  { kind: 'resource_stone', at: 0.13, out: PIT.r + 1.5 },
+  { kind: 'rock_single_E', at: 0.18, out: PIT.r + 1.1 },
+  { kind: 'rock_single_C', at: 0.24, out: PIT.r + 1.6 },
+  { kind: 'rock_single_B', at: 0.29, out: PIT.r + 1.2 },
+  { kind: 'rock_single_D', at: 0.35, out: PIT.r + 1.7 },
+  { kind: 'sack', at: 0.41, out: PIT.r + 1.3 },
+  // The camp proper, back from the edge.
+  { kind: 'tent', at: 0.70, out: 9.4, face: true },
+  { kind: 'crate_open', at: 0.80, out: 8.6 },
+  { kind: 'crate_B_big', at: 0.85, out: 9.2 },
+  { kind: 'crate_A_small', at: 0.75, out: 9.6 },
+  { kind: 'pallet', at: 0.90, out: 8.4 },
+  { kind: 'wheelbarrow', at: 0.62, out: 8.2 },
+  { kind: 'bucket_empty', at: 0.66, out: 8.8 },
+  // Stakes marking the cutting.
+  { kind: 'flag_yellow', at: 0.125, out: PIT.r + 2.6 },
+  { kind: 'flag_yellow', at: 0.375, out: PIT.r + 2.6 },
+  { kind: 'flag_yellow', at: 0.875, out: PIT.r + 2.6 },
 ];
 
 const KINDS = [...new Set(CAMP.map((c) => c.kind))];
@@ -121,7 +133,7 @@ export class DigSite3D {
             dummy.position.set(x, smoothHeightAt(x, z), z);
             // A thing with a front faces the trench; everything else takes a
             // settled bearing of its own.
-            dummy.rotation.set(0, row.face !== undefined
+            dummy.rotation.set(0, row.face
               ? Math.atan2(site.x - x, site.z - z)
               : spin + hash2(x, z, 79) * Math.PI * 2, 0);
             dummy.scale.setScalar(s);

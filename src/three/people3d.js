@@ -28,7 +28,7 @@ import {
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
 import { blocked } from '../app/occupied.js';
 import { digFor } from '../app/digs.js';
-import { loadCharacters, makeCharacter, DIG_CREW } from './characters.js';
+import { loadCharacters, makeCharacter, makePickaxe, DIG_CREW } from './characters.js';
 
 /**
  * The sign above an archaeologist's head.
@@ -161,6 +161,12 @@ class Figure {
     if (this.char) {
       this.group.add(this.char.root);
       this.char.root.rotation.y = this.seed * 6.283;
+      // A tool in the hand. Kevin's note was that they should be digging and
+      // picking things up, and a crouching figure with empty hands reads as
+      // somebody who has dropped something.
+      this.pick = makePickaxe();
+      this.pick.visible = false;
+      this.char.hold(this.pick, 'r');
     }
 
     this.sign = new Group();
@@ -180,6 +186,7 @@ class Figure {
 
     this.sign.visible = state === 'working' || state === 'waiting';
     const busy = state === 'working';
+    if (this.pick) this.pick.visible = busy;
     this.ring.material = busy ? RING_WORKING : RING_WAITING;
     this.bead.material = busy ? BEAD_WORKING : BEAD_WAITING;
 

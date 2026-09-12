@@ -132,6 +132,7 @@ The bridge’s curved approach cobbles reuse the sanctuary rock scans. `src/thre
 
 - `public/assets/palace-pbr/mossy_stone_wall_*_2k.jpg`: [Mossy Stone Wall](https://polyhaven.com/a/mossy_stone_wall), Amal Kumar / Poly Haven, CC0-1.0. Includes diffuse, OpenGL normal, roughness, AO, and displacement maps. Official download URLs and verified MD5 checksums are in `sources.json`.
 - `src/three/palaceKit.js`: original modeled masonry courses, beveled stones, quatrefoil tracery, and curved flying buttresses. No franchise or purchased architectural models are included.
+- `src/three/slateGable.js`: original overlapping slate courses with exposed edges and restrained tile variation for the surviving hall roof, under the project's CC0 dedication; no external assets.
 - `src/three/palaceLighting.js`: original procedural reflection environment and depth-occluded volumetric window shafts. The Jupiter banner glyph is drawn with original canvas paths, without a font dependency.
 
 Terrain pebbles and ruin columns reuse the sanctuary’s existing CC0 cracked-boulder colour, normal, and roughness maps. Pebble erosion, fluted broken shafts, and buried mossy bases are original procedural geometry; no animal assets have been imported in this pass.

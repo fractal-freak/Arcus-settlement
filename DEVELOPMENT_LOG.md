@@ -242,3 +242,33 @@ it live. Follow-up after release: inspect whether verifier pruning needs a
 second dependency validation after dropping jobs, since an unreachable
 critic dimension survived the preceding workflow. Keep that separate from
 this already verified terrain change. Resume castle craft afterward.
+
+## September 12, 2026 — Give the surviving hall a constructed slate roof
+
+Hypothesis stated before editing: the hall roof reads as a smooth blue sheet
+beside the detailed gatehouse. Replace the surface with staggered overlapping
+slate courses, retaining its authored dimensions and the open ruined half.
+Added slateGable.js and a slateGable shape/material in the shared realm plan.
+Tiles have real exposed edges and ends, with their lower edges sitting proud
+of the slope so each upper course overlaps cleanly. Rejected an initial
+repeating high-contrast colour pattern and parallel plates that risked
+coplanar overlap; final variation is restrained and courses read by geometry.
+
+Inspected roof and courtyard before/after plus matching world views. The
+surviving roof now reads as laid slate; the larger silhouette, open hall,
+walking floors and ground occupancy are preserved. This is a modest detail
+improvement, not a rebuilt castle or a claim of production-asset parity.
+Original asset provenance recorded in ASSETS.md. No state edits or new assets.
+
+All 33 isolated tests, strict rulebook validation, build, close castle review
+and repaired world/performance review pass. A focused geometry test bounds
+cost below 6,000 triangles and verifies the roof stays in the existing plan
+without covering the ruined half. Existing tests cover court/gate walking.
+Baseline CPU median/p95 6.0/10.6 ms and completed 20.53/32.37; final 5.8/9.6
+and 19.68/33.26 on M4 Pro. No speedup claimed. No additional opening draw calls.
+Evidence: .local/roof/{before,final,world-before,world-final}.
+
+Accepted for local integration and normal isolated release, pending deployment
+verification. Next castle priority: junctions between surviving roof, exposed
+vault ribs and masonry; then a useful village workplace/furnishing pass so
+citizens' environments receive sustained attention alongside the landmark.

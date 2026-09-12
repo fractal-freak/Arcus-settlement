@@ -64,7 +64,7 @@ for(let i=0;i<20;i++) {
 
 room('Great hall',-30,-25,15,11,f,8.6,'stone',3.2);
 // Roof structure survives on the western half; the eastern hall is open to the sky.
-parts.push({shape:'roof',name:'Surviving hall roof',x:-30,y:f+8.6,z:-25,w:15.8,d:7.6,h:5.2,half:true,material:'roof',solid:false});
+parts.push({shape:'slateGable',name:'Surviving hall roof',x:-30,y:f+8.6,z:-25,w:15.8,d:7.6,h:5.2,half:true,material:'slate',solid:false});
 for(let z=-30;z<=-20;z+=2.1)box('Exposed oak roof beam',-33,f+8.35,z,9,.25,.24,'wood',false);
 box('Hall dais',-30,f+.12,-28.9,6,.24,2.6,'floor',false);
 box('High table',-30,f+1.02,-27.7,5.1,.18,.9,'wood');

@@ -10,6 +10,7 @@ import { Gatehouse3D } from './gatehouse3d.js';
 import { PalaceLandscape3D } from './palaceLandscape3d.js';
 import { ruinedTowerGeometry } from './ruinedTower3d.js';
 import {weatherPalaceMaterial} from './palaceWeathering.js';
+import {slateGableGeometry} from './slateGable.js';
 
 function strawTexture() {
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
@@ -58,6 +59,7 @@ function materials() {
     wood:new MeshStandardMaterial({map:wood,bumpMap:woodBump,bumpScale:.035,roughness:.92,color:0xb6a99a,side:DoubleSide}),
     plaster:new MeshStandardMaterial({map:grain,bumpMap:grain,bumpScale:.055,roughness:1,color:0xc7baa0,side:DoubleSide}),
     roof:new MeshStandardMaterial({map:grain,bumpMap:grain,bumpScale:.065,roughness:.94,color:0x404b55,side:DoubleSide}),
+    slate:new MeshStandardMaterial({map:grain,bumpMap:grain,bumpScale:.025,roughness:.9,color:0x586169,vertexColors:true,side:DoubleSide}),
     thatch:new MeshStandardMaterial({map:straw,bumpMap:straw,bumpScale:.09,roughness:1,color:0xc4b68e,side:DoubleSide}),
     window:new MeshStandardMaterial({color:0x344954,roughness:.12,metalness:.2,envMapIntensity:1.4}),
     foliage:new MeshStandardMaterial({color:0x567746,roughness:1}),
@@ -117,6 +119,7 @@ export class Realm3D {
       if(p.section==='Jupiter gatehouse'||p.collisionOnly)continue;
       let g;
       if(p.shape==='ruinedDrum')g=ruinedTowerGeometry(p);
+      else if(p.shape==='slateGable')g=slateGableGeometry(p);
       else if(p.shape==='roof')g=roof(p);
       else if(p.shape==='orb'){g=new SphereGeometry(1,20,12).toNonIndexed();g.scale(p.w/2,p.h/2,p.d/2);g.translate(p.x,p.y,p.z);}
       else if(p.shape==='crag') {

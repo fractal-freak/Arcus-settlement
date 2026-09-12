@@ -420,3 +420,15 @@ move API; frozen dynamic actors are excluded from this static ground contract,
 with the full crowd audit covering their collisions separately. Route error
 0.0245m, below the unchanged 0.12m limit. Actual court and journal screenshots
 were inspected. No claim of a frame-rate improvement is made.
+
+Cloud follow-up: deployment 34717978530 and API attempt 34718012887 both failed
+while draining the software renderer, before frame sampling. The added MSAA
+render target stalls this backend. Removed the MSAA addition entirely, retaining
+the existing FXAA stack; no timeout or performance gate was weakened. This
+supersedes the two-sample choice above. All movement/UI/court changes remain.
+The first local capture after removal also failed a timing comparison (34.45ms
+completed median). A fresh unchanged control followed immediately by the release
+passed every original gate: completed median/p95 23.2/35.23ms control and
+21.74/38.22ms release; CPU 8.4/13.1ms control and 6.8/11.5ms release. Full walking
+route passed at 0.0245m error. Both failed and successful measurements are retained
+in local evidence; this remains a compatibility repair, not a speedup claim.

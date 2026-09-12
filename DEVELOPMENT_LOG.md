@@ -388,3 +388,35 @@ matched unchanged-control/follow-up comparison passed: completed median/p95
 21.59/33.45ms before, 21.4/33.06ms after; CPU 7.9/12ms before, 7.6/12.3ms after.
 No gate or frame count changed. Route error was zero. The actual walking image
 was inspected. Full tests, strict rulebook verification and build pass.
+
+## September 12 — deliver player, interface and stone-court polish
+
+Integrated the existing player, conversation, occupation and consistent-panel
+work into the public build, with continuous rig updates and solid shared crowd
+bodies. The journal now calls these assignments Citizen projects and explicitly
+labels percentages as simulated construction work, not development progress.
+Added a laid, bevelled limestone court around the settlement stone, retaining
+an irregular fieldstone edge and the existing ground/shoreline exclusions.
+
+A 307-second crowd audit found three workers blocked at occupied intermediate
+waypoints. Finer dynamic route planning resolves passages missed by the coarse
+static grid. Replanned paths store only coordinates, avoiding recursive job
+references. Added a regression for a passable gap between coarse grid lanes.
+
+The free-provider loop now retries transient failures at most three times and
+can publish a fully finished substantial task within a larger stage. The stage
+advances only when every stage acceptance criterion is met. Unfinished tasks
+remain drafts; billing, provider and generated-source permissions are unchanged.
+
+Validation: 75 tests passed, one future bakery contract skipped; strict rulebook
+and build passed. Player, five viewport/panel checks, mobile journal, search,
+focus and keyboard checks passed. All 48 workers completed deliveries in 307.2
+simulated seconds; minimum separation 1.099999m, zero obstructed positions.
+The initial four-sample AA capture exceeded the intended cost and was reduced
+to two samples. Final matched completed frames: median/p95 22.34/34.18ms before,
+23.71/34.76ms after; CPU 7.4/13.5ms before, 6.3/10.1ms after. All existing gates
+passed. The ground route now drives PlayerMotion instead of the removed vector
+move API; frozen dynamic actors are excluded from this static ground contract,
+with the full crowd audit covering their collisions separately. Route error
+0.0245m, below the unchanged 0.12m limit. Actual court and journal screenshots
+were inspected. No claim of a frame-rate improvement is made.

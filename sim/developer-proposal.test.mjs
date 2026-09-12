@@ -9,7 +9,7 @@ test('proposal continues a retained draft and adds new modules against original 
  const root=await mkdtemp(join(tmpdir(),'world-proposal-'));
  try{
   await mkdir(join(root,'sim'));await mkdir(join(root,'src/app'),{recursive:true});await mkdir(join(root,'.local/api-development'),{recursive:true});
-  for(const f of ['developer.mjs','developer-policy.mjs'])await copyFile(new URL(f,import.meta.url),join(root,'sim',f));
+  for(const f of ['developer.mjs','developer-policy.mjs','developer-api.mjs'])await copyFile(new URL(f,import.meta.url),join(root,'sim',f));
   await writeFile(join(root,'src/app/example.js'),'original');
   await writeFile(join(root,'DEVELOPMENT_PLAN.json'),JSON.stringify({stages:[{id:'test',track:'simulation'}]}));
   await writeFile(join(root,'.local/api-development/progress.json'),JSON.stringify({stage:0,history:[{reason:'continue useful foundation'}],draft:{summary:'foundation',files:[{path:'src/app/example.js',before:digest('original'),content:'retained'}]}}));

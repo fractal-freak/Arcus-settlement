@@ -44,6 +44,7 @@ export const SOUND_LAYERS = [
   ['crickets', 'Night insects', 0.3], ['drone', 'Low hum', 0],
   ['bowls', 'Singing bowls', 0.3],
   ['work', 'Work sounds', 0.5],
+  ['steps', 'Footsteps', 0.55],
 ];
 const RECORDINGS = ['wind', 'river', 'birds', 'crickets', 'bowls'];
 
@@ -247,6 +248,19 @@ export class Ambience {
     }
 
     this.ready = true;
+  }
+
+  /** A player footfall. Synthesized only when sound is enabled. */
+  footstep(running = false, landing = false) {
+    if (!this.ready || !this.on || this.ctx.state !== 'running') return;
+    const ctx=this.ctx,t=ctx.currentTime;
+    // One short, soft crunch, using the existing generated noise buffer.
+    const src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+    src.buffer=this.noise;filter.type='lowpass';filter.frequency.value=landing?650:running?1100:850;
+    gain.gain.setValueAtTime(landing ? .65 : running ? .4 : .28,t);
+    gain.gain.exponentialRampToValueAtTime(.0001,t+.14);
+    src.connect(filter).connect(gain).connect(this.buses.steps);src.start(t);src.stop(t+.16);
+    src.onended=()=>{src.disconnect();filter.disconnect();gain.disconnect();};
   }
 
   /**

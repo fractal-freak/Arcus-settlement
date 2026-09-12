@@ -17,7 +17,7 @@
 import { hermesBlocked, hermesReserved } from './hermes.js';
 import { bridgeFloor, bridgeBlocked, outsideBridgeWorks } from './bridge.js';
 import { propNear, landmarkNear, OFFERING } from './village.js';
-import { smoothHeightAt, isWater, WATER_LEVEL, STEP } from './terrain.js';
+import { smoothHeightAt, naturalHeightAt, isWater, WATER_LEVEL, STEP } from './terrain.js';
 import { realmBlocked, realmFloor } from './realm.js';
 import { SpatialIndex } from './spatialIndex.js';
 import { propRadius } from './propSizes.js';
@@ -57,11 +57,13 @@ export function onPlacementsChanged(fn) { listeners.add(fn); return () => listen
  */
 export function blocked(x, z, clear = 0.6) {
   const crossing=bridgeBlocked(x,z,clear);
-  if(crossing !== null)return crossing;
+  if(crossing !== null)return crossing || placed.intersects(x,z,clear);
   if (realmBlocked(x, z, clear)) return true;
-  if (realmFloor(x, z) !== null) return false;
+  if (realmFloor(x, z) !== null) return placed.intersects(x,z,clear);
   if (isWater(Math.round(x), Math.round(z))) return true;
-  if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
+  // Water follows the natural terrain, exactly as terrain3d.buildWater does.
+  // A dry excavation can be below river level without becoming a pond.
+  if (naturalHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
   if (hermesBlocked(x, z, clear)) return true;
   if (!hermesReserved(x, z, 0.9 + clear) && landmarkNear(x, z, 0.9 + clear)) return true;
   if (Math.hypot(x - OFFERING.x, z - OFFERING.z) < OFFERING.r + clear) return true;

@@ -1,3 +1,6 @@
+import { registerPanel, setPanel } from './app/panels.js';
+import { mountInterface, icon } from './app/icons.js';
+import './app/interface.css';
 import { PalaceLighting } from './three/palaceLighting.js';
 /**
  * Boot.
@@ -22,9 +25,10 @@ import { Enchantment3D } from './three/enchantment3d.js';
 import { Realm3D } from './three/realm3d.js';
 import { REALM, REALM_BUILDINGS } from './app/realm.js';
 import { Landmarks3D } from './three/landmarks3d.js';
+import { WorkHud } from './app/workHud.js';
 import { Folk3D } from './three/folk3d.js';
 import { DigSite3D } from './three/digsite3d.js';
-import { setPlacements, blocked } from './app/occupied.js';
+import { setPlacements, blocked, walkingHeightAt } from './app/occupied.js';
 import { Ambience } from './app/ambience.js';
 import { mountSoundControls } from './app/soundControls.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
@@ -34,6 +38,8 @@ import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { Raycaster } from 'three';
 import { smoothHeightAt } from './app/terrain.js';
+import { excavationCrew } from './app/digs.js';
+import { HERMES } from './app/hermes.js';
 
 // Reuse atlas images shared by the kit's separate glTF files.
 Cache.enabled = true;
@@ -69,7 +75,9 @@ const rig = new Rig(stage.camera, stage.renderer.domElement);
 
 rig.target.set(-14, smoothHeightAt(-14, -8)+2, -8);
 rig.setDistance(86);
-const walk = new Walk3D(stage.camera, rig, stage.renderer.domElement);
+const walk = new Walk3D(stage.camera, rig, stage.renderer.domElement, {
+  scene:stage.scene,folk,occluders:[...buildingOccluders],onFootstep:(running,landing)=>ambience.footstep(running,landing),
+});
 
 /** How high above the ground the camera is never allowed to sink below. */
 const CLEARANCE = 0.6;
@@ -117,6 +125,13 @@ function clampAboveGround() {
  */
 const FORCE_DAYLIGHT = true;
 
+const workHud = new WorkHud(folk, f => {
+  if(walk.active)walk.exit();
+  const at=f.char.root.position;
+  rig.target.set(at.x,walkingHeightAt(at.x,at.z),at.z);
+  rig.autoTilt=false;rig.setDistance(28,.7);
+});
+
 const hudStat = document.getElementById('stat');
 const hudSky = document.getElementById('sky');
 let light = 0;
@@ -140,12 +155,12 @@ const feed = new Feed((d) => {
   if (d.town && d.counts) {
     hudStat.textContent =
       `${REALM.name} · ${REALM_BUILDINGS.length} buildings · ` +
-      `${d.town.folk} citizens${d.population ? ' · subscriber-linked' : ' · subscriber link pending'} · ${d.counts.working} archaeologists working`;
+      `${d.town.folk} citizens · ${excavationCrew(d.people).length} archaeologists excavating`;
     landmarks.sync({ ...d.town, milestones: (d.town.milestones ?? []).filter(m => m.key === 'well' || m.key === 'bridge') });
-    folk.sync({ ...d.town, residents: d.life?.citizens });
+    folk.sync({ ...d.town, residents: d.life?.citizens, chronicle: d.life?.chronicle, placements: d.life?.placements });
   }
   if (d.life) {
-    syncChronicle(d.life);
+    workHud.sync(d.life);
     // Everything the citizens have finished, standing where they put it.
     built.sync(d.life.placements);
     // And the same list again as ground nobody may stand in — sessions and
@@ -158,7 +173,11 @@ const feed = new Feed((d) => {
     // only changes when the feed does.
     syncCrew();
   }
-  if (d.founding) settlementStone.sync(d.founding);
+  if (d.founding) {
+    settlementStone.sync(d.founding);
+    const stone=settlementStone.group?.getObjectByName('Settlement Stone — carved granite');
+    if(stone&&!walk.occluders.includes(stone))walk.occluders.push(stone);
+  }
 });
 
 // ── People overlay ─────────────────────────────────────────────────────
@@ -173,7 +192,6 @@ const feed = new Feed((d) => {
 const peopleLayer = document.getElementById('people');
 const card = document.getElementById('card');
 const crew = document.getElementById('crew');
-const chron = document.getElementById('chron');
 const pills = new Map(); // session id -> <a>
 const crewRows = new Map(); // session id -> <button>
 let hoveredId = null;
@@ -210,7 +228,9 @@ function showCard(p, x, y) {
     : p.state === 'waiting' ? 'Open, waiting on you' : 'Resting';
   const bits = [];
   if (p.who) bits.push(`<span class="who">${esc(p.who.name)}</span> · ${esc(p.who.temper)}`);
-  bits.push(`<b>${doing}</b>`);
+  const site = people.figures.get(p.id)?.site;
+  if (site) bits.push(`<b>Excavating at ${esc(site.where)}</b>`);
+  bits.push(`Session: ${doing}`);
   if (p.doing) {
     bits.push(`<span class="doing">${esc(p.doing.verb)}${p.doing.detail ? ' — ' + esc(p.doing.detail) : ''}</span>`);
   }
@@ -251,52 +271,31 @@ function hideCard() { card.classList.remove('show'); }
 function goTo(id) {
   const a = people.anchors().find((p) => p.id === id);
   if (!a) return;
+  walk.exit();
   followId = id;
   // The same three calls the debug hook's look() makes. There is no
   // rig.look() — reaching for one is what made the first version of this
   // throw on every click and quietly do nothing at all.
   rig.target.set(a.position.x, smoothHeightAt(a.position.x, a.position.z), a.position.z);
-  rig.autoTilt = true;
-  rig.setDistance(18);
+  rig.autoTilt = false;
+  rig.setDistance(12, .65);
   syncCrew();
 }
 
-/**
- * Header, pull-tab and body for a notice board. The pull rides the inner
- * edge so when the board slides off-screen a real handle stays in the world,
- * not a sliver of the panel with the arrow already gone.
- */
-function mountBoard(board, { toggleId, bodyId, storageKey, header, openLabel, shutLabel }) {
-  const h = document.createElement('button');
-  h.type = 'button';
-  h.id = toggleId;
-  h.innerHTML = header;
-  const pull = document.createElement('button');
-  pull.type = 'button';
-  pull.className = 'pull';
-  pull.innerHTML = '<span class="chev" aria-hidden="true"></span>';
-  const apply = (shut) => {
-    board.classList.toggle('shut', shut);
-    h.setAttribute('aria-expanded', shut ? 'false' : 'true');
-    const label = shut ? openLabel : shutLabel;
-    h.setAttribute('aria-label', label);
-    pull.setAttribute('aria-label', label);
-    try { localStorage.setItem(storageKey, shut ? '1' : '0'); } catch { /* private window */ }
-  };
-  const toggle = () => apply(!board.classList.contains('shut'));
-  h.addEventListener('click', toggle);
-  pull.addEventListener('click', toggle);
-  board.appendChild(h);
-  const body = document.createElement('div');
-  body.id = bodyId;
-  board.appendChild(body);
-  board.appendChild(pull);
-  // A first visit opens onto the world. Preserve an existing choice to keep a board open.
-  let initiallyShut = true;
-  try { initiallyShut = localStorage.getItem(storageKey) !== '0'; } catch { /* private window */ }
-  apply(initiallyShut);
+/** The optional local crew uses the same drawer lifecycle as the journal. */
+function mountBoard(board, { toggleId, bodyId, header, openLabel }) {
+  const panel=document.createElement('section');panel.id='crew-panel';panel.hidden=true;panel.setAttribute('aria-label','Dig crew');
+  const h=document.createElement('header');
+  const title=document.createElement('div');title.innerHTML=header;title.id=toggleId;
+  const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Close dig crew');close.innerHTML=icon('close');
+  h.append(title,close);
+  const body=document.createElement('div');body.id=bodyId;panel.append(h,body);
+  const pull=document.createElement('button');pull.type='button';pull.id='crew-menu';pull.className='pull';pull.innerHTML=icon('person')+'<span>Crew</span>';
+  pull.setAttribute('aria-label',openLabel);pull.setAttribute('aria-controls',panel.id);pull.setAttribute('aria-expanded','false');
+  registerPanel(panel,pull);
+  pull.onclick=()=>setPanel(panel,panel.hidden);close.onclick=()=>setPanel(panel,false);
+  board.append(panel,pull);document.getElementById('world-tools')?.append(pull);
 }
-
 /**
  * The crew panel: every session, always on screen, sorted the way the feed
  * already sorts them — working first, then waiting on Kevin, then resting.
@@ -309,6 +308,7 @@ function syncCrew() {
   const list = people.anchors()
     .map((a) => a.data)
     .filter(Boolean);
+  crew.hidden = !list.length;
   const rank = { working: 0, waiting: 1, resting: 2 };
   list.sort((a, b) => (rank[a.state] - rank[b.state]) || (a.idleMs - b.idleMs));
 
@@ -319,15 +319,14 @@ function syncCrew() {
     mountBoard(crew, {
       toggleId: 'crewToggle',
       bodyId: 'crewBody',
-      storageKey: 'crewShut',
-      header: '<span class="chev" aria-hidden="true"></span><span>The settlement</span><span class="count"></span>',
-      openLabel: 'Show the settlement',
-      shutLabel: 'Hide the settlement',
+      header: '<span class="chev" aria-hidden="true"></span><span>Dig crew</span><span class="count"></span>',
+      openLabel: 'Show the dig crew',
     });
   }
+  const crewMenu=document.getElementById('crew-menu');
+  if(crewMenu)crewMenu.hidden=!list.length;
   const body = crew.querySelector('#crewBody');
-  const atWork = list.filter((p) => p.state !== 'resting').length;
-  crew.querySelector('.count').textContent = atWork ? `${atWork} at work` : `${list.length} here`;
+  crew.querySelector('.count').textContent = `${list.length} excavating`;
 
   const seen = new Set();
   for (const p of list) {
@@ -360,7 +359,8 @@ function syncCrew() {
     if (job.textContent !== title) job.textContent = title;
     const sub = row.querySelector('.sub');
     const line = [
-      p.state === 'working' ? 'working' : p.state === 'waiting' ? 'waiting on you' : ago(p.idleMs),
+      'excavating',
+      p.state === 'working' ? 'session working' : p.state === 'waiting' ? 'session waiting on you' : 'session resting',
       p.tokens && p.tokens.context ? `${tokens(p.tokens.context)} ctx` : null,
     ].filter(Boolean).join(' · ');
     if (sub.textContent !== line) sub.textContent = line;
@@ -407,78 +407,6 @@ function updateOcclusion(anchors) {
   ray.set(from, tmpDir);
   ray.far = Math.max(0, reach - 0.45);
   if (isOccluded(ray, solid)) occluded.add(a.id); else occluded.delete(a.id);
-}
-
-/**
- * The chronicle: what the settlement got up to while nobody was looking.
- *
- * Rebuilt whole on each feed tick rather than reconciled row by row. It is at
- * most sixty entries and it only changes when the hub's simulation has
- * actually advanced, so the simpler code is the right code here — unlike the
- * crew board, whose rows carry click handlers worth keeping alive.
- */
-function syncChronicle(L) {
-  if (!L) return;
-  if (!chron.firstChild) {
-    mountBoard(chron, {
-      toggleId: 'chronToggle',
-      bodyId: 'chronBody',
-      storageKey: 'chronShut',
-      header: '<span class="chev" aria-hidden="true"></span><span>Chronicle</span><span class="when"></span>',
-      openLabel: 'Show the chronicle',
-      shutLabel: 'Hide the chronicle',
-    });
-  }
-  chron.querySelector('.when').textContent = L.said || '';
-  const body = chron.querySelector('#chronBody');
-  const entries = L.chronicle || [];
-  if (!entries.length) {
-    body.innerHTML = '<div class="empty">Nothing has happened here yet. Come back in a while.</div>';
-    return;
-  }
-  const html = standingHtml(L) + entries.slice(0, 40).map((e) => {
-    // A line out of the ground gets the line itself, and who wrote it. These
-    // are real quotations from real books (see arcus-finds.mjs, where every
-    // one was checked back against the scan it came from), so the attribution
-    // is not decoration — it is the thing that makes the quote worth anything.
-    const dug = e.quote
-      ? `<blockquote class="q">${esc(e.quote)}<cite>${esc(e.source || '')}</cite></blockquote>`
-      : '';
-    return `<div class="e ${esc(e.kind)}"><div class="d">${esc(e.at)}</div>`
-      + `<div class="t">${esc(e.text)}</div>${dug}</div>`;
-  }).join('');
-  const sig = `${entries[0].tick}:${entries.length}:${L.quality?.overall ?? ''}`;
-  if (body.dataset.sig !== sig) {
-    body.innerHTML = html;
-    body.dataset.sig = sig;
-  }
-}
-
-/**
- * How good this place has got, as the settlement itself scores it.
- *
- * The citizens' whole job is to make this look like somewhere expensive was
- * spent, and they decide what to do next by grading themselves on seven things
- * — see arcus-quality.mjs, which holds the rubric and the reasons. Showing the
- * marks is what turns that from a hidden mechanic into something worth coming
- * back to check: the bars move overnight, and the one they are worst at is the
- * one they are all working on.
- */
-function standingHtml(L) {
-  const q = L.quality;
-  if (!q || !Array.isArray(L.dimensions)) return '';
-  const rows = L.dimensions.map((d) => {
-    const v = q.scores[d.key] ?? 0;
-    const on = v >= 0.999;
-    return `<div class="sd${d.key === q.weakest ? ' now' : ''}${on ? ' full' : ''}" title="${esc(d.why)}">`
-      + `<span class="n">${esc(d.name)}</span>`
-      + `<span class="bar"><i style="width:${Math.round(v * 100)}%"></i></span></div>`;
-  }).join('');
-  const ask = (L.proposals || []).slice(-1)[0];
-  return '<div class="standing">'
-    + `<div class="sh"><span>The work</span><b>${(q.overall * 100).toFixed(0)}</b></div>${rows}`
-    + (ask ? `<div class="ask">${esc(ask.text)}</div>` : '')
-    + '</div>';
 }
 
 function syncPeopleOverlay() {
@@ -580,7 +508,8 @@ function frame(dtMs) {
   if (walk.active) walk.tick(dtMs);
   else { rig.update(dtMs); clampAboveGround(); }
   people.tick(dtMs);
-  folk.tick(elapsed / 1000);
+  folk.tick(elapsed / 1000, walk.active ? walk.position : null);
+  workHud.tick(elapsed);
   enchantment.tick(elapsed / 1000);
   palaceLighting.tick(elapsed / 1000);
   landmarks.tick(elapsed / 1000);
@@ -684,7 +613,7 @@ function goToStone() {
 }
 
 addEventListener('keydown', (e) => {
-  if (e.key === 'Home') goToStone();
+  if (e.key === 'Home' && !walk.active && !e.target?.matches?.('input,textarea,select,[contenteditable=true]')) goToStone();
 });
 
 document.getElementById('camHome').addEventListener('click', goToStone);
@@ -692,6 +621,27 @@ document.getElementById('camIn').addEventListener('click', () => rig.nudgeDistan
 document.getElementById('camOut').addEventListener('click', () => rig.nudgeDistance(1.28));
 document.getElementById('camLeft').addEventListener('click', () => rig.orbit(-0.28));
 document.getElementById('camRight').addEventListener('click', () => rig.orbit(0.28));
+
+let lastDig = null;
+document.getElementById('camDigs').addEventListener('click', () => {
+  const occupiedSites = new Map();
+  for (const f of people.figures.values()) {
+    if (f.group.visible && f.site) occupiedSites.set(f.site.id, f.site);
+  }
+  const sites = [...occupiedSites.values()].sort((a, b) => a.d - b.d);
+  // On the public world there are no private session figures. The authored
+  // excavation remains a useful destination there.
+  const site = sites.length ? sites[(sites.findIndex(s => s.id === lastDig) + 1) % sites.length] : null;
+  lastDig = site?.id ?? null;
+  const at = site?.center ?? HERMES;
+  walk.exit();
+  followId = null;
+  rig.target.set(at.x, smoothHeightAt(at.x, at.z), at.z);
+  // Look down into the cut, above the camp tents and trench walls.
+  rig.autoTilt = false;
+  rig.setDistance(site ? 18 : 38, .6);
+  syncCrew();
+});
 
 /**
  * A test hook. A hidden browser pane freezes animation frames, so nothing is
@@ -733,3 +683,5 @@ window.__world = {
 
 // Cached data is synchronous: initialize the HUD and overlay before subscribing.
 feed.start();
+
+mountInterface();

@@ -123,8 +123,10 @@ draft. Main changes are reconciled against file preimages; conflicts cause a
 fresh assessment instead of overwriting public work. This branch never supplies
 executable runner code, tests, credentials or workflow definitions.
 
-A reviewer can retain an unfinished foundation without publishing it. A stage
-is published only after its acceptance criteria and unchanged checks pass.
+A reviewer can retain an unfinished foundation without publishing it. A completed, substantial task is published after its own acceptance criteria
+and the unchanged checks pass. The larger stage advances only when the reviewer
+confirms every stage criterion; an unfinished stage does not hold back a complete
+improvement.
 Simulation changes are judged on integration and behavior, not on whether they
 change a screenshot. The fixed bakery contract tests conservation, shortages,
 feeding and deterministic long runs when that module is introduced. Passing a
@@ -134,7 +136,7 @@ Generated edits may add game source and sim/systems modules and update life or
 citizens integration, at most six edited files per attempt and twelve files/
 200 KB in a cumulative draft. Tests, transport, private feeds, rulebook, state,
 runner, plan and workflows stay outside the generated-edit allowlist. Completed
-stages deploy through the existing reusable settlement workflow; retained or
+tasks deploy through the existing reusable settlement workflow; retained or
 rejected drafts do not trigger an extra deployment or extra critic call.
 
 Existing-file proposals now use compact exact text edits rather than complete
@@ -143,3 +145,7 @@ matches are mandatory; materialized cumulative files still pass the same bounds
 and preimage checks. The visual baseline includes the actual village walking
 camera, and the harness traverses the existing stone-to-gatehouse route. Failures
 before review also save their specific error message for the next pass.
+
+Transient free-provider failures receive at most three attempts (5s and 15s
+backoff, bounded Retry-After). Permanent errors fail immediately. This does not
+change provider, enable billing, or guarantee an improvement every 15 minutes.

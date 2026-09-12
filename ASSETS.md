@@ -186,3 +186,7 @@ finds trays and spoil heaps are original project work, dedicated to CC0. The old
 procedural face/body, horn-like wings and detached sandal have been removed.
 
 `src/app/jupiterApproach.js` and `src/three/jupiterApproach3d.js`: original processional lane alignment, worn paving geometry and fern verge composition, CC0 under the project dedication. Reuses the recorded sanctuary CC0 rock maps and original fern mesh; no new external assets.
+
+The laid limestone court (`courtFlags3d.js`), interface SVG icons, and procedural
+player accessories are original project work dedicated to CC0. Court paving
+reuses the existing recorded CC0 sanctuary rock maps; no external assets added.

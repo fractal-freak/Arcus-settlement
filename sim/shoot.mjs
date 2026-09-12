@@ -216,7 +216,7 @@ if (process.env.DEVELOPMENT_VIEWS) {
   for (const view of [{name:'village',walk:true,x:-29,z:6,tx:-36,tz:-3},{name:'gatehouse',distance:25,x:-55,z:-29}]) {
     await page.evaluate(v=>{
       const w=window.__world;w.walk.exit();
-      if(v.walk){w.walk.enter();w.walk.position.set(v.x,v.y,v.z);w.walk.move(0,0);w.walk.yaw=Math.atan2(v.x-v.tx,v.z-v.tz);w.walk.pitch=.06;w.walk.tick(0);}
+      if(v.walk){w.walk.enter();Object.assign(w.walk.position,{x:v.x,y:v.y,z:v.z});w.walk.motion.stop();w.walk.yaw=Math.atan2(v.x-v.tx,v.z-v.tz);w.walk.pitch=.06;w.walk.tick(0);}
       else w.look(v.distance,v.x,v.z);
     },{...view,y:walkingHeightAt(view.x,view.z)});
     const until=Date.now()+90000;let stable=0;
@@ -230,10 +230,17 @@ if (process.env.DEVELOPMENT_VIEWS) {
   }
   const points=Array.from({length:Math.ceil(APPROACH_LENGTH/.1)+1},(_,i)=>{const p=approachPoint(Math.min(APPROACH_LENGTH,i*.1));return {...p,y:walkingHeightAt(p.x,p.z)};});
   const routeError=await page.evaluate(points=>{
-    const w=window.__world;w.walk.enter();w.walk.position.set(points[0].x,points[0].y,points[0].z);w.walk.move(0,0);let worst=0;
-    for(const p of points){w.walk.move(p.x-w.walk.position.x,p.z-w.walk.position.z);worst=Math.max(worst,Math.hypot(p.x-w.walk.position.x,p.z-w.walk.position.z));}
-    for(let z=-13;z>=-32;z-=.1){w.walk.move(-55-w.walk.position.x,z-w.walk.position.z);worst=Math.max(worst,Math.hypot(-55-w.walk.position.x,z-w.walk.position.z));}
-    w.walk.exit();return worst;
+    const w=window.__world;w.walk.enter();Object.assign(w.walk.position,points[0]);w.walk.motion.stop();let worst=0;
+    // This is the fixed ground-clearance contract. Frozen citizens must not
+    // become permanent walls; dynamic separation/delivery has its own crowd audit.
+    const solid=w.walk.motion.solid;w.walk.motion.solid=w.blocked;
+    const reach=p=>{
+      for(let i=0;i<180;i++){const dx=p.x-w.walk.position.x,dz=p.z-w.walk.position.z,d=Math.hypot(dx,dz);if(d<.025)break;w.walk.motion.update(1/60,{forward:Math.min(1,d*8),yaw:Math.atan2(-dx,-dz)});}
+      worst=Math.max(worst,Math.hypot(p.x-w.walk.position.x,p.z-w.walk.position.z));
+    };
+    for(const p of points)reach(p);
+    for(let z=-13;z>=-32;z-=.1)reach({x:-55,z});
+    w.walk.motion.solid=solid;w.walk.exit();return worst;
   },points);
   if(routeError>.12)throw Error('Milestone walking route blocked: '+routeError);
   console.log('Milestone walking route passed:',routeError);

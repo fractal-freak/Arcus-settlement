@@ -31,7 +31,7 @@ export async function loadProgress(){
 export function advanceProgress(p,event){
  const {candidate,...record}=event;
  const next={...p,history:[...p.history,record].slice(-40)};
- if(event.published){next.draft=null;next.stage=p.stage+1;}
+ if(event.published){next.draft=null;next.stage=p.stage+(event.stageComplete===true?1:0);}
  else if(event.validated&&event.retain&&event.candidate?.files.length)next.draft=validateCandidate(event.candidate);
  // Failed experiments never erase the last validated draft.
  return next;
@@ -58,7 +58,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   const candidate=await read('candidate'),review=await read('review'),publication=await read('publication'),validation=await read('validation'),attemptError=await read('attempt-error');
   const event={at:new Date().toISOString(),run:process.env.GITHUB_RUN_ID,stage:p.stage,
    outcome:process.env.DEVELOPMENT_RESULT||'unknown',validated:process.env.VALIDATION_RESULT==='success',
-   retain:review?.retain===true,published:publication?.published===true,
+   retain:review?.retain===true,published:publication?.published===true,stageComplete:publication?.stageComplete===true,
    summary:String(candidate?.summary||'No candidate produced').slice(0,1000),
    reason:String(review?.reason||publication?.reason||attemptError?.reason||(validation?.passed===false?validation.reason:null)||'Attempt failed before review; inspect this run before repeating.').slice(0,2000),
    next:String(review?.next||'Continue the current milestone; address the last failure.').slice(0,1000)};

@@ -1,0 +1,50 @@
+.village-journal{position:fixed;top:76px;left:18px;z-index:35;color:#eee9d9;font:14px/1.55 system-ui,sans-serif}
+.village-journal button{font:inherit;color:inherit;cursor:pointer;border:1px solid #bda66c55;border-radius:7px;background:#26372fee;padding:8px 12px;text-align:left}
+.village-journal button:hover{background:#43533c;border-color:#d6bc83}
+.village-journal :focus-visible{outline:2px solid #eed59c;outline-offset:3px}
+#journal-toggle{background:#1b2b23f5;box-shadow:0 3px 18px #0004;font-weight:600;padding:10px 16px}
+#journal-toggle::before{content:'▤';margin-right:9px;color:#e4c784}
+#village-work-panel{margin-top:10px;width:min(440px,calc(100vw - 36px));height:min(730px,calc(100dvh - 175px));display:flex;flex-direction:column;background:#18271ffb;border:1px solid #a28f6266;border-radius:14px;box-shadow:0 16px 55px #0008;overflow:hidden}
+#village-work-panel[hidden]{display:none}
+#village-work-panel header{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 12px}
+#village-work-panel h2{font:27px Georgia,serif;color:#f5e6bf;margin:3px 0 2px}
+#village-work-panel h3{font:22px Georgia,serif;color:#f2e3bf;margin:0 0 8px}
+#village-work-panel h4{font-size:15px;line-height:1.5;font-weight:600;margin:5px 0 8px;color:#f1eddd}
+#village-work-panel p{margin:7px 0 12px}
+.journal-eyebrow{font-size:9px;font-weight:700;letter-spacing:.13em;color:#c6b17c}
+#village-work-panel .journal-date{font-size:11px;color:#abb7a8;margin:3px 0 0}
+#village-work-panel .journal-close{font-size:24px;border:0;background:transparent;line-height:1;padding:4px 7px}
+#village-work-panel nav{display:flex;gap:4px;padding:0 16px 12px;border-bottom:1px solid #a28f6238}
+#village-work-panel nav button{flex:1;padding:8px 5px;text-align:center;font-size:12px;background:transparent;border-color:transparent;white-space:nowrap}
+#village-work-panel button[aria-pressed=true]{background:#b99b5730;border-color:#c8ad70;color:#f9e6b3}
+.journal-search{display:block;padding:12px 20px 10px;font-size:10px;color:#b8c1ae}
+.journal-search input{display:block;width:100%;font:13px system-ui;color:#f0ebda;background:#0d1b14;border:1px solid #8e9d7555;border-radius:7px;padding:10px;margin-top:4px}
+.journal-search input::placeholder{color:#93a38e}
+.journal-content{overflow-y:auto;overscroll-behavior:contain;padding:8px 20px 22px;min-height:0;scrollbar-color:#778367 #18271f}
+.journal-intro{color:#bcc8b6;font-size:13px}
+.journal-focus{border-left:2px solid #d5b676;padding:10px 13px;background:#b5a57112;border-radius:0 8px 8px 0;margin:16px 0}
+.journal-focus p{font-size:12px;color:#c3cbb9}
+.journal-card{border:1px solid #afaa7d30;border-radius:9px;padding:14px;margin:12px 0;background:#e6ddbc05}
+.journal-card p{color:#cbd2c0;font-size:13px}
+#village-work-panel .journal-person-link{border:0;background:transparent;padding:0;color:#e7c990;text-decoration:underline;text-decoration-color:#b7a37166;text-underline-offset:3px;font-size:13px}
+.journal-card progress{display:block;appearance:none;width:100%;height:5px;margin:8px 0 4px;border:0;border-radius:3px;accent-color:#d3b373;background:#5b6552}
+.journal-card progress::-webkit-progress-bar{background:#4c5944;border-radius:3px}
+.journal-card progress::-webkit-progress-value{background:#d3b373;border-radius:3px}
+.journal-card progress::-moz-progress-bar{background:#d3b373}
+.journal-meta,#village-work-panel small{display:block;font-size:11px;color:#a8b7a2}
+#village-work-panel .journal-aside{font:italic 16px/1.6 Georgia,serif;color:#ebd9ae;margin-bottom:5px}
+.journal-story-preview{border-left:2px solid #9eb18b55;padding-left:10px}
+.journal-event-kind{display:block;color:#e4c68b;font-size:12px;font-weight:600;margin-bottom:2px}
+.journal-event-people{display:flex;gap:12px;flex-wrap:wrap}
+.journal-filters{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+.journal-filters button{font-size:11px;padding:6px 9px}
+.journal-more{width:100%;text-align:center!important;margin-top:10px}
+#village-work-panel .journal-back{font-size:12px;margin-bottom:16px}
+#village-work-panel .journal-find{margin-top:9px}
+#village-work-panel details{margin-top:20px;padding-top:14px;border-top:1px solid #a28f6238;font-size:12px;color:#b8c5b0}
+#village-work-panel summary{cursor:pointer;color:#e3cea2}
+#village-work-panel blockquote{margin:12px 0;padding-left:12px;border-left:2px solid #c6ad77;font:italic 15px/1.6 Georgia,serif;color:#eadfc4}
+#village-work-panel cite{display:block;margin-top:7px;font-size:11px;font-style:normal;color:#a9b7a2}
+@media(max-width:540px){.village-journal{left:10px;top:68px}#village-work-panel{width:calc(100vw - 20px);height:calc(100dvh - 155px);margin-top:6px}#village-work-panel header{padding:14px 16px 10px}.journal-content{padding:8px 16px 18px}.journal-search{padding:10px 16px}#village-work-panel h2{font-size:24px}}
+body:has(#village-conversation[open]) .village-journal{visibility:hidden}
+@media(max-width:540px){#hud{display:block;padding:12px 18px}#hud #stat{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;margin-top:3px}#hud #sky{display:none}}

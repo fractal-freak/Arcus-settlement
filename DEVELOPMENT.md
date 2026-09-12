@@ -4,10 +4,22 @@ The goal is a cohesive, delightful adventure world with increasingly polished
 art direction and play. Breath of the Wild is a reference for composition,
 discovery and craft, not a source of assets or a claim of equivalent quality.
 
-The GitHub simulation still runs every half hour. A separate Codex task runs
-every thirty minutes on the local machine and can improve the game itself. This
-requires the machine and Codex to be available and uses the account's Codex
-allowance. Missing a pass is acceptable; shipping a regression is not.
+The original citizen critic uses the existing Gemini API configuration. The
+Codex development heartbeat is paused to stop consuming Codex allowance.
+The replacement API development workflow proposes source changes, runs the
+existing checks without API keys or write credentials, and reviews matching
+images through Gemini. An isolated trusted publisher applies only the original approved candidate,
+with an exact-base check and a normal fast-forward push. It never executes
+generated code with write credentials. Successful runs trigger the existing
+settlement deployment through workflow_run, without actions:write access.
+Generated changes cannot modify their runner, tests, workflows or state.
+
+Kevin confirmed billing is disabled and explicitly approved automatic
+publication on September 12. Both API loops require FREE_API_CONFIRMED=true. This assertion is not a technical billing cap: disable
+it if billing changes. Quota exhaustion skips a pass, with no paid fallback.
+The existing world simulation continues independently. Both AI activities can
+use Gemini without a Codex subscription allocation; GitHub runner usage is
+separate. Review artifacts expire after seven days.
 
 ## Current priorities
 

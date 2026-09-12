@@ -27,6 +27,9 @@ on:
   schedule:
     - cron: '7,37 * * * *'
   workflow_dispatch:
+  workflow_run:
+    workflows: [API world development]
+    types: [completed]
   push:
     branches: [main]
 
@@ -41,6 +44,7 @@ concurrency:
 
 jobs:
   live:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -76,14 +80,15 @@ jobs:
       # wrote anything.
       - name: Ask the critic what is wrong
         id: critic
+        if: vars.FREE_API_CONFIRMED == 'true' && github.event_name != 'workflow_run'
         continue-on-error: true
         env:
           # Whichever provider Kevin has given a key for — see sim/critic.mjs
           # for the two free ones that work. With no key the step says so and
           # the settlement carries on without it.
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
-          CRITIC_URL: ${{ vars.CRITIC_URL }}
-          CRITIC_MODEL: ${{ vars.CRITIC_MODEL }}
+          CRITIC_URL: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+          CRITIC_MODEL: gemini-3.6-flash
         run: node sim/critic.mjs
 
       # --prune drops the entries that are wrong and keeps the rest. A whole

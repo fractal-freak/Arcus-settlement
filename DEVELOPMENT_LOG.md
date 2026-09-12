@@ -273,6 +273,31 @@ verification. Next castle priority: junctions between surviving roof, exposed
 vault ribs and masonry; then a useful village workplace/furnishing pass so
 citizens' environments receive sustained attention alongside the landmark.
 
+## September 12 — replace recurring Codex usage with API development
+
+User requested all recurring loops use the free API. Paused the existing
+refine-the-settlement Codex heartbeat, retaining its prompt and target. The
+original critic uses the Gemini endpoint/model defaults; no repository API
+provider overrides were configured. The API project's billing tier is not
+visible from GitHub's secret and remains unconfirmed.
+
+Prepared a separate API-only candidate workflow with read-only permissions.
+It selects source context, proposes bounded edits, validates in a job without
+API/write credentials, and obtains a before/after visual review. It produces
+artifacts only. The workflow is gated on FREE_API_CONFIRMED=true; no new API
+calls or paid fallback were used. Owner confirmation of a Free-plan project
+with billing disabled is required before activation.
+
+Automatic approval review rejected the initial scheduled automatic-main-push
+implementation because of broad write permissions. Removed all publishing
+code and write permissions from this candidate; do not restore automatic
+publication without an explicit decision. The draft does not by itself make
+tested changes live. Existing citizen simulation/critic deployment is unchanged.
+
+All 35 Node tests, strict verifier, build and standard headless check pass.
+M4 Pro CPU median/p95 5.9/11.9ms, completed 20.94/33.08ms. Tests cover path
+allowlisting, immutable preimages, all-or-nothing checks and symlink refusal.
+Live API execution and scheduled release integration remain pending.
 ## September 12 — Stone-to-gatehouse route milestone, first landscape pass
 
 Roof release 34704247290 succeeded; exact public bundle index-BGs4VfWv.js matches the tested roof build. Current milestone remains a coherent stone-to-gatehouse journey, then a complete village workplace. Hypothesis before editing: isolated patches of fieldstones and near-identical meadow obscure the main castle approach. A continuous worn limestone lane with intact edge courses and sheltered planting will make the journey readable from the stone, through the village bend and at the bridge landing. Preserve the existing route, door clearance, shared walking height and newer local movement/UI work. Acceptance requires matched overview plus actual walking-camera evidence, traversing the entire approach, and unchanged performance gates. This pass does not complete the courtyard/workplace milestone.
@@ -318,3 +343,13 @@ Preserve the newer local player, journal, UI and occupied-waypoint fixes.
 Local integration is built; isolated publication and public verification follow.
 
 Integrated local validation: all 62 tests, strict verifier and build passed. The existing 307-second close-encounter crowd audit completed with all 48 citizens delivering, minimum separation 1.100004m, zero scenery violations and no page errors. Evidence: root .local/approach/crowd/evidence.json. Local build index-CiJA4pad.js includes the approach plus the preserved newer player/UI/navigation stack; the isolated public release contains only this approach change and the already-published base.
+
+## September 12 — Free API activation approved
+
+Kevin confirmed the Gemini project has billing disabled and explicitly approved
+automatic publishing after validation. Added a trusted source-only publisher
+with exact-base and preimage checks, isolated from candidate execution. It
+uses only contents:write; workflow_run invokes the existing deployment, with
+no actions:write permission. Both API loops are gated by FREE_API_CONFIRMED,
+use the same pinned Gemini configuration, and have no paid fallback. The
+Codex heartbeat remains paused.

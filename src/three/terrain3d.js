@@ -92,6 +92,31 @@ const WATER_FAR = new Color(0x315258);
 const groundSurface = makeGroundSurface();
 const landMat = new MeshStandardMaterial({ vertexColors: true, roughness: 0.97,
   map: groundSurface, bumpMap: groundSurface, bumpScale: 0.075 });
+landMat.onBeforeCompile=shader=>{
+  shader.uniforms.earthDetail={value:groundSurface};
+  shader.vertexShader='attribute float excavation; varying float vExcavation; varying vec2 vEarthXZ;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    vExcavation=excavation;vEarthXZ=(modelMatrix*vec4(position,1.0)).xz;
+  `);
+  shader.fragmentShader='uniform sampler2D earthDetail; varying float vExcavation; varying vec2 vEarthXZ;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    float crumbs=texture2D(earthDetail,vEarthXZ*.72).r;
+    float broadEarth=texture2D(earthDetail,vEarthXZ*.073).r;
+    vec2 cell=floor(vEarthXZ*1.45), q=fract(vEarthXZ*1.45)-.5;
+    float pick=fract(sin(dot(cell,vec2(127.1,311.7)))*43758.5453);
+    float angle=pick*6.28318;
+    q=mat2(cos(angle),-sin(angle),sin(angle),cos(angle))*q;
+    float scrape=(1.-smoothstep(.07,.14,abs(q.x)))*(1.-smoothstep(.13,.29+pick*.1,abs(q.y)))*step(.68,pick)*smoothstep(.77,.86,broadEarth);
+    float worked=smoothstep(.12,.78,vExcavation);
+    diffuseColor.rgb*=clamp(.83+(broadEarth-.76)*1.3+(crumbs-.76)*mix(.6,2.8,worked),.48,1.18);
+    diffuseColor.rgb*=1.-scrape*worked*.12;
+    float soilRelief=(crumbs-.76)*mix(.014,.075,worked)-scrape*worked*.012;
+  `);
+  shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+    normal=perturbNormalArb(-vViewPosition,normal,vec2(dFdx(soilRelief),dFdy(soilRelief)),faceDirection);
+  `);
+};
+landMat.customProgramCacheKey=()=> 'worked-earth-and-meadow-v1';
 // Same land, pushed a hair back in depth so streamed chunks win where they
 // overlap it. This is the mid-distance country: real hills and river, coarse
 // enough to cover the whole view, so the horizon is never a flat empty disc.

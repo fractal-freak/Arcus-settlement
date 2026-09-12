@@ -3,7 +3,8 @@ import { Group, Mesh, MeshStandardMaterial, BufferGeometry, Float32BufferAttribu
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { weatheredMaterial } from './villageMaterials.js';
-import { HERMES, HERMES_SCAN, HERMES_CHIPS, hermesWorld } from '../app/hermes.js';
+import { HERMES, HERMES_SCAN, HERMES_CHIPS, HERMES_EARTH, hermesWorld } from '../app/hermes.js';
+import { makeGroundSurface } from './groundSurface.js';
 import { smoothHeightAt } from '../app/terrain.js';
 
 export function buildHermes() {
@@ -17,6 +18,9 @@ export function buildHermes() {
     wood: new MeshStandardMaterial({ color: 0x77604a, roughness: 1, vertexColors: true }),
     rope: new MeshStandardMaterial({ color: 0xbba781, roughness: 1, vertexColors: true }),
   };
+  const earthGrain=makeGroundSurface();
+  materials.soil.map=earthGrain;materials.soil.bumpMap=earthGrain;
+  materials.soil.bumpScale=.18;
   materials.marble = weatheredMaterial(materials.marble, 'rock');
   const stoneShader = materials.marble.onBeforeCompile;
   materials.marble.onBeforeCompile = shader => {
@@ -62,6 +66,10 @@ export function buildHermes() {
     g.setAttribute('color', new Float32BufferAttribute(colors,3));
     // Keep all batch attributes identical, including geometries authored below.
     g.deleteAttribute('uv');
+    if(kind==='soil') {
+      const uv=[];for(let i=0;i<p.count;i++)uv.push(p.getX(i)*1.8,p.getZ(i)*1.8);
+      g.setAttribute('uv',new Float32BufferAttribute(uv,2));
+    }
     if (!batches.has(kind)) batches.set(kind, []);
     batches.get(kind).push(g.index ? g.toNonIndexed() : g);
   }
@@ -136,6 +144,13 @@ export function buildHermes() {
     const g=new IcosahedronGeometry(1,0);
     g.scale(chip.r,chip.r*.55,chip.r*.8);g.rotateY(chip.rot);
     g.translate(chip.x,ground(chip.x,chip.z)+chip.r*.18,chip.z);add(g);
+  }
+  // Angular crumbs and larger broken clods catch real shadows along the work
+  // faces, rather than another smooth brown patch beneath the sculpture.
+  for(const clod of HERMES_EARTH) {
+    const g=new IcosahedronGeometry(1,0);
+    g.scale(clod.r,clod.h,clod.r*.72);g.rotateY(clod.rot);
+    g.translate(clod.x,ground(clod.x,clod.z)+clod.h*.35,clod.z);add(g,'soil');
   }
   for(const [kind,geometries] of batches) {
     const merged=mergeGeometries(geometries);const mesh=new Mesh(merged,materials[kind]);

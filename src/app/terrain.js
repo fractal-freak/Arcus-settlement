@@ -232,10 +232,12 @@ function pitAt(x, z) {
   for (const p of pits) {
     const d = Math.hypot(x - p.x, z - p.z);
     if (d >= p.r) continue;
-    // Flat floor in the middle, walls easing up to ground level at the rim —
-    // a cutting, not a crater.
+    // A worked floor has shallow uneven cuts, fading out through the walls.
+    // This is shared by walkers, camp furniture and the terrain worker.
     const t = Math.min(1, (p.r - d) / p.wall);
-    cut = Math.max(cut, p.depth * t * t * (3 - 2 * t));
+    const weight=t*t*(3-2*t);
+    const worked=.075*noise(x*1.6,z*1.6,137)*weight*weight;
+    cut = Math.max(cut, p.depth * weight+worked);
   }
   return cut;
 }

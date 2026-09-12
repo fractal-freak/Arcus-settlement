@@ -1,6 +1,6 @@
 import { Color, BufferGeometry, BufferAttribute } from 'three';
 import { CHUNK } from '../app/iso.js';
-import { groundAt, smoothHeightAt, digAmountAt, anyPitWithin, STEP, WATER_LEVEL, GROUND } from '../app/terrain.js';
+import { groundAt, smoothHeightAt, digAmountAt, anyPitWithin, noise, STEP, WATER_LEVEL, GROUND } from '../app/terrain.js';
 import { pathAmountAt } from '../app/village.js';
 import { palaceCliffMask } from '../app/palaceLandscape.js';
 /** Vertices per tile edge. 2 is one extra vertex per tile — enough to round off a shelf into a slope. */
@@ -61,6 +61,12 @@ export function paletteAt(wx, wz, h, kind, dug = true) {
   const shore = Math.min(1, Math.max(0, 1 - (h - WATER_LEVEL) / 0.5));
 
   tmpC.copy(base).lerp(ROCKY, rocky).lerp(BEACH, shore * (1 - rocky) * 0.85);
+  // Broad dry patches and cooler vegetation follow continuous world-space
+  // fields, so the landscape varies without tile seams or scattered objects.
+  const patch=noise(wx*.19,wz*.19,83);
+  if(kind==='grass'||kind==='meadow'||kind==='scrub')
+    tmpC.lerp(BASE.scrub,Math.max(0,patch-.48)*.65);
+  tmpC.multiplyScalar(.92+noise(wx*.37,wz*.37,91)*.16);
   // Soil darkens at the actual waterline; it does not become a pale sand ribbon.
   const damp = Math.max(0, 1 - Math.abs(h - SURFACE_Y) / 0.35);
   tmpC.multiplyScalar(1 - damp * 0.18);
@@ -79,7 +85,11 @@ export function paletteAt(wx, wz, h, kind, dug = true) {
   // almost every chunk.
   if (dug) {
     const cut = digAmountAt(wx, wz);
-    if (cut > 0) tmpC.lerp(SPOIL, Math.min(1, cut * 1.35));
+    if (cut > 0) {
+      const disturbed=noise(wx*1.9,wz*1.9,114);
+      tmpC.lerp(SPOIL,Math.min(1,cut*(1.04+disturbed*.6)));
+      tmpC.multiplyScalar(1-cut*(.08+disturbed*.26));
+    }
   }
   return tmpC;
 }
@@ -91,6 +101,7 @@ export function landGeometry(t0x, t0y) {
     const positions = new Float32Array(verts * verts * 3);
     const colors = new Float32Array(verts * verts * 3);
     const uvs = new Float32Array(verts * verts * 2);
+    const excavation = new Float32Array(verts * verts);
 
     // groundAt() for whatever tile each vertex rounds to, resolved once per
     // tile rather than once per vertex — see the note on paletteAt.
@@ -112,6 +123,7 @@ export function landGeometry(t0x, t0y) {
         const wx = t0x + i / SUB;
         const wz = t0y + j / SUB;
         const h = smoothHeightAt(wx, wz);
+        excavation[p/3]=dug?digAmountAt(wx,wz):0;
         // The finer cliff mesh draws the actual shared surface here. Recess this
         // coarse underlay so its interpolation cannot poke through the rock face.
         positions[p] = wx; positions[p + 1] = h - palaceCliffMask(wx,wz)*.5; positions[p + 2] = wz;
@@ -136,6 +148,7 @@ export function landGeometry(t0x, t0y) {
     geo.setAttribute('position', new BufferAttribute(positions, 3));
     geo.setAttribute('color', new BufferAttribute(colors, 3));
     geo.setAttribute('uv', new BufferAttribute(uvs, 2));
+    geo.setAttribute('excavation', new BufferAttribute(excavation, 1));
     geo.setIndex(new BufferAttribute(idx, 1));
     geo.computeVertexNormals();
 

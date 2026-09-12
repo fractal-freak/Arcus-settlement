@@ -5,9 +5,26 @@ art direction and play. Breath of the Wild is a reference for composition,
 discovery and craft, not a source of assets or a claim of equivalent quality.
 
 The GitHub simulation still runs every half hour. A separate Codex task runs
-every six hours on the local machine and can improve the game itself. This
+every thirty minutes on the local machine and can improve the game itself. This
 requires the machine and Codex to be available and uses the account's Codex
 allowance. Missing a pass is acceptable; shipping a regression is not.
+
+## Current priorities
+
+Kevin's September 12 direction is sustained improvement of the castle, the
+village, and the things citizens own. Lead with the Jupiter castle: coherent
+architecture, convincing stone and roofs, entrances, courtyards, useful
+interiors, and a memorable approach. Develop the surrounding village through
+better houses, streets, gardens and workplaces. Give citizens useful tools,
+furniture, storage and possessions that reflect their trades and identities.
+Ownership and placement belong in world data; the renderer draws those facts.
+More objects alone are not progress: each addition must improve craft or use.
+
+Track progress across all three priorities in the journal, keeping steady
+attention on the village and personal belongings alongside the castle. A
+half-hour wakeup is an opportunity to continue work, not a release deadline.
+Larger improvements may span several passes. Finish and verify active work
+before beginning an overlapping change; retain all existing quality gates.
 
 ## First milestone
 

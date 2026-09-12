@@ -11,6 +11,15 @@ export const HERMES_CHIPS = [
   {x:4.05,z:-.45,r:.09,rot:2.1},{x:4.4,z:.3,r:.12,rot:.6},
 ];
 export const HERMES_PIT = { x: HERMES.x, z: HERMES.z, r: 12.8, depth: 0.55, wall: 3.2 };
+// Loose surface dressing is low enough to step over. Keep the western working
+// aisle and access boards clear; larger occupied objects remain in SOLIDS.
+export const HERMES_EARTH = Array.from({length:510},(_,i)=>{
+  const rand=n=>{const v=Math.sin(i*127.1+n*311.7)*43758.5453;return v-Math.floor(v);};
+  const side=i%2?1:-1;
+  const x=i<420?side*(3.5+rand(1)*2.25):side*(9+rand(1)*3.1);
+  const z=i<420?-9.5+rand(2)*19:2+rand(2)*6.5;
+  return {x,z,r:.055+rand(3)**2*.22,h:.025+rand(4)*.10,rot:rand(5)*Math.PI};
+});
 export function hermesLocal(x, z) {
   const dx = x - HERMES.x, dz = z - HERMES.z, c = Math.cos(HERMES.rot), s = Math.sin(HERMES.rot);
   return { x: c * dx - s * dz, z: s * dx + c * dz };

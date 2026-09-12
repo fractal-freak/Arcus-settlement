@@ -168,3 +168,29 @@ software renderer; future rendering optimization remains worthwhile. Existing
 limits were retained. This fixes asynchronous test backlog, not game speed.
 The code-only release matches the tested harness exactly; the diagnostic
 workflow is excluded. Normal critic/publish run is the final release check.
+
+## September 12, 2026 — Isolate the accepted worked-earth changes
+
+Consolidated only the previously accepted terrain work in codex/worked-earth:
+shared shallow excavation relief, low Hermes clods and spill around spoil
+heaps, patchy exposed soil, localized scrapes and subtle meadow variation.
+Each of the five source baselines was byte-compared with the saved pre-edit
+version before applying the candidate; no citizen, player or journal code was
+included. Updated the original-procedural asset credit and synchronized the
+already authorized thirty-minute development priorities in DEVELOPMENT.md.
+
+All 29 isolated logic tests, strict rulebook verification, build, matching
+four-view review and close Hermes review passed. Inspected the stone and
+village comparisons and close excavation result. Same M4 Pro backend: median
+6.1 / p95 9.7 ms before and 6.8 / 11.0 after; startup 3.69 / 4.00 s. Existing
+performance gate passed, zero pending visible terrain. Do not claim a speedup.
+Evidence: .local/earth-release/{before,after,hermes} in this worktree.
+
+Accepted as an isolated local release candidate, not published. Main's Linux
+software-rendering/capture blocker still needs a demonstrated remedy. Runtime
+castle indexing was rejected in the separate diagnostic worktree and is not
+included. The shared local world already contains this visual work, so this
+consolidation is not a new visible change for Kevin. Resume the release blocker
+without repeating unchanged CI runs until they happen to pass; then publish
+this tested candidate and continue castle craft, village workplaces and owned
+belongings. Preserve unrelated local work throughout.

@@ -100,6 +100,10 @@ from a third party at runtime.
 `src/three/groundSurface.js` generates an original seamless soil-grain texture
 at runtime, shared by terrain chunks for colour variation and bump detail.
 It uses no external image or downloaded asset.
+The worked-earth treatment in `terrain3d.js` and `terrainGeometry.js`, shallow
+excavation relief in `app/terrain.js`, and low soil clods specified in
+`app/hermes.js` are original procedural additions under the project's CC0
+dedication. They reuse that grain texture; no new external assets are included.
 
 ## Village material and vegetation detail
 

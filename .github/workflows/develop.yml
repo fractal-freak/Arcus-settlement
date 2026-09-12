@@ -30,6 +30,7 @@ jobs:
           name: developer-proposal
           path: .local/api-development
           retention-days: 7
+          include-hidden-files: true
   validate:
     needs: propose
     runs-on: ubuntu-latest
@@ -64,6 +65,7 @@ jobs:
           name: developer-validation-image
           path: .local/api-development/after.png
           retention-days: 7
+          include-hidden-files: true
   review:
     needs: [propose, validate]
     runs-on: ubuntu-latest
@@ -97,3 +99,29 @@ jobs:
           name: developer-visual-review
           path: .local/api-development/review.json
           retention-days: 7
+          include-hidden-files: true
+  publish:
+    needs: [propose, validate, review]
+    if: github.ref == 'refs/heads/main' && vars.FREE_API_CONFIRMED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # Trusted publisher applies the original proposal; it never runs generated code.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-proposal
+          path: .local/api-development
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-visual-review
+          path: .local/api-development
+      - name: Publish only an approved unchanged-base candidate
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: node sim/developer-publish.mjs

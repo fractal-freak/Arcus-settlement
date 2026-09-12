@@ -8,12 +8,14 @@ The original citizen critic uses the existing Gemini API configuration. The
 Codex development heartbeat is paused to stop consuming Codex allowance.
 The replacement API development workflow proposes source changes, runs the
 existing checks without API keys or write credentials, and reviews matching
-images through Gemini. It saves candidate and review artifacts for integration;
-it cannot push, merge, change its tests/workflows, or deploy automatically.
+images through Gemini. An isolated trusted publisher applies only the original approved candidate,
+with an exact-base check and a normal fast-forward push. It never executes
+generated code with write credentials. Successful runs trigger the existing
+settlement deployment through workflow_run, without actions:write access.
+Generated changes cannot modify their runner, tests, workflows or state.
 
-The API development job is disabled until FREE_API_CONFIRMED=true is set after
-the owner confirms that the key's Google AI Studio project is on the Free plan
-with billing disabled. This assertion is not a technical billing cap: disable
+Kevin confirmed billing is disabled and explicitly approved automatic
+publication on September 12. Both API loops require FREE_API_CONFIRMED=true. This assertion is not a technical billing cap: disable
 it if billing changes. Quota exhaustion skips a pass, with no paid fallback.
 The existing world simulation continues independently. Both AI activities can
 use Gemini without a Codex subscription allocation; GitHub runner usage is
@@ -85,3 +87,16 @@ Notify Kevin on a visible accepted improvement, a failed deployment, or a
 decision requiring his input. Remain quiet on unchanged or non-actionable runs.
 Do not guarantee that every visit looks different or that autonomous aesthetic
 judgment is objective. Revisit priorities when Kevin gives feedback.
+
+## September 12 visual milestone clarification
+
+Kevin cannot see sufficient progress. Treat the stone-to-Jupiter-gatehouse
+walk as one coherent visual milestone across several passes: composed terrain
+and vegetation, a readable approach, coherent castle materials/architecture,
+and a rewarding arrival courtyard. Hogwarts Legacy and Breath of the Wild
+are references for atmosphere, composition and discovery; production parity
+is not promised. Follow this with a complete village workplace and citizens'
+useful belongings. Small roof/material edits are supporting steps, not proof
+that the milestone is complete. Inspect actual arrival and walking views and
+show matched before/after images with where the player can see the change.
+Keep local and public release status explicit. Fix movement regressions first.

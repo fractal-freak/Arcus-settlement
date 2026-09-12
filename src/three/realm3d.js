@@ -10,6 +10,7 @@ import { Gatehouse3D } from './gatehouse3d.js';
 import { PalaceLandscape3D } from './palaceLandscape3d.js';
 import { ruinedTowerGeometry } from './ruinedTower3d.js';
 import {weatherPalaceMaterial} from './palaceWeathering.js';
+import {jupiterApproach} from './jupiterApproach3d.js';
 import {slateGableGeometry} from './slateGable.js';
 
 function strawTexture() {
@@ -162,5 +163,6 @@ export class Realm3D {
     }
     this.gatehouse=new Gatehouse3D(this.group);
     this.landscape=new PalaceLandscape3D(this.group);
+    this.group.add(jupiterApproach());
   }
 }

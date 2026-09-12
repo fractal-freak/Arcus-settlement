@@ -1,4 +1,5 @@
 /** Surviving fragments of old routes, following the existing hamlet road plan. */
+import { approachDistance, APPROACH_VERGE_RADIUS } from './jupiterApproach.js';
 import { BRIDGE, BRIDGE_PATHS } from './bridge.js';
 import { REALM_ROADS, realmBlocked } from './realm.js';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from './terrain.js';
@@ -31,7 +32,7 @@ for(const [routeIndex,route] of ANCIENT_ROUTES.entries()){
         const offset=lane*route.width/5+(rand(1)-.5)*.18;
         const x=centerX-dz*offset+dx*(lane%2*.22+(rand(2)-.5)*.12),z=centerZ+dx*offset+dz*(lane%2*.22+(rand(2)-.5)*.12);
         const edge=1-Math.abs(lane)*.15,coverage=endFade*island*edge;
-        if(Math.hypot(x,z)<9.4 || isWater(x,z) || smoothHeightAt(x,z)<WATER_LEVEL+STEP*.5+.12 || realmBlocked(x,z,.35))continue;
+        if(approachDistance(x,z)<1.45 || Math.hypot(x,z)<9.4 || isWater(x,z) || smoothHeightAt(x,z)<WATER_LEVEL+STEP*.5+.12 || realmBlocked(x,z,.35))continue;
         // Never extend the approach stones over the raised deck.
         if(x>BRIDGE.from && x<BRIDGE.to && Math.abs(z-BRIDGE.z)<BRIDGE.width/2)continue;
         const key=`${Math.round(x/.42)},${Math.round(z/.42)}`;
@@ -50,11 +51,12 @@ for(const [routeIndex,route] of ANCIENT_ROUTES.entries()){
 /** Reserve just surviving paving, leaving grass in the abandoned gaps. */
 const pavedTiles=new Set();
 for(const p of PATH_STONES)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)pavedTiles.add(`${Math.round(p.x)+dx},${Math.round(p.z)+dz}`);
-export function ancientPavingNear(x,z){return pavedTiles.has(`${Math.round(x)},${Math.round(z)}`);}
+export function ancientPavingNear(x,z){return approachDistance(x,z)<APPROACH_VERGE_RADIUS || pavedTiles.has(`${Math.round(x)},${Math.round(z)}`);}
 
 const stoneCells=new Map();
 for(const p of PATH_STONES){const key=`${Math.floor(p.x)},${Math.floor(p.z)}`;if(!stoneCells.has(key))stoneCells.set(key,[]);stoneCells.get(key).push(p);}
 export function ancientStoneNear(x,z){
+  if(approachDistance(x,z)<1.2)return true;
   if(!ancientPavingNear(x,z))return false;
   for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(const p of stoneCells.get(`${Math.floor(x)+dx},${Math.floor(z)+dz}`)??[])
     if(Math.hypot(x-p.x,z-p.z)<.38)return true;

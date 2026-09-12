@@ -240,6 +240,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "The broad central thoroughfares offer no public gathering stages or fenced enclosure to structure civic life.",
     "tag": "tall",
     "target": 35
+  },
+  {
+    "key": "quarry_workings",
+    "name": "Quarry Operations",
+    "why": "The grey dirt patch on the left field is a bare extraction site without wheelbarrows, ladders, or stone stockpiles.",
+    "tag": "clutter",
+    "target": 80
+  },
+  {
+    "key": "outpost_wayfinding",
+    "name": "Outpost Wayfinding",
+    "why": "The wide wooden deck and main thoroughfare transitions lack boundary markers, banners, or posts.",
+    "tag": "accent",
+    "target": 60
   }
 ];
 
@@ -250,6 +264,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-12",
+    "seen": "The raw grey dirt clearing on the left is an empty quarry patch lacking tools or stone stockpiles, while the expansive wooden platform on the right sits unbordered and featureless.",
+    "added": "quarry_workings, outpost_wayfinding, equip_stone_quarry, quarry_scaffolding_access, waypoint_banner_posts, promenade_boundary_fence"
+  },
   {
     "at": "2026-09-11",
     "seen": "The red stone tower and central dirt crossroads sit exposed on empty lawn without armories, practice equipment, or civic gathering structures, leaving major spaces feeling unpurposeful.",

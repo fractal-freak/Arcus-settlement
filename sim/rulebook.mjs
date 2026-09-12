@@ -334,6 +334,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "The river bank leading up to the stone bridge is stark dirt meeting bare water without reed beds or riverbank rock lining.",
     "tag": "edge",
     "target": 60
+  },
+  {
+    "key": "sacred_hallow",
+    "name": "Sacred Hallow",
+    "why": "The central runic monolith stone draws crowd gatherings but lacks sacred ceremonial banners, ritual altars, or votive perimeter markers.",
+    "tag": "sacred",
+    "target": 110
+  },
+  {
+    "key": "forest_boundary",
+    "name": "Forest Boundary",
+    "why": "The foreground tree grove is planted in an unnaturally rigid grid across raw grass, lacking natural stone borders or forestry work clutter.",
+    "tag": "edge",
+    "target": 100
   }
 ];
 
@@ -344,6 +358,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-12",
+    "seen": "The large runic monolith draws heavy crowd gatherings but lacks sacred ceremonial banners or ritual offerings, while the foreground tree grove sits in an artificial grid on open grass without natural stone margins or timber workings.",
+    "added": "sacred_hallow, forest_boundary, monolith_hallow_banners, monolith_votive_shrine, forester_timber_stockpile, woodland_boulder_margin"
+  },
   {
     "at": "2026-09-12",
     "seen": "The large carved stone monolith dominating the central plaza sits on unbordered cobbles without sacred offerings or boundary markers, while the riverbank beside the stone bridge remains a bare dirt drop into open water.",

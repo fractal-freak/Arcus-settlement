@@ -25,6 +25,19 @@
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); no fallback or automatic retry",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-12T20:51:10.542Z",
+      "run": "34718012887",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

@@ -93,7 +93,7 @@ try {
 browser = await chromium.launch({
   // The full bundled browser uses modern headless mode on the Mac. The
   // headless shell can fall back to extremely slow software rasterisation.
-  channel: process.platform === 'darwin' && !process.env.CI ? 'chromium' : undefined,
+  channel: process.env.WORLD_BROWSER_CHANNEL || (process.platform === 'darwin' && !process.env.CI ? 'chromium' : undefined),
   args: process.platform === 'darwin' && !process.env.CI ? []
     : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
 });
@@ -138,7 +138,8 @@ page.on('console', (m) => {
 // Keep the animation clock deterministic; step() still runs the real frame body.
 await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
 await page.goto(url, { waitUntil: 'load' });
-await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000, polling: 100 });
+await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000, polling: 100 })
+  .catch(error=>{throw new Error(`${error.message}\nBrowser errors: ${errors.join('\n')}`);});
 
 // Pace from Node: background browsers can suspend page timers even while
 // explicit evaluate/step calls still work. Time only the real frame body.
@@ -189,6 +190,19 @@ const report = await page.evaluate(t => {
 }, timings);
 
 console.log('Frame check:', JSON.stringify(report));
+if(process.env.WORLD_CAPTURE==='buffer') {
+  // Diagnostic: freeze a real rendered frame in an image before asking the
+  // compositor for a page screenshot, preserving the actual pixels and HUD.
+  await page.evaluate(async()=>{
+    const w=window.__world;w.step(1);
+    const canvas=w.stage.renderer.domElement;
+    const img=document.createElement('img');
+    img.src=canvas.toDataURL('image/png');img.style.cssText=canvas.style.cssText;
+    img.width=canvas.width;img.height=canvas.height;
+    canvas.replaceWith(img);
+    await img.decode();
+  });
+}
 mkdirSync(join(HERE, '..', 'state'), { recursive: true });
 mkdirSync(dirname(OUT), { recursive: true });
 // Generous, and no waiting on fonts: capturing a software-rendered WebGL

@@ -1,138 +1,48 @@
-# The settlement, living on its own.
-#
-# Every half hour this advances the town's clock, lets a critic look at a real
-# picture of it and write new work for the citizens, checks that what it wrote
-# is sane and still runs, and publishes. Nothing reaches the site that has not
-# passed every check; anything that fails is thrown away and the last good
-# rulebook kept, so a bad night costs nothing but a night.
-#
-# The order matters and is not arbitrary:
-#
-#   tick      advance the clock FIRST, so the critic sees the town as it is now
-#   build     with whatever rules already passed
-#   shoot     boot it headless, prove it runs, photograph it
-#   critic    look at that photograph and write new rules
-#   verify    refuse anything malformed, hallucinated or unplaceable
-#   rebuild   with the new rules
-#   shoot     prove the new rules still run and did not cost the earth
-#   publish   only now
-#
-# The clock advances whether or not the critic has anything to say, and the
-# published town is never held back by a critic that failed. Those are separate
-# concerns on purpose: the settlement's life does not depend on an API.
-
 name: settlement
-
 on:
-  schedule:
-    - cron: '7,37 * * * *'
   workflow_dispatch:
-  push:
-    branches: [main]
-
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-concurrency:
-  group: settlement
-  cancel-in-progress: false
-
+  contents: read
 jobs:
-  live:
+  capture-diagnostic:
     runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: shell
+            channel: ''
+            capture: ''
+          - variant: modern
+            channel: chromium
+            capture: ''
+          - variant: buffered
+            channel: ''
+            capture: buffer
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-
-      # ── The clock ────────────────────────────────────────────────────────
-      - name: Advance the settlement
+      - run: node --test sim/*.test.mjs
+      - run: node sim/verify.mjs
+      - run: npm run build
+      - name: Capture actual world with unchanged quality gates
         env:
-          SUBSCRIBER_COUNT_URL: ${{ secrets.SUBSCRIBER_COUNT_URL }}
-        run: node sim/tick.mjs
-
-      # ── Prove what we already have still works, and get a picture of it ──
-      - name: Check world logic
-        run: node --test sim/*.test.mjs
-
-      - name: Build
-        run: npm run build
-
-      - name: Boot it and photograph it
-        run: node sim/shoot.mjs
-
-      # ── The critic, and the gate ─────────────────────────────────────────
-      #
-      # `continue-on-error` because a model being unavailable is not a reason
-      # to stop the town living. The steps after it check what it wrote, if it
-      # wrote anything.
-      - name: Ask the critic what is wrong
-        id: critic
-        continue-on-error: true
-        env:
-          # Whichever provider Kevin has given a key for — see sim/critic.mjs
-          # for the two free ones that work. With no key the step says so and
-          # the settlement carries on without it.
-          CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
-          CRITIC_URL: ${{ vars.CRITIC_URL }}
-          CRITIC_MODEL: ${{ vars.CRITIC_MODEL }}
-        run: node sim/critic.mjs
-
-      # --prune drops the entries that are wrong and keeps the rest. A whole
-      # night's thinking should not be lost because one job of six had a
-      # malformed sentence in it — which is exactly what happened the first
-      # time this ran for real.
-      - name: Check the new rules
-        id: check
-        continue-on-error: true
-        run: node sim/verify.mjs --prune
-
-      - name: Refuse rules that do not make sense
-        if: steps.check.outcome == 'failure'
+          WORLD_BROWSER_CHANNEL: ${{ matrix.channel }}
+          WORLD_CAPTURE: ${{ matrix.capture }}
+          CRITIC_REPORT: .local/render-diagnostic/report.json
+          CRITIC_SHOT: .local/render-diagnostic/opening.png
         run: |
-          echo "::warning::the critic's rulebook was refused; keeping the last good one"
-          git checkout -- sim/rulebook.mjs
-
-      - name: Rebuild with whatever survived
-        run: |
-          npm run build
-
-      - name: Prove it still runs
-        id: runs
-        continue-on-error: true
-        run: node sim/shoot.mjs
-
-      - name: Refuse rules that broke it or made it slow
-        if: steps.runs.outcome == 'failure'
-        run: |
-          echo "::warning::the world would not run with the new rules; keeping the last good ones"
-          git checkout -- sim/rulebook.mjs
-          npm run build
+          mkdir -p .local/render-diagnostic
+          cp state/report.json .local/render-diagnostic/report.json
           node sim/shoot.mjs
-
-      # ── Write it down, and put it up ─────────────────────────────────────
-      - name: Remember
-        run: |
-          git config user.name  "the settlement"
-          git config user.email "settlement@users.noreply.github.com"
-          git add state sim/rulebook.mjs
-          git diff --cached --quiet || git commit -m "$(node -e "
-            const d = require('./state/settlement.json');
-            const q = d.life.quality;
-            console.log(\`\${d.life.said} · \${d.life.placements.length} placed · quality \${q.overall} · working on \${q.weakest}\`);
-          ")"
-          git push
-
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          path: dist
-      - uses: actions/deploy-pages@v4
+          name: render-${{ matrix.variant }}
+          path: .local/render-diagnostic

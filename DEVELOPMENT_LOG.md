@@ -157,3 +157,14 @@ startup queue exceeds the newly added single-frame 90-second drain. Treat this
 as the multi-frame workload it is: use the existing 180-second capture allowance
 for that one boundary. All pre-existing startup/screenshot limits and regression
 ratios remain unchanged; each measured frame retains its new 90-second bound.
+
+Linux verification 34697957974 PASSED on commit 7405876. All 32 tests,
+strict verifier, build, all 60 completed frame samples and real screenshot pass.
+Inspected the downloaded screenshot: actual world and HUD, no replacement art.
+Submission median/p95 20.0 / 26.8 ms; completion 4726.94 / 5406.75 ms;
+startup readiness 21,069 ms; 86 chunks with no missing visible terrain.
+The startup queue drained in 167.9 seconds, leaving a narrow margin on this
+software renderer; future rendering optimization remains worthwhile. Existing
+limits were retained. This fixes asynchronous test backlog, not game speed.
+The code-only release matches the tested harness exactly; the diagnostic
+workflow is excluded. Normal critic/publish run is the final release check.

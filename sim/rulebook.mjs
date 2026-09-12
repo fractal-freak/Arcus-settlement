@@ -334,20 +334,6 @@ export const EXTRA_DIMENSIONS = [
     "why": "The river bank leading up to the stone bridge is stark dirt meeting bare water without reed beds or riverbank rock lining.",
     "tag": "edge",
     "target": 60
-  },
-  {
-    "key": "sacred_hallow",
-    "name": "Sacred Hallow",
-    "why": "The central runic monolith stone draws crowd gatherings but lacks sacred ceremonial banners, ritual altars, or votive perimeter markers.",
-    "tag": "sacred",
-    "target": 110
-  },
-  {
-    "key": "forest_boundary",
-    "name": "Forest Boundary",
-    "why": "The foreground tree grove is planted in an unnaturally rigid grid across raw grass, lacking natural stone borders or forestry work clutter.",
-    "tag": "edge",
-    "target": 100
   }
 ];
 

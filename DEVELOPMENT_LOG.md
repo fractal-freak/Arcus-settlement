@@ -61,3 +61,33 @@ failure, and uses modern headless Chromium on the Mac for hardware rendering.
 Linux CI retains its software-rendering configuration and regression thresholds.
 Evidence: .local/design-review/2026-09-12-foundation/{before,after}.
 Release: isolated candidate prepared for the existing main-branch deployment.
+
+
+## September 12, 2026 — Replace the Hermes blockout with a museum scan
+
+Kevin requested a more recognizable, photorealistic ancient Hermes being
+excavated. Replaced the overlapping procedural body and horn-like helmet with
+SMK KAS1161, a public-domain scan of the Belvedere Hermes cast. Removed its
+modern display plinth/foot extremities, capped the ankle fracture, retained the
+scanned face, hair, anatomy, cloak and ancient arm breaks, and added soil-line
+staining, mineral patina and a small cluster of marble chips. This is an
+archaeological game presentation of a museum cast scan, not a claimed scan of
+an excavation. Full provenance is in ASSETS.md and the asset's source.json.
+
+The derived asset is 2.4 MB / 99,999 triangles. Collision is measured from its
+exposed surface, and retired arm/sandal footprints no longer block walking.
+Inspected overhead, oblique and face views in the real game. The anatomy and
+carved detail are substantially more convincing; the surrounding world still
+uses the established stylized lighting and terrain.
+
+Validation: 29 isolated logic tests, strict rulebook verification, build,
+headless boot/performance comparison, and sim/hermes-review.mjs passed. The
+combined local working tree also passed all 48 tests and the visual review.
+Same-hardware opening median was 6.2 ms before and 8.6 ms after, p95 10.1/15.6 ms;
+within the existing regression gate. Streaming/shadow draw counts varied, so
+these measurements do not isolate the statue's GPU cost. The scan itself is
+covered by a 120,000-triangle ceiling and sampled collision coverage tests.
+The verifier also pruned two unreachable goals already present on remote main.
+
+Evidence: .local/hermes-scan/{overhead,excavation,face}.png in the shared checkout.
+Release: verified locally and prepared on codex/hermes-scan for publication.

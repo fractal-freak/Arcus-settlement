@@ -27,9 +27,11 @@ on:
   schedule:
     - cron: '7,37 * * * *'
   workflow_dispatch:
-  workflow_run:
-    workflows: [API world development]
-    types: [completed]
+  workflow_call:
+    inputs:
+      skip_critic:
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -44,7 +46,6 @@ concurrency:
 
 jobs:
   live:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +81,7 @@ jobs:
       # wrote anything.
       - name: Ask the critic what is wrong
         id: critic
-        if: vars.FREE_API_CONFIRMED == 'true' && github.event_name != 'workflow_run'
+        if: vars.FREE_API_CONFIRMED == 'true' && !inputs.skip_critic
         continue-on-error: true
         env:
           # Whichever provider Kevin has given a key for — see sim/critic.mjs

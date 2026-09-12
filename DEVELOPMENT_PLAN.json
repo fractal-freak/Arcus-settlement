@@ -1,0 +1,78 @@
+{
+  "id": "living-village-square",
+  "title": "A beautiful village square with a functioning bakery",
+  "experience": "Walk from the settlement stone through a coherent village square; see farming, deliveries, baking and meals change citizens' lives and the appearance of their workplaces.",
+  "stages": [
+    {
+      "id": "square-composition",
+      "track": "visual",
+      "goal": "Finish a coherent stone-to-square approach with readable paths, grounded architecture, restrained planting and consistent lighting and materials.",
+      "acceptance": [
+        "Noticeable improvement from the opening and village walking views",
+        "Clear path and usable entrances with no new collisions",
+        "Consistent materials and vegetation; no density for its own sake"
+      ]
+    },
+    {
+      "id": "bakery-simulation",
+      "track": "simulation",
+      "goal": "Build and integrate a deterministic farming-to-bakery-to-meals chain with inventories and visible consequences.",
+      "acceptance": [
+        "Supply changes bread production and meals",
+        "Resource balances remain nonnegative and deterministic over long runs",
+        "The running settlement invokes the system and exposes its result; a disconnected module is unfinished"
+      ]
+    },
+    {
+      "id": "living-square",
+      "track": "integrated",
+      "goal": "Show deliveries, baking, meals and progressive workshop furnishing in the polished square.",
+      "acceptance": [
+        "Visible activity reflects actual simulation facts",
+        "A returning player can see construction or provisioning progress",
+        "Citizens can reach destinations and finish tasks without jitter or deadlock"
+      ]
+    },
+    {
+      "id": "weather-and-shelter",
+      "track": "integrated",
+      "goal": "Make weather influence food production, shelter use and work, with visible readable consequences.",
+      "acceptance": [
+        "Weather has deterministic consequences for an existing supply chain",
+        "Citizens can reach shelter and resume work",
+        "Weather presentation preserves route readability and performance"
+      ]
+    },
+    {
+      "id": "trade-and-deliveries",
+      "track": "simulation",
+      "goal": "Connect several workplaces through inventories, transport capacity and shortages.",
+      "acceptance": [
+        "Resources move between actual workplaces without duplication",
+        "Shortages cause recoverable changes in work priorities",
+        "Long runs remain deterministic and bounded"
+      ]
+    },
+    {
+      "id": "citizen-households",
+      "track": "integrated",
+      "goal": "Give citizens persistent households, routines and useful belongings supported by the economy.",
+      "acceptance": [
+        "Owned furnishings and household provisioning have visible persistent state",
+        "Routines respond to work and basic needs",
+        "No session data is used and navigation remains reliable"
+      ]
+    }
+  ],
+  "artStandard": [
+    "Preserve landmark silhouettes and intentional open space",
+    "Use one coherent stone, wood and foliage palette",
+    "Match before/after views and daylight",
+    "Windows share typography, spacing, icons and dismissal behavior"
+  ],
+  "constraints": [
+    "Original code and existing CC0 assets only",
+    "Do not touch private session data or the separate Arcus product",
+    "Performance and behavioral gates remain immutable to generated changes"
+  ]
+}

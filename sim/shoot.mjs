@@ -103,8 +103,8 @@ browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
 const reviewDir = process.env.DESIGN_REVIEW_DIR;
 let reviewFixture;
-if (reviewDir) {
-  reviewFixture = await readFile(process.env.DESIGN_FIXTURE, 'utf8');
+if (reviewDir || process.env.DEVELOPMENT_FIXTURE) {
+  reviewFixture = await readFile(process.env.DESIGN_FIXTURE || process.env.DEVELOPMENT_FIXTURE, 'utf8');
   await page.route('**/state/settlement.json', route => route.fulfill({ contentType: 'application/json', body: reviewFixture }));
   // Freeze wall time only. Keep real timers/performance for worker streaming
   // and frame measurement, and leave RAF under the explicit step() harness.
@@ -208,6 +208,21 @@ mkdirSync(dirname(OUT), { recursive: true });
 // Generous, and no waiting on fonts: capturing a software-rendered WebGL
 // frame is slow enough that Playwright's default patience runs out first.
 writeFileSync(OUT, await captureWorld(page));
+
+// Additional milestone views reuse this browser after the full unchanged frame gate.
+if (process.env.DEVELOPMENT_VIEWS) {
+  for (const view of [{name:'stone',distance:24,x:0,z:0},{name:'gatehouse',distance:25,x:-55,z:-29}]) {
+    await page.evaluate(v=>window.__world.look(v.distance,v.x,v.z),view);
+    const until=Date.now()+90000;let stable=0;
+    while(stable<2){
+      const pending=await page.evaluate(()=>{window.__world.step(1);return window.__world.terrain.pendingVisible;});
+      await finishGpuFrame(page,{timeout:Math.max(1,until-Date.now())});
+      stable=pending===0?stable+1:0;
+      if(Date.now()>until)throw Error('Milestone view did not settle: '+view.name);
+    }
+    writeFileSync(process.env.DEVELOPMENT_VIEWS+'-'+view.name+'.png',await captureWorld(page));
+  }
+}
 
 if (reviewDir) {
   // Fixed composition, not whatever camera angle the last operator left behind.

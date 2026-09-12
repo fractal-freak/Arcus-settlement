@@ -14,6 +14,7 @@
  * the world adds it HERE rather than to whichever renderer noticed first.
  */
 
+import { hermesBlocked, hermesReserved } from './hermes.js';
 import { bridgeFloor, bridgeBlocked, outsideBridgeWorks } from './bridge.js';
 import { propNear, landmarkNear, OFFERING } from './village.js';
 import { smoothHeightAt, isWater, WATER_LEVEL, STEP } from './terrain.js';
@@ -61,7 +62,8 @@ export function blocked(x, z, clear = 0.6) {
   if (realmFloor(x, z) !== null) return false;
   if (isWater(Math.round(x), Math.round(z))) return true;
   if (smoothHeightAt(x, z) < WATER_SURFACE + 0.1) return true;
-  if (landmarkNear(x, z, 0.9 + clear)) return true;
+  if (hermesBlocked(x, z, clear)) return true;
+  if (!hermesReserved(x, z, 0.9 + clear) && landmarkNear(x, z, 0.9 + clear)) return true;
   if (Math.hypot(x - OFFERING.x, z - OFFERING.z) < OFFERING.r + clear) return true;
   if (Math.hypot(x, z) < 4.4 + clear) return true;          // the Stone's own ground
   // A tree claims its trunk plus its canopy, and propNear already allows 0.85

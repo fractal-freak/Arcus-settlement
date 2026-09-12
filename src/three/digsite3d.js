@@ -21,6 +21,7 @@
  * you pan far enough to see it.
  */
 
+import { buildHermes } from './hermes3d.js';
 import { Group, Object3D, InstancedMesh, Matrix4 } from 'three';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
 import { digSites, PIT } from '../app/digs.js';
@@ -92,6 +93,7 @@ export class DigSite3D {
     this.scene = scene;
     this.group = new Group();
     scene.add(this.group);
+    this.group.add(buildHermes());
     this.ready = false;
     loadModels(KINDS).then((models) => {
       this.models = models;

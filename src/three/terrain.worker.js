@@ -1,3 +1,5 @@
+// Register the same excavation cuts as the main thread before generating ground.
+import '../app/digs.js';
 import { landGeometry, farGeometry } from './terrainGeometry.js';
 self.onmessage = ({ data: { key, x, z, type } }) => {
   const mesh = type === 'far' ? farGeometry(x, z) : landGeometry(x, z);

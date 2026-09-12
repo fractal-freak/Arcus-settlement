@@ -21,6 +21,7 @@
  * ever written down that could drift.
  */
 
+import { HERMES_PIT } from './hermes.js';
 import { propAt, groundAt, heightAt, isWater, hash2, registerPits, GROUND, WATER_LEVEL, STEP } from './terrain.js';
 import { PLOTS, LANDMARKS, landmarkNear } from './village.js';
 
@@ -97,7 +98,7 @@ export const PIT = { r: 4.6, depth: 1.6, wall: 2.1 };
  * frame, so by the time a chunk is built the ground already knows it has been
  * dug.
  */
-registerPits(digSites().map((s) => ({ x: s.x, z: s.z, ...PIT })));
+registerPits([...digSites().map((s) => ({ x: s.x, z: s.z, ...PIT })), HERMES_PIT]);
 
 /**
  * Which site this session works, and exactly where they stand at it.

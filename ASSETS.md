@@ -154,3 +154,12 @@ The palace causeway, arched spandrels, flared abutments, worn paving, and connec
   Mossy Stone Wall maps credited above, encoded locally with libwebp (`cwebp -m 6`,
   quality 90; OpenGL normal map quality 95). Originals and their source checksums
   remain in `palace-pbr/`. No change to texture dimensions or licensing.
+
+## The Buried Messenger — Hermes excavation
+
+`src/three/hermes3d.js` is original procedural sculpture and site furniture:
+a fallen wing-helmeted Hermes, carved drapery, fractured forearm, winged sandal,
+survey ropes, timber boards, finds trays and spoil heaps. No external statue
+model or reference image is included. The sculpture reuses the existing CC0
+sanctuary rock scans through `villageMaterials.js`; geometry and material
+arrangement are original project work, dedicated to CC0.

@@ -32,6 +32,7 @@
  * at all. The plan is the same on every load.
  */
 
+import { hermesReserved } from './hermes.js';
 import { realmReserved, realmPath } from './realm.js';
 import { propRadius } from './propSizes.js';
 import { ancientPavingNear } from './ancientPaths.js';
@@ -262,6 +263,7 @@ export const LANDMARKS = [
 
 /** Is (x, z) inside a milestone's own ground, allowing for the caller's size? */
 export function landmarkNear(x, z, margin = 0) {
+  if (hermesReserved(x, z, margin)) return true;
   for (const L of LANDMARKS) {
     if (Math.hypot(L.x - x, L.z - z) < L.r + margin) return true;
   }

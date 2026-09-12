@@ -143,15 +143,20 @@ await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000,
 // Pace from Node: background browsers can suspend page timers even while
 // explicit evaluate/step calls still work. Time only the real frame body.
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
-await page.evaluate(() => window.__world.look(34, -4, 8));
+// Design review must show the player's actual arrival camera. The ordinary
+// performance check retains its established close-view workload.
+if (!reviewDir) await page.evaluate(() => window.__world.look(34, -4, 8));
 const deadline = Date.now() + 90000;
-while (true) {
+let readyFrames = 0;
+while (readyFrames < 20) {
   const status = await page.evaluate(() => {
     const w = window.__world;
     w.step(1);
     return { ready: w.startup?.complete, pending: w.terrain.pendingVisible, stats: w.stats() };
   });
-  if (status.ready && status.pending === 0) break;
+  // Startup expands streaming beyond the initial nearby patch on the next
+  // frame. Require settled visible terrain before timing the steady view.
+  readyFrames = status.ready && status.pending === 0 ? readyFrames + 1 : 0;
   if (Date.now() > deadline) throw new Error('Opening view did not load: ' + JSON.stringify(status));
   await pause(5);
 }

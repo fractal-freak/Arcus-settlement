@@ -91,3 +91,44 @@ The verifier also pruned two unreachable goals already present on remote main.
 
 Evidence: .local/hermes-scan/{overhead,excavation,face}.png in the shared checkout.
 Release: verified locally and prepared on codex/hermes-scan for publication.
+
+## September 12, 2026 — Reject camera trials and correct visual review
+
+Hypothesis before editing: the opening camera crops the castle's upper
+silhouette, weakening the landmark and the stone-to-gatehouse route. Reframe
+the initial view to include the palace roofline with breathing room while
+keeping the settlement stone legible in the foreground. Accept only after
+matching views show this improvement and orbit, zoom and Home remain usable.
+Work is isolated from the shared player, village-work and archaeology edits.
+This pass addresses castle presentation; next priorities remain architectural
+craft, village workplaces and meaningful citizen belongings.
+
+Outcome: rejected all camera candidates and restored the original game camera.
+The initial comparison exposed a review bug: shoot.mjs forced a close view
+while labeling it opening. Design review now preserves the actual arrival
+camera; ordinary performance runs retain their original close-view workload.
+The capture also waits for twenty consecutive ready frames: startup first
+loads a nearby patch, then expands streaming on the next frame. The old wait
+could start timing before that expansion. No thresholds or timeout limits were
+relaxed. The corrected camera trials still cropped the tower tip or reduced
+the prominence of the stone and citizens; passing performance is insufficient.
+
+Local evidence is in .local/design-review/castle and
+.local/design-review/arrival in the isolated codex/castle-refinement checkout.
+The original game code is unchanged. Retain the review correction as tooling
+work only, with no claimed visible improvement. Logic tests (29), strict
+rulebook validation and build passed; final ordinary frame results follow.
+
+Release blocker discovered: the previous Hermes deployment, run 34675643006,
+failed in Boot it and photograph it. SwiftShader reported a 32 ms median and
+29,568.4 ms p95, then page.screenshot exceeded the existing 180-second timeout.
+Do not call Hermes live on the public site based on the local build. Next pass
+must investigate the CI rendering/capture stall before publishing further
+changes; do not loosen the performance gate or simply extend the timeout.
+After release recovery, resume castle architectural craft, then village
+workplaces and owned furnishings. The schedule is now every thirty minutes.
+
+Final ordinary frame gate passed: median 5.8 ms / p95 7.4 ms against
+6.0 / 9.3 on the same M4 Pro backend, with zero pending visible terrain.
+No speedup is claimed. Tooling retained locally, not pushed while the prior
+release is blocked. No camera experiment or unrelated work was published.

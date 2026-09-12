@@ -8,6 +8,7 @@ import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {REALM_PARTS} from '../app/realm.js';
 import {sanctuaryMaterials} from './sanctuaryMaterials.js';
 import {weatherPalaceMaterial} from './palaceWeathering.js';
+import {indexGeometry} from './indexGeometry.js';
 
 const bevel={bevelEnabled:true,bevelSize:.025,bevelThickness:.025,bevelSegments:2,curveSegments:16};
 function outline(path,w,h,x=0,y=0){
@@ -276,6 +277,6 @@ export class Gatehouse3D {
         const roof=prepare(geometry(roofSpec),roofSpec);if(!batches.has('slate'))batches.set('slate',[]);batches.get('slate').push(roof);
       }
     }
-    for(const [key,list] of batches){const mesh=new Mesh(mergeGeometries(list),mats[key]);mesh.name=`Gatehouse ${key}`;mesh.castShadow=key!=='leadedGlass';mesh.receiveShadow=true;this.group.add(mesh);list.forEach(g=>g.dispose());}
+    for(const [key,list] of batches){const mesh=new Mesh(indexGeometry(mergeGeometries(list)),mats[key]);mesh.name=`Gatehouse ${key}`;mesh.castShadow=key!=='leadedGlass';mesh.receiveShadow=true;this.group.add(mesh);list.forEach(g=>g.dispose());}
   }
 }

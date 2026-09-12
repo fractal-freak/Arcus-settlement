@@ -10,6 +10,7 @@ import { Gatehouse3D } from './gatehouse3d.js';
 import { PalaceLandscape3D } from './palaceLandscape3d.js';
 import { ruinedTowerGeometry } from './ruinedTower3d.js';
 import {weatherPalaceMaterial} from './palaceWeathering.js';
+import {indexGeometry} from './indexGeometry.js';
 
 function strawTexture() {
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
@@ -154,7 +155,7 @@ export class Realm3D {
       batches.get(cell).geometries.push(g);
     }
     for(const {material:key,geometries} of batches.values()) {
-      const mesh=new Mesh(mergeGeometries(geometries),mats[key]);mesh.name=`${REALM.name} ${key}`;
+      const mesh=new Mesh(indexGeometry(mergeGeometries(geometries)),mats[key]);mesh.name=`${REALM.name} ${key}`;
       mesh.castShadow=true;mesh.receiveShadow=true;this.group.add(mesh);geometries.forEach(g=>g.dispose());
     }
     this.gatehouse=new Gatehouse3D(this.group);

@@ -118,3 +118,29 @@ terrain. Game source and public feed are unchanged. Release prepared on
 codex/capture-release for the normal pipeline; verify that run before reporting
 publication. The worked-earth candidate and concurrent local game work remain
 separate. Continue with castle/village/possessions once publication recovers.
+
+## September 12, 2026 — Repair the stalled critic/publish loop
+
+Hypothesis: the headless harness submits WebGL frames without waiting for GPU
+completion. Software-rendered work accumulates, makes occasional step() calls
+block on backpressure, and leaves capture behind minutes of pending rendering.
+The previous indexing diagnostic did not pass: both logs timed out at capture,
+while tee masked their exit codes. Reject that experiment as a release fix.
+
+Acceptance: explicitly finish each submitted test frame without altering the
+world, sample count, existing regression ratios or timeouts; also record and
+check completed-frame cost. Verify a real screenshot with HUD, all existing
+checks, and a normal deployment including an actual successful critic call.
+The local probe measures seconds of pending work after millisecond submission.
+No game source, quality settings, private data or authored state changes planned.
+
+Accepted locally: all 32 tests, strict rulebook verifier, build and four-view
+hardware review pass. Opening, stone and gatehouse PNGs are byte-identical;
+overview streaming variation was inspected. Hardware submission 6.3 ms median /
+10.1 ms p95 versus 6.0 / 9.7 before. Completed-frame timings are separate and
+include browser round trips; they are not advertised as pure GPU timings.
+Full Mac SwiftShader check and actual screenshot pass: submission 6.9 / 11.5
+ms, completion 1206.74 / 1673.72 ms, startup 52,971 ms. This backend differs
+from Linux. Software rendering remains slow; pacing fixes the harness backlog,
+not game speed. Evidence remains local under .local/repair and
+.local/software-world.png. Linux branch validation precedes publication.

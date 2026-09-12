@@ -25,6 +25,7 @@
 
 import { createServer } from 'node:http';
 import { captureWorld } from './capture-world.mjs';
+import { finishGpuFrame } from './gpu-frame.mjs';
 import { readFile } from 'node:fs/promises';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { extname, join, dirname, normalize } from 'node:path';
@@ -152,24 +153,33 @@ while (true) {
     w.step(1);
     return { ready: w.startup?.complete, pending: w.terrain.pendingVisible, stats: w.stats() };
   });
+  await finishGpuFrame(page, { timeout: Math.max(1, deadline - Date.now()) });
   if (status.ready && status.pending === 0) break;
   if (Date.now() > deadline) throw new Error('Opening view did not load: ' + JSON.stringify(status));
   await pause(5);
 }
+console.log('Opening view ready; warming up completed frames');
 for (let i = 0; i < 10; i++) {
   await page.evaluate(() => window.__world.step(1));
+  await finishGpuFrame(page);
   await pause(1);
 }
 const timings = [];
+const completedTimings = [];
 for (let i = 0; i < 60; i++) {
+  const started = performance.now();
   timings.push(await page.evaluate(() => {
     const start = performance.now();
     window.__world.step(1);
     return performance.now() - start;
   }));
+  await finishGpuFrame(page);
+  completedTimings.push(performance.now() - started);
+  if ((i + 1) % 20 === 0) console.log(`Completed frame samples: ${i + 1}/60`);
   await pause(16);
 }
 timings.sort((a, b) => a - b);
+completedTimings.sort((a, b) => a - b);
 const report = await page.evaluate(t => {
   const w = window.__world, s = w.stats();
   const gl = w.stage.renderer.getContext();
@@ -183,6 +193,10 @@ const report = await page.evaluate(t => {
     pendingVisible: s.pendingVisible, placed: (w.built?._pending ?? []).length,
   };
 }, timings);
+// CPU submission remains comparable with the existing gate. Completion includes
+// renderer execution plus browser round trips; keep it separate and gate it too.
+report.completedMedian = +completedTimings[30].toFixed(2);
+report.completedP95 = +completedTimings[57].toFixed(2);
 
 console.log('Frame check:', JSON.stringify(report));
 mkdirSync(join(HERE, '..', 'state'), { recursive: true });
@@ -215,6 +229,7 @@ if (reviewDir) {
         window.__world.step(1);
         return window.__world.terrain.pendingVisible;
       });
+      await finishGpuFrame(page, { timeout: Math.max(1, viewDeadline - Date.now()) });
       settled = pending === 0 ? settled + 1 : 0;
       if (Date.now() > viewDeadline) throw new Error('Review view did not load: ' + view.name);
       await pause(10);
@@ -256,6 +271,11 @@ if (before?.median && report.median > before.median * WORSE_BY
 
 if (before?.p95 && report.p95 > before.p95 * WORSE_BY && report.p95 - before.p95 > 8) {
   problems.push(`${report.p95}ms at the 95th percentile against ${before.p95}ms last time`);
+}
+for (const [key, minimum] of [['completedMedian', AND_AT_LEAST], ['completedP95', 8]]) {
+  if (before?.[key] && report[key] > before[key] * WORSE_BY && report[key] - before[key] > minimum) {
+    problems.push(`${key}: ${report[key]}ms against ${before[key]}ms last time`);
+  }
 }
 
 console.log(`[${WHERE}] chunks ${report.chunks} · ${report.placed} placed · ${report.drawCalls} draws · median ${report.median}ms · p95 ${report.p95}ms`

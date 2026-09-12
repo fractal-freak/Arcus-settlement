@@ -194,3 +194,29 @@ consolidation is not a new visible change for Kevin. Resume the release blocker
 without repeating unchanged CI runs until they happen to pass; then publish
 this tested candidate and continue castle craft, village workplaces and owned
 belongings. Preserve unrelated local work throughout.
+
+## September 12, 2026 — Validate terrain on the independently repaired loop
+
+The shared journal revealed an active user-requested repair in the separate
+loop task. Avoided duplicating its completed GPU-queue investigation. Its
+code-only repair a89a912 passed Linux diagnostics; normal run 34698536765
+is still in progress. Do not interrupt or supersede its final publication.
+
+Rebased the isolated terrain candidate onto a89a912, preserving both journal
+entries. Terrain commit is now 8463fe6. All 32 isolated tests, strict verifier,
+build and the repaired four-view screenshot check pass. Compared the same
+frozen fixture against a clean a89a912 checkout with identical hardware and
+camera settings: submission median/p95 6.0/10.4 ms before, 6.6/11.2 after;
+completed-frame median/p95 20.73/33.33 before, 20.93/32.95 after. All existing
+CPU and completion thresholds pass; fixture hashes match. This is not a
+claimed speedup. Evidence: .local/earth-repaired/comparison.json and after
+views here; matching baseline is in arcus-capture-phases/.local/earth-repaired.
+The latter worktree is an untouched repair checkout, not a new instrumentation
+experiment. The actual world changes remain the already accepted soil pass.
+
+Release remains local and ready. Wait for normal repair run 34698536765 to
+finish; the latest snapshot was Boot it and photograph it. Then fetch main,
+preserve its generated state and journal, rebase if needed, and publish only
+this isolated terrain candidate through the normal gates. Do not reintroduce
+indexing or diagnostic workflows, and do not stage the shared unfinished UI.
+No new user-facing visual change or decision this pass.

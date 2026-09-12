@@ -55,12 +55,12 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  }else if(process.argv[2]==='save'){
   const p=await loadProgress();
   const read=async name=>{try{return JSON.parse(await readFile(out+'/'+name+'.json','utf8'));}catch{return null;}};
-  const candidate=await read('candidate'),review=await read('review'),publication=await read('publication'),validation=await read('validation');
+  const candidate=await read('candidate'),review=await read('review'),publication=await read('publication'),validation=await read('validation'),attemptError=await read('attempt-error');
   const event={at:new Date().toISOString(),run:process.env.GITHUB_RUN_ID,stage:p.stage,
    outcome:process.env.DEVELOPMENT_RESULT||'unknown',validated:process.env.VALIDATION_RESULT==='success',
    retain:review?.retain===true,published:publication?.published===true,
    summary:String(candidate?.summary||'No candidate produced').slice(0,1000),
-   reason:String(review?.reason||publication?.reason||(validation?.passed===false?validation.reason:null)||'Attempt failed before review; inspect this run before repeating.').slice(0,2000),
+   reason:String(review?.reason||publication?.reason||attemptError?.reason||(validation?.passed===false?validation.reason:null)||'Attempt failed before review; inspect this run before repeating.').slice(0,2000),
    next:String(review?.next||'Continue the current milestone; address the last failure.').slice(0,1000)};
   saveProgress(advanceProgress(p,{...event,candidate:candidate?validateCandidate(candidate):undefined}));
   console.log('Development memory saved:',event.reason);

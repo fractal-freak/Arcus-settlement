@@ -372,3 +372,19 @@ and hillside_procession (no reachable serving job). Strict verification then
 passed. This repair is included so the development loop is not blocked on
 invalid published input; generated development edits still cannot alter the
 rulebook or its verifier.
+
+First persistent live run 34715084501 passed the three-view baseline and memory
+load, then Gemini's whole-file response was truncated. The remember job saved
+the failure on codex/world-progress, verifying durable failure memory. Replaced
+whole-file output for existing source with compact exact find/replace edits;
+ambiguous or missing matches are rejected. New files still use full content.
+Structured API errors now survive failed proposal/review steps and are fed to
+the next pass. This avoids spending output capacity on unchanged source.
+
+Also replaced the secondary orbital view with the actual village walking camera
+and added the existing full approach/gatehouse traversal in the same browser.
+Initial local frame comparisons failed; these were retained as failures. A
+matched unchanged-control/follow-up comparison passed: completed median/p95
+21.59/33.45ms before, 21.4/33.06ms after; CPU 7.9/12ms before, 7.6/12.3ms after.
+No gate or frame count changed. Route error was zero. The actual walking image
+was inspected. Full tests, strict rulebook verification and build pass.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,symlink,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {digest,validateCandidate,applyCandidate} from './developer-policy.mjs';
+import {digest,validateCandidate,applyCandidate,applyTextEdits} from './developer-policy.mjs';
 const candidate=(path='src/app/example.js')=>({summary:'A visible improvement',files:[{path,before:digest('old'),content:'new'}]});
 test('API development cannot modify workflow, tests, memory, credentials or escape source',()=>{
  for(const p of ['.github/workflows/a.yml','sim/shoot.mjs','state/settlement.json','.env','src/../sim/shoot.mjs','src/app/x.js/../../a.js'])assert.throws(()=>validateCandidate(candidate(p)));
@@ -19,4 +19,10 @@ test('preimages are checked atomically and symlinks refused',async()=>{
   await symlink(join(root,'src/app/example.js'),join(root,'src/app/link.js'));
   await assert.rejects(applyCandidate({summary:'x',files:[{path:'src/app/link.js',before:digest('new'),content:'bad'}]},root));
  }finally{await rm(root,{recursive:true,force:true});}
+});
+
+test('compact edits refuse ambiguous and missing targets and preserve surrounding source',()=>{
+ assert.equal(applyTextEdits('before\nold\nafter',[{find:'old',replace:'new'}]),'before\nnew\nafter');
+ assert.throws(()=>applyTextEdits('old old',[{find:'old',replace:'new'}]));
+ assert.throws(()=>applyTextEdits('old',[{find:'missing',replace:'new'}]));
 });

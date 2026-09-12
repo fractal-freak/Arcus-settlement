@@ -211,8 +211,14 @@ writeFileSync(OUT, await captureWorld(page));
 
 // Additional milestone views reuse this browser after the full unchanged frame gate.
 if (process.env.DEVELOPMENT_VIEWS) {
-  for (const view of [{name:'stone',distance:24,x:0,z:0},{name:'gatehouse',distance:25,x:-55,z:-29}]) {
-    await page.evaluate(v=>window.__world.look(v.distance,v.x,v.z),view);
+  const {walkingHeightAt}=await import('../src/app/occupied.js');
+  const {APPROACH_LENGTH,approachPoint}=await import('../src/app/jupiterApproach.js');
+  for (const view of [{name:'village',walk:true,x:-29,z:6,tx:-36,tz:-3},{name:'gatehouse',distance:25,x:-55,z:-29}]) {
+    await page.evaluate(v=>{
+      const w=window.__world;w.walk.exit();
+      if(v.walk){w.walk.enter();w.walk.position.set(v.x,v.y,v.z);w.walk.move(0,0);w.walk.yaw=Math.atan2(v.x-v.tx,v.z-v.tz);w.walk.pitch=.06;w.walk.tick(0);}
+      else w.look(v.distance,v.x,v.z);
+    },{...view,y:walkingHeightAt(view.x,view.z)});
     const until=Date.now()+90000;let stable=0;
     while(stable<2){
       const pending=await page.evaluate(()=>{window.__world.step(1);return window.__world.terrain.pendingVisible;});
@@ -222,6 +228,15 @@ if (process.env.DEVELOPMENT_VIEWS) {
     }
     writeFileSync(process.env.DEVELOPMENT_VIEWS+'-'+view.name+'.png',await captureWorld(page));
   }
+  const points=Array.from({length:Math.ceil(APPROACH_LENGTH/.1)+1},(_,i)=>{const p=approachPoint(Math.min(APPROACH_LENGTH,i*.1));return {...p,y:walkingHeightAt(p.x,p.z)};});
+  const routeError=await page.evaluate(points=>{
+    const w=window.__world;w.walk.enter();w.walk.position.set(points[0].x,points[0].y,points[0].z);w.walk.move(0,0);let worst=0;
+    for(const p of points){w.walk.move(p.x-w.walk.position.x,p.z-w.walk.position.z);worst=Math.max(worst,Math.hypot(p.x-w.walk.position.x,p.z-w.walk.position.z));}
+    for(let z=-13;z>=-32;z-=.1){w.walk.move(-55-w.walk.position.x,z-w.walk.position.z);worst=Math.max(worst,Math.hypot(-55-w.walk.position.x,z-w.walk.position.z));}
+    w.walk.exit();return worst;
+  },points);
+  if(routeError>.12)throw Error('Milestone walking route blocked: '+routeError);
+  console.log('Milestone walking route passed:',routeError);
 }
 
 if (reviewDir) {

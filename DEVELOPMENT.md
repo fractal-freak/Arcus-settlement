@@ -136,3 +136,10 @@ citizens integration, at most six edited files per attempt and twelve files/
 runner, plan and workflows stay outside the generated-edit allowlist. Completed
 stages deploy through the existing reusable settlement workflow; retained or
 rejected drafts do not trigger an extra deployment or extra critic call.
+
+Existing-file proposals now use compact exact text edits rather than complete
+replacement files. This reduces response size and truncation risk. Exact unique
+matches are mandatory; materialized cumulative files still pass the same bounds
+and preimage checks. The visual baseline includes the actual village walking
+camera, and the harness traverses the existing stone-to-gatehouse route. Failures
+before review also save their specific error message for the next pass.

@@ -25,3 +25,16 @@ export async function applyCandidate(c,root=process.cwd()) {
   }
   for(const f of c.files){await mkdir(dirname(resolve(root,f.path)),{recursive:true});await writeFile(resolve(root,f.path),f.content);}
 }
+
+/** Materialize small, exact edits locally instead of spending API output on whole files. */
+export function applyTextEdits(source,edits){
+ if(typeof source!=='string'||!Array.isArray(edits)||!edits.length||edits.length>30)throw Error('Invalid text edits');
+ let result=source;
+ for(const edit of edits){
+  if(typeof edit.find!=='string'||!edit.find.length||typeof edit.replace!=='string')throw Error('Invalid replacement');
+  const first=result.indexOf(edit.find);
+  if(first<0||result.indexOf(edit.find,first+1)>=0)throw Error('Edit must match exactly one location; include more context');
+  result=result.slice(0,first)+edit.replace+result.slice(first+edit.find.length);
+ }
+ return result;
+}

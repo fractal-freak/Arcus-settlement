@@ -151,3 +151,9 @@ Preserve the original startup stepping and its unchanged 90-second readiness
 check, then drain that queue once within a separate bounded 90-second GPU wait
 before warmup. Each warmup/sample frame still drains individually. This avoids
 changing what the original startup gate measures. Revalidate on Linux.
+
+Verified-commit Linux run 34697692777 reaches readiness but its accumulated
+startup queue exceeds the newly added single-frame 90-second drain. Treat this
+as the multi-frame workload it is: use the existing 180-second capture allowance
+for that one boundary. All pre-existing startup/screenshot limits and regression
+ratios remain unchanged; each measured frame retains its new 90-second bound.

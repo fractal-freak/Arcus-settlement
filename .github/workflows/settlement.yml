@@ -87,7 +87,7 @@ jobs:
           # for the two free ones that work. With no key the step says so and
           # the settlement carries on without it.
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
-          CRITIC_URL: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
+          CRITIC_URL: https://generativelanguage.googleapis.com/v1beta/openai
           CRITIC_MODEL: gemini-3.6-flash
         run: node sim/critic.mjs
 

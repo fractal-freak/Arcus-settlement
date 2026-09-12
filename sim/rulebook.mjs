@@ -274,6 +274,19 @@ export const EXTRA_PROJECTS = [
       "rock_single_C",
       "rock_single_D"
     ]
+  },
+  {
+    "key": "erect_market_stalls",
+    "dim": "civic_commerce",
+    "want": "to establish a trade center near the upper residential houses",
+    "needs": 60,
+    "place": "byPlot",
+    "tag": "accent",
+    "n": 2,
+    "kinds": [
+      "building_market_red",
+      "building_market_green"
+    ]
   }
 ];
 
@@ -334,6 +347,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "The river bank leading up to the stone bridge is stark dirt meeting bare water without reed beds or riverbank rock lining.",
     "tag": "edge",
     "target": 60
+  },
+  {
+    "key": "civic_commerce",
+    "name": "Civic Commerce",
+    "why": "The area around the upper houses lacks active market structures or trade hubs, leaving visual voids in the residential quarter.",
+    "tag": "accent",
+    "target": 40
+  },
+  {
+    "key": "lane_thresholds",
+    "name": "Lane Thresholds",
+    "why": "The open ground connecting the well to the monolith plaza lacks stone edging or framed paths to guide movement.",
+    "tag": "edge",
+    "target": 55
   }
 ];
 
@@ -344,6 +371,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-12",
+    "seen": "The open ground between the upper timber houses and the monolith plaza is a bare grass expanse dotted randomly with lone barrels, while the residential area lacks any market structures or defined trade space.",
+    "added": "civic_commerce, lane_thresholds, erect_market_stalls, market_goods_staging, plaza_approach_fencing, waypoint_storage_alcove"
+  },
   {
     "at": "2026-09-12",
     "seen": "The large runic monolith draws heavy crowd gatherings but lacks sacred ceremonial banners or ritual offerings, while the foreground tree grove sits in an artificial grid on open grass without natural stone margins or timber workings.",

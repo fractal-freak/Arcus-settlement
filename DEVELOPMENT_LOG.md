@@ -144,3 +144,10 @@ ms, completion 1206.74 / 1673.72 ms, startup 52,971 ms. This backend differs
 from Linux. Software rendering remains slow; pacing fixes the harness backlog,
 not game speed. Evidence remains local under .local/repair and
 .local/software-world.png. Linux branch validation precedes publication.
+
+Linux branch check 34697298939 exposed an overconstraint in the initial repair:
+waiting after each terrain-loading frame consumed the shared startup deadline.
+Preserve the original startup stepping and its unchanged 90-second readiness
+check, then drain that queue once within a separate bounded 90-second GPU wait
+before warmup. Each warmup/sample frame still drains individually. This avoids
+changing what the original startup gate measures. Revalidate on Linux.

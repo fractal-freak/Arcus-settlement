@@ -38,13 +38,21 @@ import {
 
 const puffVert = `
   varying vec3 vNormalView;
+  varying float vCloudDistance;
   void main() {
-    vNormalView = normalize(normalMatrix * normal);
+    vec3 cloudNormal = normal;
+    #ifdef USE_INSTANCING
+      mat3 im = mat3(instanceMatrix);
+      cloudNormal /= vec3(dot(im[0],im[0]),dot(im[1],im[1]),dot(im[2],im[2]));
+      cloudNormal = im * cloudNormal;
+    #endif
+    vNormalView = normalize(normalMatrix * cloudNormal);
     #ifdef USE_INSTANCING
       vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
     #else
       vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     #endif
+    vCloudDistance = length(mvPosition.xyz);
     gl_Position = projectionMatrix * mvPosition;
   }
 `;
@@ -52,9 +60,13 @@ const puffFrag = `
   uniform vec3 uColor;
   uniform float uOpacity;
   varying vec3 vNormalView;
+  varying float vCloudDistance;
   void main() {
     float facing = abs(vNormalView.z);
-    float alpha = smoothstep(0.02, 0.55, facing) * uOpacity;
+    // Fade nearby puffs before an orbiting camera enters them. Otherwise
+    // overlapping transparent facets become a giant opaque white sheet.
+    float alpha = smoothstep(0.02, 0.55, facing) * uOpacity * smoothstep(35.,100.,vCloudDistance);
+    if (alpha < .003) discard;
     gl_FragColor = vec4(uColor, alpha);
   }
 `;

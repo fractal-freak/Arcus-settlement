@@ -1,0 +1,38 @@
+{
+  "asset": "https://polyhaven.com/a/mossy_stone_wall",
+  "author": "Amal Kumar",
+  "license": "CC0-1.0",
+  "licenseURL": "https://polyhaven.com/license",
+  "maps": [
+    {
+      "channel": "Diffuse",
+      "file": "mossy_stone_wall_diff_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_diff_2k.jpg",
+      "md5": "1f0ff600e455874379c78ab97c7680b4"
+    },
+    {
+      "channel": "nor_gl",
+      "file": "mossy_stone_wall_nor_gl_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_nor_gl_2k.jpg",
+      "md5": "0c40b1b9b731c404bd499389322fffb1"
+    },
+    {
+      "channel": "Rough",
+      "file": "mossy_stone_wall_rough_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_rough_2k.jpg",
+      "md5": "c0c8fc6f25386e98fe0ee6bfe4264eda"
+    },
+    {
+      "channel": "Displacement",
+      "file": "mossy_stone_wall_disp_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_disp_2k.jpg",
+      "md5": "3e23d7af3e3a79895eed620d179a323e"
+    },
+    {
+      "channel": "AO",
+      "file": "mossy_stone_wall_ao_2k.jpg",
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/mossy_stone_wall/mossy_stone_wall_ao_2k.jpg",
+      "md5": "7a893c2e1bee082619114844b4da4750"
+    }
+  ]
+}

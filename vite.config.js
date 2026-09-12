@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
 
 /**
  * Base is relative, not the hub's absolute path or GitHub Pages' absolute
@@ -17,5 +18,16 @@ import { defineConfig } from 'vite';
  */
 export default defineConfig({
   base: './',
+  plugins: [{
+    name: 'settlement-startup-snapshot',
+    generateBundle() {
+      // The public snapshot is sufficient to draw immediately while the local
+      // session feed is still working. Never ship sessions or commit subjects.
+      const data = JSON.parse(readFileSync(new URL('./state/settlement.json', import.meta.url), 'utf8'));
+      data.people = [];
+      if (data.town?.buildings) data.town.buildings = data.town.buildings.map(({ n, trade, weight }) => ({ n, trade, weight }));
+      this.emitFile({ type: 'asset', fileName: 'state/settlement.json', source: JSON.stringify(data) });
+    },
+  }],
   build: { outDir: 'dist', emptyOutDir: true, target: 'es2022' },
 });

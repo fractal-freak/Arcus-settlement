@@ -1,3 +1,4 @@
+import { refreshSubscribers, subscriberSnapshot, reconcileResidents } from './subscribers.mjs';
 /**
  * The living settlement: citizens who want things, fall in and out with each
  * other, and change the place while nobody is watching.
@@ -36,6 +37,7 @@ import { homedir } from 'node:os';
 import { citizen, hashString } from './citizens.mjs';
 import { PROJECTS, chooseProject, grade, spotFor, redundant, DIMENSIONS, CAPACITY } from './quality.mjs';
 import { unearth, corpusSize } from './finds.mjs';
+import { settledPlacements } from '../src/app/village.js';
 import { digFor } from '../src/app/digs.js';
 
 /**
@@ -299,7 +301,7 @@ function doProject(state, spec, worker, tick, pr) {
 
 function step(state, tick) {
   const r = rng(hashString(`tick:${tick}`));
-  const people = state.citizens;
+  const people = state.citizens.filter(c => c.residency !== 'departed');
   if (people.length < 2) return;
 
   /**
@@ -541,23 +543,25 @@ export function life(folk, now = Date.now(), crew = []) {
   if (!state || !Array.isArray(state.citizens)) { state = blank(now); dirty = true; }
   if (!Array.isArray(state.found)) state.found = [];
   if (!Array.isArray(state.placements)) state.placements = [];
+  const planned = settledPlacements(state.placements);
+  if (planned.length !== state.placements.length) { state.placements = planned; dirty = true; }
   if (!Array.isArray(state.proposals)) state.proposals = [];
 
-  // Fill out the roll to the real population.
-  while (state.citizens.length < folk) {
-    dirty = true;
-    const seed = state.citizens.length + 1;
-    // A founding generation all born before anything has been graded would
-    // otherwise every one of them want the same thing — the settlement had
-    // forty-eight people and one idea, and three of the seven dimensions sat
-    // at zero all night because nobody was ever assigned to them. Once there
-    // IS a weakest dimension it rules; until then, spread them out.
-    const aim = state.quality
-      || { scores: {}, weakest: DIMENSIONS[seed % DIMENSIONS.length].key };
-    const c = born(seed, state.tick, aim);
-    state.citizens.push(c);
-    if (state.tick > 0) {
-      record(state, state.tick, 'arrival', `${c.name}, ${c.trade}, came to the settlement.`, [c.seed]);
+  // The local hub stays synchronous; the next poll sees the refreshed count.
+  // CLI ticks await this refresh before calling life().
+  void refreshSubscribers();
+  const population=subscriberSnapshot() ?? state.population;
+  if(population) {
+    state.population=population;
+    dirty=reconcileResidents(state,population.count,seed=>born(seed,state.tick,state.quality),
+      (kind,text,seed)=>record(state,state.tick,kind,text,[seed])) || dirty;
+  } else {
+    // Preserve the existing world until its subscriber source is connected.
+    while(state.citizens.filter(c=>c.residency!=='departed').length<folk) {
+      const seed=state.citizens.reduce((n,c)=>Math.max(n,c.seed),0)+1;
+      const aim=state.quality || {scores:{},weakest:DIMENSIONS[seed%DIMENSIONS.length].key};
+      const c=born(seed,state.tick,aim);state.citizens.push(c);dirty=true;
+      if(state.tick>0)record(state,state.tick,'arrival',`${c.name}, ${c.trade}, came to the settlement.`,[c.seed]);
     }
   }
 
@@ -598,7 +602,10 @@ function summary(state) {
     proposals: state.proposals.slice(-12).reverse(),
     // What the dig has brought up, newest first, and how much is still buried.
     library: { found: state.finds.filter((f) => f.source).slice(-40).reverse(), of: corpusSize() },
-    citizens: state.citizens.map((c) => ({
+    population: state.population ?? null,
+    departed: state.citizens.filter(c => c.residency === 'departed').length,
+    citizens: state.citizens.filter(c => c.residency !== 'departed').map((c) => ({
+      kingdom: c.kingdom ?? 'first-kingdom',
       seed: c.seed, name: c.name, trade: c.trade, temper: c.temper,
       want: c.ambition ? c.ambition.want : null,
       dim: c.ambition ? c.ambition.dim : null,

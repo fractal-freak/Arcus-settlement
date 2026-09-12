@@ -1,3 +1,4 @@
+import { PalaceLighting } from './three/palaceLighting.js';
 /**
  * Boot.
  *
@@ -10,29 +11,51 @@
  * drawn, which is the only reason a whole-engine pivot is an afternoon.
  */
 
-import { Vector3 } from 'three';
+import { Vector3, DefaultLoadingManager, Cache } from 'three';
 import { Stage } from './three/stage.js';
+import { visibilityMeshes, isOccluded } from './three/visibility.js';
+import { FramePerformance } from './three/performance.js';
 import { Terrain3D } from './three/terrain3d.js';
 import { Sky3D } from './three/sky3d.js';
 import { People3D, setStrikeListener } from './three/people3d.js';
-import { Town3D } from './three/town3d.js';
+import { Enchantment3D } from './three/enchantment3d.js';
+import { Realm3D } from './three/realm3d.js';
+import { REALM, REALM_BUILDINGS } from './app/realm.js';
 import { Landmarks3D } from './three/landmarks3d.js';
 import { Folk3D } from './three/folk3d.js';
 import { DigSite3D } from './three/digsite3d.js';
 import { setPlacements, blocked } from './app/occupied.js';
 import { Ambience } from './app/ambience.js';
+import { mountSoundControls } from './app/soundControls.js';
 import { SettlementStone3D } from './three/settlementStone3d.js';
 import { Built3D } from './three/built3d.js';
+import { Walk3D } from './three/walk3d.js';
 import { Rig } from './three/controls.js';
 import { Feed } from './data/feed.js';
 import { Raycaster } from 'three';
 import { smoothHeightAt } from './app/terrain.js';
 
+// Reuse atlas images shared by the kit's separate glTF files.
+Cache.enabled = true;
+
+const loadingStatus = document.getElementById('world-loading-status');
+const startup = { assetsPending: false, assetErrors: 0, complete: false,
+  startedAt: performance.now(), readyAt: null, firstFrameAt: null };
+DefaultLoadingManager.onStart = () => { startup.assetsPending = true; };
+DefaultLoadingManager.onLoad = () => { startup.assetsPending = false; startup.assetsReadyAt = performance.now(); };
+DefaultLoadingManager.onError = () => { startup.assetErrors++; };
+
 const stage = new Stage(document.body);
+const framePerformance = new FramePerformance(stage.renderer);
+framePerformance.attach(stage);
+framePerformance.context = () => ({ startupMs: Math.round((startup.readyAt ?? performance.now()) - startup.startedAt), firstFrameMs: Math.round(startup.firstFrameAt - startup.startedAt), ready: startup.complete, feedSource: feed.source, startup: Object.fromEntries(['assetsReadyAt','terrainReadyAt','feedReadyAt','modelsReadyAt'].map(k=>[k,Math.round((startup[k]??performance.now())-startup.startedAt)])), chunks: terrain.chunks.size, pending: terrain.pendingVisible, calls: stage.renderer.info.render.calls, triangles: stage.renderer.info.render.triangles });
 const sky = new Sky3D(stage.scene);
 const terrain = new Terrain3D(stage.scene);
 const people = new People3D(stage.scene);
-const town3d = new Town3D(stage.scene);
+const town3d = new Realm3D(stage.scene);
+const buildingOccluders = visibilityMeshes(town3d.group);
+const enchantment = new Enchantment3D(stage.scene);
+const palaceLighting = new PalaceLighting(stage);
 const landmarks = new Landmarks3D(stage.scene);
 const folk = new Folk3D(stage.scene);
 const digs = new DigSite3D(stage.scene);
@@ -44,8 +67,9 @@ const settlementStone = new SettlementStone3D(stage.scene);
 const built = new Built3D(stage.scene);
 const rig = new Rig(stage.camera, stage.renderer.domElement);
 
-rig.target.set(0, smoothHeightAt(0, 0), 0);
-rig.setDistance(52);
+rig.target.set(-14, smoothHeightAt(-14, -8)+2, -8);
+rig.setDistance(86);
+const walk = new Walk3D(stage.camera, rig, stage.renderer.domElement);
 
 /** How high above the ground the camera is never allowed to sink below. */
 const CLEARANCE = 0.6;
@@ -65,7 +89,7 @@ const CLEARANCE = 0.6;
  * is not directly under the target, which the first part does not reach.
  */
 function clampAboveGround() {
-  const groundAtTarget = smoothHeightAt(rig.target.x, rig.target.z);
+  const groundAtTarget = smoothHeightAt(rig.target.x, rig.target.z) + Math.min(8,Math.max(0,(rig.distance-30)*.16));
   const dy = groundAtTarget - rig.target.y;
   if (dy !== 0) {
     rig.target.y += dy;
@@ -115,11 +139,10 @@ const feed = new Feed((d) => {
   }
   if (d.town && d.counts) {
     hudStat.textContent =
-      `${d.town.buildings.length} buildings (${d.town.toward}/${d.town.needed} toward the next) · ` +
-      `${d.town.folk} living here · ${d.counts.working} working · ${d.counts.waiting} waiting on you`;
-    town3d.sync(d.town);
-    landmarks.sync(d.town);
-    folk.sync(d.town);
+      `${REALM.name} · ${REALM_BUILDINGS.length} buildings · ` +
+      `${d.town.folk} citizens${d.population ? ' · subscriber-linked' : ' · subscriber link pending'} · ${d.counts.working} archaeologists working`;
+    landmarks.sync({ ...d.town, milestones: (d.town.milestones ?? []).filter(m => m.key === 'well' || m.key === 'bridge') });
+    folk.sync({ ...d.town, residents: d.life?.citizens });
   }
   if (d.life) {
     syncChronicle(d.life);
@@ -137,7 +160,6 @@ const feed = new Feed((d) => {
   }
   if (d.founding) settlementStone.sync(d.founding);
 });
-feed.start();
 
 // ── People overlay ─────────────────────────────────────────────────────
 //
@@ -240,6 +262,42 @@ function goTo(id) {
 }
 
 /**
+ * Header, pull-tab and body for a notice board. The pull rides the inner
+ * edge so when the board slides off-screen a real handle stays in the world,
+ * not a sliver of the panel with the arrow already gone.
+ */
+function mountBoard(board, { toggleId, bodyId, storageKey, header, openLabel, shutLabel }) {
+  const h = document.createElement('button');
+  h.type = 'button';
+  h.id = toggleId;
+  h.innerHTML = header;
+  const pull = document.createElement('button');
+  pull.type = 'button';
+  pull.className = 'pull';
+  pull.innerHTML = '<span class="chev" aria-hidden="true"></span>';
+  const apply = (shut) => {
+    board.classList.toggle('shut', shut);
+    h.setAttribute('aria-expanded', shut ? 'false' : 'true');
+    const label = shut ? openLabel : shutLabel;
+    h.setAttribute('aria-label', label);
+    pull.setAttribute('aria-label', label);
+    try { localStorage.setItem(storageKey, shut ? '1' : '0'); } catch { /* private window */ }
+  };
+  const toggle = () => apply(!board.classList.contains('shut'));
+  h.addEventListener('click', toggle);
+  pull.addEventListener('click', toggle);
+  board.appendChild(h);
+  const body = document.createElement('div');
+  body.id = bodyId;
+  board.appendChild(body);
+  board.appendChild(pull);
+  // A first visit opens onto the world. Preserve an existing choice to keep a board open.
+  let initiallyShut = true;
+  try { initiallyShut = localStorage.getItem(storageKey) !== '0'; } catch { /* private window */ }
+  apply(initiallyShut);
+}
+
+/**
  * The crew panel: every session, always on screen, sorted the way the feed
  * already sorts them — working first, then waiting on Kevin, then resting.
  *
@@ -258,20 +316,14 @@ function syncCrew() {
     // The header is the toggle. Kept in localStorage so a closed board stays
     // closed across reloads — a panel that reopens itself every refresh is
     // one you end up closing every refresh.
-    const h = document.createElement('button');
-    h.type = 'button';
-    h.id = 'crewToggle';
-    h.innerHTML = '<span class="arrow">▾</span><span>The settlement</span><span class="count"></span>';
-    h.addEventListener('click', () => {
-      const now = !crew.classList.contains('shut');
-      crew.classList.toggle('shut', now);
-      try { localStorage.setItem('crewShut', now ? '1' : '0'); } catch { /* private window */ }
+    mountBoard(crew, {
+      toggleId: 'crewToggle',
+      bodyId: 'crewBody',
+      storageKey: 'crewShut',
+      header: '<span class="chev" aria-hidden="true"></span><span>The settlement</span><span class="count"></span>',
+      openLabel: 'Show the settlement',
+      shutLabel: 'Hide the settlement',
     });
-    crew.appendChild(h);
-    const body = document.createElement('div');
-    body.id = 'crewBody';
-    crew.appendChild(body);
-    try { if (localStorage.getItem('crewShut') === '1') crew.classList.add('shut'); } catch { /* private window */ }
   }
   const body = crew.querySelector('#crewBody');
   const atWork = list.filter((p) => p.state !== 'resting').length;
@@ -334,23 +386,27 @@ function syncCrew() {
 const ray = new Raycaster();
 const tmpDir = new Vector3();
 const occluded = new Set();
-let occludeTick = 0;
+let occludeCursor = 0;
+let lastOcclusionAt = 0;
 
 function updateOcclusion(anchors) {
-  if (occludeTick++ % 4 !== 0) return;
-  // Buildings, landmarks and the stone — plus the land itself, so a figure
-  // over the brow of a hill is hidden too.
-  const solid = [town3d.group, ...terrain.chunks.values()];
+  // Labels belong behind solid ground/buildings. Raycasting every blade and every
+  // tree instance for every label caused a ~80ms stall once every four frames.
+  // Land is the first mesh in each terrain chunk; foliage need not hide a label.
+  if (!anchors.length || performance.now() - lastOcclusionAt < 24) return;
+  lastOcclusionAt = performance.now();
+  const a = anchors[occludeCursor++ % anchors.length];
+  tmpProj.copy(a.position).project(stage.camera);
+  if (tmpProj.z > 1 || Math.abs(tmpProj.x) > 1.1 || Math.abs(tmpProj.y) > 1.1) return;
+  const solid = [...buildingOccluders];
+  for (const chunk of terrain.chunks.values()) solid.push(chunk.children[0]);
   const from = stage.camera.position;
-  for (const a of anchors) {
-    tmpDir.subVectors(a.position, from);
-    const reach = tmpDir.length();
-    tmpDir.divideScalar(reach || 1);
-    ray.set(from, tmpDir);
-    ray.far = reach - 0.45; // stop just short, or the figure's own ground hits
-    const hit = ray.intersectObjects(solid, true);
-    if (hit.length) occluded.add(a.id); else occluded.delete(a.id);
-  }
+  tmpDir.subVectors(a.position, from);
+  const reach = tmpDir.length();
+  tmpDir.divideScalar(reach || 1);
+  ray.set(from, tmpDir);
+  ray.far = Math.max(0, reach - 0.45);
+  if (isOccluded(ray, solid)) occluded.add(a.id); else occluded.delete(a.id);
 }
 
 /**
@@ -364,20 +420,14 @@ function updateOcclusion(anchors) {
 function syncChronicle(L) {
   if (!L) return;
   if (!chron.firstChild) {
-    const h = document.createElement('button');
-    h.type = 'button';
-    h.id = 'chronToggle';
-    h.innerHTML = '<span class="arrow">▾</span><span>Chronicle</span><span class="when"></span>';
-    h.addEventListener('click', () => {
-      const now = !chron.classList.contains('shut');
-      chron.classList.toggle('shut', now);
-      try { localStorage.setItem('chronShut', now ? '1' : '0'); } catch { /* private window */ }
+    mountBoard(chron, {
+      toggleId: 'chronToggle',
+      bodyId: 'chronBody',
+      storageKey: 'chronShut',
+      header: '<span class="chev" aria-hidden="true"></span><span>Chronicle</span><span class="when"></span>',
+      openLabel: 'Show the chronicle',
+      shutLabel: 'Hide the chronicle',
     });
-    chron.appendChild(h);
-    const body = document.createElement('div');
-    body.id = 'chronBody';
-    chron.appendChild(body);
-    try { if (localStorage.getItem('chronShut') === '1') chron.classList.add('shut'); } catch { /* private window */ }
   }
   chron.querySelector('.when').textContent = L.said || '';
   const body = chron.querySelector('#chronBody');
@@ -493,87 +543,155 @@ function syncPeopleOverlay() {
 // ── Frame ───────────────────────────────────────────────────────────────
 
 const tmp = new Vector3();
+const viewOrigin = new Vector3();
+const viewDir = new Vector3();
+const VIEW_CORNERS = [[-1, -1], [1, -1], [-1, 1], [1, 1], [-1, 0], [1, 0], [0, -1], [0, 1]];
 let elapsed = 0;
 
+/**
+ * How far the current view actually reaches across the ground.
+ *
+ * Streaming a fixed ring around the orbit target left the corners of a low
+ * camera looking at empty floor — the land was there, it just had not been
+ * asked for yet, and a pan would pop it in. The four screen corners, plus
+ * the edge midpoints, tell us how far to keep detailed chunks, and the
+ * coarse country mesh covers whatever is still past that.
+ */
+function visibleGroundRadius(camera, target) {
+  camera.updateMatrixWorld();
+  let maxR = 0;
+  for (const [nx, ny] of VIEW_CORNERS) {
+    viewOrigin.set(nx, ny, -1).unproject(camera);
+    viewDir.set(nx, ny, 1).unproject(camera).sub(viewOrigin);
+    if (viewDir.y >= -1e-5) continue;
+    const tHit = (target.y - viewOrigin.y) / viewDir.y;
+    if (tHit < 0) continue;
+    const tUse = Math.min(tHit, 1);
+    const gx = viewOrigin.x + viewDir.x * tUse;
+    const gz = viewOrigin.z + viewDir.z * tUse;
+    maxR = Math.max(maxR, Math.min(240, Math.hypot(gx - target.x, gz - target.z)));
+  }
+  return maxR;
+}
+
 function frame(dtMs) {
+  const frameStart = performance.now();
   elapsed += dtMs;
-  rig.update(dtMs);
-  clampAboveGround();
+  if (walk.active) walk.tick(dtMs);
+  else { rig.update(dtMs); clampAboveGround(); }
   people.tick(dtMs);
   folk.tick(elapsed / 1000);
-  ambience.update(light, stage.camera, rig.target, elapsed / 1000);
+  enchantment.tick(elapsed / 1000);
+  palaceLighting.tick(elapsed / 1000);
+  landmarks.tick(elapsed / 1000);
+  settlementStone.tick(elapsed / 1000);
+  ambience.update(light, stage.camera, rig.target);
 
+  const animationEnd = performance.now();
   const t = rig.target;
-  // How much DETAILED land (cliffs, trees, water) to keep loaded. Zoomed out
-  // used to cap at a flat 88 tiles no matter how far back the camera pulled,
-  // which is a wall you can see the top of, not a horizon — the streamed
-  // chunks stopped well short of where fog would have hidden the join. Raised
-  // it, and past this radius Terrain3D's own floor plane carries the ground
-  // on regardless, so there is no longer an edge to see at all, at any zoom.
-  const radius = Math.min(150, 32 + rig.distance * 0.62);
+  // Detailed land (cliffs, trees, water) follows the VIEW, not a guess about
+  // zoom. Past that, Terrain3D's coarse country mesh keeps the same hills and
+  // river going, so the horizon is never a flat empty disc.
+  // Update the camera even before the first render, so the requested area is
+  // based on this view rather than a stale projection from startup.
+  stage.camera.updateMatrixWorld();
+  const seen = visibleGroundRadius(stage.camera, t);
+  const fullRadius = Math.min(160, Math.max(40 + rig.distance * 0.7, seen * 0.9));
+  // Start with the town under the camera's target (49 chunks), not the huge
+  // rectangle spanning the camera, target and horizon. The coarse country
+  // already covers the background; detail beyond town streams after entry.
+  const radius = startup.complete ? fullRadius : Math.min(48, fullRadius);
   const cam = stage.camera.position;
-  // Milliseconds, not a chunk count — leaves headroom in a 16.7ms frame for
-  // the render call after it. Measured that call alone at 9.4ms at a typical
-  // zoom, which is MORE than the 8ms this used to budget for building —
-  // guaranteeing an occasional overrun the moment a frame's building actually
-  // used its full allowance, exactly the stutter reported while panning into
-  // fresh ground continuously. 5ms leaves real room for render plus the
-  // camera/sky updates around it, checked against a live sustained-pan test,
-  // not assumed. See the long comment on Terrain3D.update for the rest.
-  terrain.update(t.x, t.z, radius, 5, cam.x, cam.z);
+  terrain.update(t.x, t.z, radius, 3, startup.complete ? cam.x : t.x, startup.complete ? cam.z : t.z, stage.camera);
   terrain.updateFades(performance.now());
   // One shared clock for every water and grass surface in the world, fed
   // from the same elapsed-time accumulator the frame loop already keeps —
   // water and grass wave together instead of each timing off Date.now().
-  terrain.updateShaders(elapsed, stage.sunDir, stage.sun.color);
+  terrain.updateShaders(elapsed, stage.sunDir, stage.sun.color, stage.camera.position, stage.scene.fog.color);
 
+  const terrainEnd = performance.now();
   sky.update(dtMs, t);
   stage.followShadow(tmp.set(t.x, t.y, t.z), rig.distance);
-  stage.render();
+  stage.prepareDetail();
+  const renderStart = performance.now();
+  stage.render(elapsed);
+  const renderEnd = performance.now();
+  startup.firstFrameAt ??= performance.now();
+  updateStartup();
   // After render(), not before: projecting a figure's position needs the
   // camera's matrixWorld for THIS frame, which stage.render() is what
   // actually brings current.
   syncPeopleOverlay();
+  return { cpu: performance.now()-frameStart, animation: animationEnd-frameStart,
+    terrain: terrainEnd-animationEnd, render: renderEnd-renderStart,
+    environment: renderStart-terrainEnd, overlay: performance.now()-renderEnd };
+}
+
+function updateStartup() {
+  if (startup.complete) return;
+  const nearbyReady = terrain.pendingVisible === 0;
+  if (nearbyReady) startup.terrainReadyAt ??= performance.now();
+  if (feed.data) startup.feedReadyAt ??= performance.now();
+  if (built.ready && folk.ready && people.ready && landmarks.ready) startup.modelsReadyAt ??= performance.now();
+  const assetsReady = feed.data && built.ready && folk.ready && people.ready && landmarks.ready && !startup.assetsPending;
+  if (nearbyReady && assetsReady) {
+    startup.complete = true;
+    startup.readyAt = performance.now();
+    feed.beginLive();
+    loadingStatus?.remove();
+    return;
+  }
+  // This is a small status label, never an overlay or a gate on interaction.
+  // A failed download also cannot leave a blocking loading screen behind.
+  if (performance.now() - startup.startedAt > 10000 || startup.assetErrors) {
+    loadingStatus?.remove();
+  } else if (loadingStatus) {
+    const message = nearbyReady ? 'Preparing buildings and citizens…' : 'Preparing the nearby valley…';
+    if (loadingStatus.textContent !== message) loadingStatus.textContent = message;
+  }
 }
 
 let last = performance.now();
+let animationFrame = 0;
 function loop(now) {
-  const dt = Math.min(64, now - last);
+  animationFrame = 0;
+  if (document.hidden) return;
+  const interval = Math.max(0, now - last);
+  const dt = Math.min(32, interval);
   last = now;
-  frame(dt);
-  requestAnimationFrame(loop);
+  const timing = frame(dt);
+  framePerformance.record({ interval, ...timing });
+  animationFrame = requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
-
-/**
- * Sound, remembered.
- *
- * `resume()` has to happen inside a real gesture, so a page reloaded with
- * sound already on still cannot start it by itself — it arms instead, and the
- * next click anywhere in the world turns it on. That is one click rather than
- * hunting for the button again.
- */
-const soundBtn = document.getElementById('sound');
-let soundWanted = false;
-try { soundWanted = localStorage.getItem('sound') === '1'; } catch { /* private window */ }
-
-function showSound(on) {
-  soundBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  try { localStorage.setItem('sound', on ? '1' : '0'); } catch { /* private window */ }
+function resume() {
+  if (document.hidden || animationFrame) return;
+  last = performance.now();
+  animationFrame = requestAnimationFrame(loop);
 }
-soundBtn.addEventListener('click', () => { showSound(ambience.toggle()); });
-if (soundWanted) {
-  const arm = () => { showSound(ambience.resume()); removeEventListener('pointerdown', arm); };
-  addEventListener('pointerdown', arm);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { cancelAnimationFrame(animationFrame); animationFrame = 0; }
+  else resume();
+});
+resume();
+
+mountSoundControls(ambience);
+
+function goToStone() {
+  walk.exit();
+  rig.target.set(0, smoothHeightAt(0, 0), 0);
+  rig.autoTilt = true;
+  rig.setDistance(52);
 }
 
 addEventListener('keydown', (e) => {
-  if (e.key === 'Home') {
-    rig.target.set(0, smoothHeightAt(0, 0), 0);
-    rig.autoTilt = true;
-    rig.setDistance(52);
-  }
+  if (e.key === 'Home') goToStone();
 });
+
+document.getElementById('camHome').addEventListener('click', goToStone);
+document.getElementById('camIn').addEventListener('click', () => rig.nudgeDistance(0.78));
+document.getElementById('camOut').addEventListener('click', () => rig.nudgeDistance(1.28));
+document.getElementById('camLeft').addEventListener('click', () => rig.orbit(-0.28));
+document.getElementById('camRight').addEventListener('click', () => rig.orbit(0.28));
 
 /**
  * A test hook. A hidden browser pane freezes animation frames, so nothing is
@@ -581,7 +699,7 @@ addEventListener('keydown', (e) => {
  * exactly what the loop runs, not a parallel path written to pass.
  */
 window.__world = {
-  stage, sky, terrain, people, town3d, built, landmarks, folk, digs, ambience, settlementStone, rig, feed,
+  framePerformance, startup, stage, sky, terrain, people, town3d, built, landmarks, folk, digs, ambience, settlementStone, rig, feed, walk, enchantment,
   // Exposed so a check can ask the world the same question the world asked
   // itself when it put somebody somewhere — see the note on step().
   blocked,
@@ -596,6 +714,11 @@ window.__world = {
   },
   stats: () => ({
     chunks: terrain.chunks.size,
+    pendingTerrain: terrain._queue?.length ?? 0,
+    pendingVisible: terrain.pendingVisible ?? null,
+    terrainWorker: !!terrain._worker,
+    pixelRatio: stage.renderer.getPixelRatio(),
+    ready: startup.complete,
     built: terrain.built,
     distance: Math.round(rig.distance),
     polarDeg: Math.round(Math.acos(
@@ -607,3 +730,6 @@ window.__world = {
     light: Number(light.toFixed(2)),
   }),
 };
+
+// Cached data is synchronous: initialize the HUD and overlay before subscribing.
+feed.start();

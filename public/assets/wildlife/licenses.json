@@ -1,0 +1,37 @@
+[
+  {
+    "file": "stag.glb",
+    "source": "https://opengameart.org/content/old-deer-male",
+    "authors": "CDmir / TinyWorlds",
+    "license": "CC0-1.0",
+    "reviewed": "2026-09-11",
+    "sha256": "a98a826d097cef75d7850bd5f32919de302fa6d2cb4824e28b76913ca2479c73",
+    "modifications": "Blender conversion to glTF; rebuilt materials; retained and baked four animation clips; runtime scale and orientation",
+    "obligations": "No required attribution",
+    "sourceFileSha256": "729f47b10f29e13d128aa2e0a2a5ba47be40cb6593e1e86ac31e236e93bef003",
+    "sourceDownload": "https://opengameart.org/sites/default/files/deer1.blend"
+  },
+  {
+    "file": "doe.glb",
+    "source": "https://opengameart.org/content/deer-female",
+    "authors": "CDmir / TinyWorlds",
+    "license": "CC0-1.0",
+    "reviewed": "2026-09-11",
+    "sha256": "573f54c8a8ab6c7615196e169969158a7370c2f428827e83891ebcde3d501d86",
+    "modifications": "Blender conversion to glTF; rebuilt materials; retained and baked four animation clips; runtime scale and orientation",
+    "obligations": "No required attribution",
+    "sourceFileSha256": "577b9e48ce7cee955c6dac1b0a70333eccdfcad3f11eaa1f96a15900b64ca25e",
+    "sourceDownload": "https://opengameart.org/sites/default/files/doe.blend"
+  },
+  {
+    "file": "fox.glb",
+    "source": "https://github.com/KhronosGroup/glTF-Sample-Assets/blob/main/Models/Fox/README.md",
+    "authors": "PixelMannen (model); tomkranis (rigging and animation); @AsoboStudio and @scurest (glTF conversion)",
+    "license": "CC0-1.0 model; CC-BY-4.0 rigging, animation and conversion",
+    "reviewed": "2026-09-11",
+    "sha256": "d97044e701822bac5a62696459b27d7b375aada5de8574ed4362edbba94771f7",
+    "modifications": "GLB unchanged; runtime scale, orientation and animation selection",
+    "obligations": "Retain creator credits, source, CC BY 4.0 license link and modification notice; see ../../credits.html",
+    "sourceFileSha256": "d97044e701822bac5a62696459b27d7b375aada5de8574ed4362edbba94771f7"
+  }
+]

@@ -16,20 +16,14 @@ canvas { display: block; }
 #stat { font-size: 12px; color: #b0a9c8; }
 #sky { margin-left: auto; font-size: 11.5px; color: #8b85a4; }
 #hint {
-  position: fixed; right: 14px; bottom: 12px; z-index: 5;
+  position: fixed; right: 14px; bottom: 78px; z-index: 5;
   font-size: 11px; color: #6e6888; pointer-events: none;
 }
 /* The half nobody would otherwise find. */
 #hint b { color: #a9a2c6; font-weight: 600; }
 
-/* ── Sound ────────────────────────────────────────────────────────────────
-   Off until it is asked for, which is not a design choice: no browser will
-   make a sound before somebody has clicked something, and a page that tries
-   leaves a dead audio context behind. Sits by the camera hint because it
-   belongs to the same family of things — how you get around, and what you
-   hear while you do. */
 #sound {
-  position: fixed; right: 14px; bottom: 32px; z-index: 5;
+  position: fixed; right: 14px; bottom: 18px; z-index: 6;
   padding: 4px 9px; border-radius: 3px;
   background: rgba(20, 18, 31, 0.55); border: 1px solid rgba(255, 255, 255, 0.14);
   font: inherit; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -41,6 +35,52 @@ canvas { display: block; }
 #sound[aria-pressed="true"] { color: #cfe6ff; border-color: rgba(150, 226, 255, 0.45); }
 #sound[aria-pressed="true"] .on { display: inline; }
 #sound[aria-pressed="true"] .off { display: none; }
+
+/* ── Camera dock ──────────────────────────────────────────────────────────
+   A Sims-style bar under the world: turn, zoom, and a home that puts the
+   Settlement Stone back in the middle of the screen. Dressed like the rest
+   of the chrome — dark glass over the valley — so it is a control, not a
+   second notice board. */
+#camdock {
+  position: fixed; left: 50%; bottom: 16px; z-index: 6;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 8px;
+  border-radius: 18px;
+  background: rgba(16, 14, 24, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+#camdock button {
+  width: 40px; height: 40px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #e6e1f2;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+#camdock button svg { width: 18px; height: 18px; display: block; }
+#camdock button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+}
+#camdock button:active { transform: translateY(1px); }
+#camdock button:focus-visible { outline: 2px solid #c4a574; outline-offset: 2px; }
+#camdock button.home {
+  width: 48px; height: 48px;
+  background: linear-gradient(180deg, rgba(232, 216, 176, 0.28), rgba(138, 106, 47, 0.22));
+  border-color: rgba(232, 216, 176, 0.45);
+  color: #f3e6c4;
+}
+#camdock button.home svg { width: 22px; height: 22px; }
+#camdock button.home:hover {
+  background: linear-gradient(180deg, rgba(232, 216, 176, 0.42), rgba(138, 106, 47, 0.32));
+  color: #fff8e8;
+}
 
 /* One pill per open Claude Code session, positioned every frame by
    projecting its 3D figure through the camera (see syncPeopleOverlay in
@@ -152,32 +192,53 @@ canvas { display: block; }
   text-transform: uppercase; color: #6b5535;
 }
 #crewToggle:hover { color: #4a3c28; }
-#crewToggle .arrow { font-size: 9px; transition: transform 0.15s; }
 #crewToggle .count {
   margin-left: auto; letter-spacing: 0.04em; text-transform: none;
   font-weight: 500; color: #8a7457;
 }
-/* Shut: the board slides OFF THE SIDE it came from and leaves a tab.
-   It used to keep its full width and only hide its rows, so a shut board was
-   still a 236px slab across the corner of the valley — which is not what shut
-   means. Now it goes where it lives, and the tab is what brings it back. */
-#crew, #chron { transition: transform 0.22s ease; }
+#crewToggle .chev, #chronToggle .chev,
+#crew .pull .chev, #chron .pull .chev {
+  width: 9px; height: 9px; flex: none;
+  border-right: 2.5px solid #2e2415;
+  border-bottom: 2.5px solid #2e2415;
+}
+#crewToggle .chev, #crew .pull .chev { transform: rotate(-45deg); }
+#chronToggle .chev, #chron .pull .chev { transform: rotate(135deg); }
+
+/* Shut: the board leaves the valley entirely. A pull rides its inner edge
+   so the thing you click is a handle, not thirty pixels of empty parchment
+   with the arrow already off-screen. */
+#crew, #chron { transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 #crew.shut, #chron.shut { max-height: none; overflow: visible; }
 #crew.shut #crewBody, #chron.shut #chronBody { display: none; }
-#crew.shut { transform: translateX(calc(-100% + 30px)); }
-#chron.shut { transform: translateX(calc(100% - 30px)); }
-/* Everything but the arrow goes with it, so the tab is an arrow and nothing
-   else — a strip of parchment down the edge with a way back in. */
-#crew.shut #crewToggle, #chron.shut #chronToggle {
-  margin-bottom: 0; padding-bottom: 2px; border-bottom: 0;
+#crew.shut { transform: translateX(calc(-100% - 12px)); }
+#chron.shut { transform: translateX(calc(100% + 12px)); }
+
+#crew .pull, #chron .pull {
+  position: absolute; top: 8px;
+  width: 30px; height: 78px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #2e2415;
+  background:
+    radial-gradient(120% 70% at 50% 12%, rgba(255, 250, 232, 0.95), rgba(0, 0, 0, 0) 58%),
+    linear-gradient(180deg, #efe3c4, #d7c49a 55%, #c9b17d);
+  border: 1px solid #5c472c;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 252, 240, 0.55),
+    inset 0 -10px 16px rgba(120, 92, 52, 0.18),
+    0 10px 20px rgba(28, 20, 10, 0.42);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.18s ease, filter 0.18s ease;
 }
-#crew.shut #crewToggle > :not(.arrow),
-#chron.shut #chronToggle > :not(.arrow) { display: none; }
-#crew.shut #crewToggle { justify-content: flex-end; }
-#crew.shut #crewToggle .arrow { transform: rotate(-90deg); }
-#chron.shut #chronToggle .arrow { transform: rotate(90deg); }
-/* The tab has to stay clickable where the panel no longer is. */
-#crew.shut #crewToggle, #chron.shut #chronToggle { min-height: 16px; }
+#crew .pull { left: 100%; border-left: 0; border-radius: 0 9px 9px 0; }
+#chron .pull { right: 100%; border-right: 0; border-radius: 9px 0 0 9px; }
+#crew.shut .pull, #chron.shut .pull { opacity: 1; pointer-events: auto; }
+#crew .pull:hover, #chron .pull:hover { filter: brightness(1.06); }
+#crew .pull:focus-visible, #chron .pull:focus-visible {
+  outline: 2px solid #8a6a2f; outline-offset: 2px;
+}
+#crew .pull .chev { margin-left: 2px; }
+#chron .pull .chev { margin-right: 2px; }
 #crew .row {
   display: block; width: 100%; text-align: left; cursor: pointer;
   background: none; border: 0; border-radius: 3px; padding: 5px 6px;
@@ -236,7 +297,6 @@ canvas { display: block; }
   text-transform: uppercase; color: #6b5535;
 }
 #chronToggle:hover { color: #4a3c28; }
-#chronToggle .arrow { font-size: 9px; transition: transform 0.15s; }
 #chronToggle .when {
   margin-left: auto; letter-spacing: 0.03em; text-transform: none;
   font-weight: 500; color: #8a7457;
@@ -314,3 +374,47 @@ canvas { display: block; }
    emoji: the rest of this panel is set in text glyphs and a colour emoji in
    among them reads as a different piece of software. */
 #chron .ask::before { content: '☞ '; color: #8a6a2f; }
+
+/* A compact, independent mixer above the sound dock. */
+#sound-settings {
+  position: fixed; right: 112px; bottom: 18px; z-index: 7;
+  background: rgba(20,18,31,.88); color: #e8dfca; border: 1px solid #72664f;
+  border-radius: 5px; padding: 6px 10px; cursor: pointer; font: inherit;
+}
+#sound { z-index: 8; padding: 7px 9px; }
+#sound-panel {
+  position: fixed; right: 14px; bottom: 64px; z-index: 9;
+  width: min(340px, calc(100vw - 28px)); max-height: calc(100dvh - 90px); overflow-y: auto;
+  padding: 18px; border: 1px solid #73684f; border-radius: 12px;
+  background: rgba(24, 25, 29, .97); box-shadow: 0 12px 42px #0008; color: #ece7db;
+  font-size: 14px;
+}
+#sound-panel[hidden] { display: none; }
+#sound-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#sound-panel h2 { margin: 0; font: 600 18px/1.3 Georgia, serif; color: #ead7ab; }
+#sound-panel button { font: inherit; color: #e8dfca; background: #ffffff09; border: 1px solid #ffffff28; border-radius: 5px; padding: 5px 8px; cursor: pointer; }
+#sound-panel button:hover { background: #ffffff18; }
+#sound-panel #sound-close { font-size: 23px; padding: 0 9px; }
+#sound-state, .sound-note, #sound-loading { color: #bfb9ad; font-size: 12px; }
+#sound-state { margin: 8px 0 16px; }
+.sound-row { display: grid; grid-template-columns: 1fr 54px; gap: 5px 12px; margin: 0 0 14px; }
+.sound-row label { align-self: center; }
+.sound-condition { display: block; color: #bfb9ad; font-size: 12px; font-weight: normal; }
+.sound-row output { text-align: right; color: #d6bd8b; font-size: 12px; }
+.sound-row input { width: 100%; margin: 0; accent-color: #d6bd8b; cursor: pointer; min-height: 24px; }
+.sound-row:first-child { padding-bottom: 14px; border-bottom: 1px solid #ffffff20; }
+.sound-row:first-child input { grid-column: 1 / -1; }
+#sound-panel .sound-row button { font-size: 12px; padding: 4px; }
+#sound-panel .sound-row button[aria-pressed="true"] { color: #efd3a0; background: #7c603a66; border-color: #ab8756; }
+.sound-row.muted input { opacity: .4; }
+.sound-note { margin: 4px 0 16px; line-height: 1.5; }
+#sound-panel footer { display: flex; gap: 8px; flex-wrap: wrap; }
+#sound-loading { display: block; flex-basis: 100%; margin-top: 4px; }
+#sound-panel :focus-visible, #sound-settings:focus-visible, #sound:focus-visible { outline: 2px solid #efd3a0; outline-offset: 3px; }
+@media (max-width: 540px) {
+  #sound, #sound-settings { bottom: 84px; }
+  #sound-panel { bottom: 126px; max-height: calc(100dvh - 150px); }
+}
+
+#camdock #walkMode { width: auto; padding: 0 13px; font-size: 12px; }
+#walkMode[aria-pressed="true"] { background: #655339; color: #fff4db; }

@@ -26,7 +26,7 @@ import {
   Group, IcosahedronGeometry, MeshBasicMaterial, Mesh, Vector3, TorusGeometry,
 } from 'three';
 import { smoothHeightAt, isWater, hash2, WATER_LEVEL, STEP } from '../app/terrain.js';
-import { blocked } from '../app/occupied.js';
+import { blocked, walkingHeightAt } from '../app/occupied.js';
 import { digFor } from '../app/digs.js';
 import { loadCharacters, makeCharacter, makePickaxe, DIG_CREW } from './characters.js';
 
@@ -238,7 +238,7 @@ class Figure {
 
   /** Stand on the real ground at the current spot, facing the right way. */
   settle() {
-    this.h = smoothHeightAt(this.baseX, this.baseZ);
+    this.h = walkingHeightAt(this.baseX, this.baseZ);
     this.group.position.set(this.baseX, this.h, this.baseZ);
     if (!this.char) return;
     // At the dig everyone faces the trench; in the village nobody has a reason

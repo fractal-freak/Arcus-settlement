@@ -32,10 +32,26 @@
  * at all. The plan is the same on every load.
  */
 
+import { realmReserved, realmPath } from './realm.js';
+import { propRadius } from './propSizes.js';
+import { ancientPavingNear } from './ancientPaths.js';
+import { bridgeContains, bridgePathContains } from './bridge.js';
 import { smoothHeightAt, isWater, groundAt, propAt, GROUND } from './terrain.js';
 
 /** The square: open ground around the Settlement Stone, never built on. */
 export const SQUARE = { x: 0, z: 0, r: 12.0 };
+/** A walkable sanctuary, kept free of buildings, supplies and offerings. */
+export const SANCTUARY = { x: 0, z: 0, r: 12, pavingRadius: 11.5 };
+/** A tended offering table is the sanctuary's one deliberate furnishing. */
+export const OFFERING = { x: 0, z: 5.3, r: 1.05, visitors: [{ x: -1.8, z: 6.25 }, { x: 1.8, z: 6.25 }] };
+export function sanctuaryNear(x, z, margin = 0) {
+  return Math.hypot(x - SANCTUARY.x, z - SANCTUARY.z) < SANCTUARY.r + margin;
+}
+/** Apply the current plan to older saved placements without editing history. */
+export function settledPlacements(placements = []) {
+  return placements.filter((p) => !sanctuaryNear(p.x, p.z, propRadius(p.kind))
+    && !landmarkNear(p.x, p.z, propRadius(p.kind) + 0.5));
+}
 
 /**
  * Authored street skeleton. Angles are world radians, (cos, sin) → (x, z).
@@ -147,7 +163,7 @@ const MIN_GAP = 11.5;
 export const CIVIC_PLOT = { w: 11.0, d: 9.0 };
 
 function findCivic() {
-  const radius = SQUARE.r + CIVIC_PLOT.d / 2 + 0.5;
+  const radius = SQUARE.r + CIVIC_PLOT.d / 2 + 5.0;
   // Sweep out from due north, alternating either way, and take the first
   // bearing whose full footprint stands on good ground.
   for (let step = 0; step < 48; step++) {
@@ -185,7 +201,7 @@ function buildPlan() {
         // (-sin, cos), so facing the street is exactly the opposite of that.
         const face = { x: -side * -Math.sin(st.angle), z: -side * Math.cos(st.angle) };
         const rot = Math.atan2(face.x, face.z);
-        if (Math.hypot(px, pz) < SQUARE.r + 1.0) continue;
+        if (sanctuaryNear(px, pz, Math.hypot(PLOT.w, PLOT.d) / 2 + 1)) continue;
         if (CIVIC && Math.hypot(px - CIVIC.x, pz - CIVIC.z) < CIVIC_CLEAR) continue;
         if (!footprintOk(px, pz, PLOT.w, PLOT.d, rot)) continue;
         candidates.push({ x: px, z: pz, rot, face, street: st.key, dist: Math.hypot(px, pz) });
@@ -219,12 +235,30 @@ export const PLOTS = buildPlan();
  * fits each model to. The bridge is deliberately absent: it is a ROAD, and
  * walking on it is the point.
  */
+// Relocated civic landmarks frame the court from dry, unoccupied ground.
+function outerLandmark(key, r, bearing, rot, previous = []) {
+  for (let radius = SANCTUARY.r + r + 5; radius < 45; radius += 2) {
+    for (let i = 0; i < 64; i++) {
+      const a = bearing + (i % 2 ? -1 : 1) * Math.ceil(i / 2) * Math.PI / 32;
+      const x = Math.cos(a) * radius, z = Math.sin(a) * radius;
+      if (!footprintOk(x, z, r * 2, r * 2, rot)) continue;
+      if (PLOTS.some(p => Math.hypot(p.x - x, p.z - z) < r + 6)) continue;
+      if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < r + 9) continue;
+      if (previous.some(p => Math.hypot(p.x - x, p.z - z) < p.r + r + 2)) continue;
+      return { key, x, z, r, rot };
+    }
+  }
+  throw new Error(`No dry outer plot for ${key}`);
+}
+const outerWell = outerLandmark('well', 1.7, 2.0, -0.6);
+const outerTower = outerLandmark('tower', 2.8, -2.8, 0.35, [outerWell]);
+
 export const LANDMARKS = [
-  { key: 'well', x: 6.2, z: 5.0, r: 1.7, rot: -0.6 },
-  { key: 'tower', x: -6.6, z: 4.8, r: 2.8, rot: 0.35 },
+  outerWell,
+  outerTower,
   { key: 'gate', x: -47, z: -7.9, r: 4.5, rot: Math.PI / 2 },
   { key: 'dome', x: 4, z: -34, r: 5.5, rot: 0.8 },
-];
+].filter(landmark => landmark.key === 'well');
 
 /** Is (x, z) inside a milestone's own ground, allowing for the caller's size? */
 export function landmarkNear(x, z, margin = 0) {
@@ -293,7 +327,7 @@ const RESERVED = buildReserved();
 
 /** Is this tile spoken for by the village — a plot, a street or the square? */
 export function isReserved(tx, tz) {
-  return RESERVED.has(tileKey(tx, tz));
+  return ancientPavingNear(tx,tz) || bridgeContains(tx,tz,1) || bridgePathContains(tx,tz,1.1) || sanctuaryNear(tx, tz, 1) || realmReserved(tx, tz, 1) || realmPath(tx, tz) > 0 || landmarkNear(tx, tz, 1);
 }
 
 /**
@@ -325,7 +359,7 @@ const PLOT_TILES = (() => {
 })();
 
 export function isPlotTile(tx, tz) {
-  return PLOT_TILES.has(tileKey(tx, tz));
+  return realmReserved(tx, tz);
 }
 
 /** Is this tile street or square surface (so it can be paved rather than grassed)? */
@@ -349,7 +383,7 @@ const PAVED = (() => {
 })();
 
 export function isPaved(tx, tz) {
-  return PAVED.has(tileKey(tx, tz));
+  return pathAmountAt(tx, tz) > 0.8;
 }
 
 /** How far past the edge of a street the packed earth fades out. */
@@ -369,18 +403,9 @@ const PATH_EDGE = 1.7;
  * path edges smooth curves instead of a staircase.
  */
 export function pathAmountAt(x, z) {
-  // Distance OUTSIDE the square (negative when standing on it).
-  let best = Math.hypot(x - SQUARE.x, z - SQUARE.z) - SQUARE.r;
-  for (const st of STREETS) {
-    const c = Math.cos(st.angle), s = Math.sin(st.angle);
-    // Project onto the street's own axis, clamped to its actual length, so a
-    // lane stops where it stops instead of running on as an infinite line.
-    const t = Math.max(0, Math.min(st.to, x * c + z * s));
-    const d = Math.hypot(x - c * t, z - s * t) - st.halfWidth;
-    if (d < best) best = d;
-  }
-  if (best <= 0) return 1;
-  return Math.max(0, 1 - best / PATH_EDGE);
+  const square=Math.max(0,Math.min(1,1-(Math.hypot(x,z)-SQUARE.r)/PATH_EDGE));
+  const east=Math.max(0,Math.min(1,1-(Math.hypot(x-Math.max(0,Math.min(22,x)),z)-2.6)/PATH_EDGE));
+  return Math.max(square,east,realmPath(x,z));
 }
 
 

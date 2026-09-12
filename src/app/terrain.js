@@ -29,6 +29,7 @@
  * anything.
  */
 
+import { weatherPalaceRidge } from './palaceLandscape.js';
 const SEED = 0x5eed1a;
 
 /** Cheap integer hash. Deterministic across machines and runs, which matters. */
@@ -129,12 +130,24 @@ function reliefAt(d) {
  * smoothHeightAt() are built from, so the two can never silently disagree
  * about the shape of a hill.
  */
+/** The old kingdom occupies a weather-cut ridge above the river clearing. */
+export function castleReliefAt(x,z) {
+  const dx=x+57,dz=z+45,angle=Math.atan2(dz,dx);
+  const warp=1+.13*Math.sin(angle*3+.4)+.08*Math.sin(angle*5-1.1);
+  const radius=Math.hypot(dx/29,dz/27)/warp;
+  const shelf=8.2*(1-smoothstep(.69,1.25,radius));
+  const spur=10*Math.exp(-((x+86)**2/450+(z+70)**2/650));
+  const ridge=2.2*Math.exp(-((x+77)**2/150+(z+39)**2/500));
+  const gullies=(noise(x/5.7,z/5.7,76)-.5)*2.8*smoothstep(.6,.85,radius)*(1-smoothstep(1.05,1.38,radius));
+  return Math.max(0,shelf+spur+ridge+gullies);
+}
+
 function rawHeightAt(x, z) {
   const d = Math.hypot(x, z);
   const relief = reliefAt(d);
 
   const hills = (noise(x / 26, z / 26, 41) * 2.0 + noise(x / 11, z / 11, 42) * 0.8) * relief;
-  let h = hills;
+  let h = hills + castleReliefAt(x,z);
 
   // The one river. Distance to its centreline at this Z, carved with a smooth
   // bank rather than a hard-edged channel, width itself wandering a little so
@@ -147,6 +160,22 @@ function rawHeightAt(x, z) {
   // The coastline: land eases down into the sea as Z drops toward OCEAN_FAR.
   const coast = smoothstep(OCEAN_NEAR, OCEAN_FAR, z);
   h -= coast * 6;
+  h = weatherPalaceRidge(x,z,h);
+
+  // The builders cut a level court into the ridge and a long approach into
+  // its southern face. Ground stays below the shared architectural floors.
+  const courtEdge=Math.max(Math.abs(x+55)-16,Math.abs(z+42)-13);
+  const terrace=1-smoothstep(0,4,courtEdge);
+  h+=(Math.min(h,9.75)-h)*terrace;
+  if(z>=-29.1 && z<-13 && Math.abs(x+55)<4.2){
+    const t=Math.min(1,(-13-z)/16.1),start=rawHeightAt(x,-13);
+    const road=start*(1-t)+10.1*t-.09;
+    h+=(Math.min(h,road)-h)*(1-smoothstep(2.6,4.2,Math.abs(x+55)));
+  }
+  // A shallow drainage cutting exposes the bridge arches; the route stays on
+  // the shared structural deck above, and both abutments still meet real ground.
+  const bridgeCut=smoothstep(-28,-25.8,z)*(1-smoothstep(-17,-13.3,z))*(1-smoothstep(3.1,5.1,Math.abs(x+55)));
+  h-=2.0*bridgeCut;
 
   // A river channel or a shoreline is a slope, never a chasm: the water
   // surface draws at a fixed WATER_LEVEL, so ground cut too far below that
@@ -295,6 +324,11 @@ export function groundAt(tx, ty) {
   // snow appears only where the land itself has actually risen to earn it —
   // it is not a fixed height that mountains reach and the valley never does
   // by definition, it is "high for wherever this happens to be."
+  const ridge=castleReliefAt(tx,ty);
+  if(ridge>1.5) {
+    const slope=Math.hypot(rawHeightAt(tx+.5,ty)-rawHeightAt(tx-.5,ty),rawHeightAt(tx,ty+.5)-rawHeightAt(tx,ty-.5));
+    return {kind:slope>.38 || ridge>8.8?GROUND.stone:GROUND.meadow,variant:(hash2(tx,ty,14)*3)|0};
+  }
   const relief = reliefAt(Math.hypot(tx, ty));
   if (h > 3.6 + 1.3 * (relief - 0.62)) {
     return { kind: GROUND.snow, variant: Math.min(2, (noise(tx / 6, ty / 6, 17) * 2.4) | 0) };

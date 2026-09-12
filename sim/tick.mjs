@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { refreshSubscribers } from './subscribers.mjs';
 import { life } from './life.mjs';
 import { skyAt } from './sky.mjs';
 import { PLACE, FOUNDING } from './place.mjs';
@@ -58,6 +59,8 @@ try {
 // sky over Pawtucket at the moment you open it, same as the local one.
 const sky = skyAt(new Date(), PLACE.lat, PLACE.lon);
 
+const population = await refreshSubscribers();
+if (population) folk = population.count;
 const out = life(folk, Date.now(), []);
 
 /**
@@ -76,6 +79,7 @@ function publishable(t) {
   if (!t) return null;
   return {
     ...t,
+    folk,
     buildings: (t.buildings ?? []).map(({ n, trade, weight }) => ({ n, trade, weight })),
   };
 }
@@ -90,6 +94,7 @@ const published = {
   town: publishable(town),
   founding: FOUNDING,
   life: out,
+  population,
   people: [],
   counts: { working: 0, waiting: 0, resting: 0, unread: 0 },
 };

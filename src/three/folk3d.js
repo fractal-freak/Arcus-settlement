@@ -28,8 +28,10 @@
  */
 
 import { Group } from 'three';
-import { smoothHeightAt, hash2 } from '../app/terrain.js';
-import { blocked, onPlacementsChanged } from '../app/occupied.js';
+import { hash2 } from '../app/terrain.js';
+import { BRIDGE, bridgeActive, bridgeRoute } from '../app/bridge.js';
+import { OFFERING } from '../app/village.js';
+import { blocked, onPlacementsChanged, walkingHeightAt } from '../app/occupied.js';
 import { loadCharacters, makeCharacter, kindFor } from './characters.js';
 
 /** Shorter than a session figure (1.8) — a real, readable difference at a glance. */
@@ -120,7 +122,7 @@ export class Folk3D {
     // they finish something, everyone picks their spot again — otherwise a
     // villager placed this morning is standing in a hedge planted this
     // afternoon, and nothing would ever notice.
-    onPlacementsChanged(() => { if (this.ready && this.count >= 0) this._rebuild(this.count); });
+    onPlacementsChanged(() => { this._checkHomes = [...this.folk]; });
   }
 
   /** Rebuilt only when the real population number changes — same rare-rebuild pattern as Town3D. */
@@ -129,21 +131,39 @@ export class Folk3D {
     this._pending = town;
     if (!this.ready) return;
     const n = town.folk ?? 0;
-    if (n === this.count) return;
+    const identities = town.residents?.length === n ? town.residents.map(c => c.seed) : Array.from({length:n},(_,i)=>i);
+    const signature=identities.join(',')+':'+bridgeActive();
+    if (n === this.count && signature === this.signature) return;
+    this.identities=identities;this.signature=signature;
     this.count = n;
     this._rebuild(n);
   }
 
   _rebuild(n) {
-    for (const f of this.folk) if (f.char) f.char.dispose();
-    this.group.clear();
+    const previous = new Map(this.folk.map(f => [f.identity, f]));
     this.folk = [];
 
     for (let i = 0; i < n; i++) {
-      const home = homeFor(i);
-      if (!home) continue;
+      const identity=this.identities?.[i] ?? i;
+      const existing = previous.get(identity);
+      const visitor = OFFERING.visitors[i];
+      const crossing = bridgeActive() && i >= OFFERING.visitors.length && i < OFFERING.visitors.length+4;
+      if (existing && !!existing.home.crossing === crossing && !!existing.home.ritual === !!visitor) {
+        this.folk.push(existing); previous.delete(identity); continue;
+      }
+      const home = crossing ? { x:BRIDGE.from,z:BRIDGE.z,seed:hash2(identity,41,131),wanderR:0,crossing:true } : visitor && !blocked(visitor.x, visitor.z, 0.6)
+        ? { ...visitor, seed: hash2(identity, 41, 131), wanderR: 0.25, ritual: true }
+        : homeFor(identity);
+      if (!home) {
+        if (existing) { this.folk.push(existing); previous.delete(identity); }
+        continue;
+      }
+      if (existing) {
+        existing.home = home; existing.wanderR = home.wanderR;
+        this.folk.push(existing); previous.delete(identity); continue;
+      }
       const seedInt = Math.floor(home.seed * 100000);
-      const char = makeCharacter(kindFor(seedInt + i * 7), HEIGHT, { background: true });
+      const char = makeCharacter(kindFor(seedInt + identity * 7), HEIGHT, { background: true, appearanceSeed: identity });
       if (!char) continue;
       // Staggered start times, so forty-eight people are not all mid-stride
       // on the same foot — the single clearest tell of a cloned crowd.
@@ -151,6 +171,7 @@ export class Folk3D {
       char.mixer.setTime((seedInt % 997) / 997 * 2);
       this.group.add(char.root);
       this.folk.push({
+        identity,
         char,
         home,
         phase: (seedInt % 1000) / 1000,
@@ -159,17 +180,43 @@ export class Folk3D {
         lastTick: 0,
       });
     }
+    for (const f of previous.values()) { f.char.dispose(); this.group.remove(f.char.root); }
+    this._checkHomes = [...this.folk];
   }
 
   tick(elapsedS) {
     if (!this.folk.length) return;
+    // Revalidate one home per frame after construction, preserving each rig.
+    const check = this._checkHomes?.pop();
+    if (check && !check.home.crossing && !check.home.ritual &&
+        blocked(check.home.x, check.home.z, check.wanderR * 1.42 + 0.9)) {
+      const home = homeFor(check.identity);
+      if (home) { check.home = home; check.wanderR = home.wanderR; }
+    }
     this.folk.forEach((f) => {
+      if(f.home.crossing){
+        const p=bridgeRoute(elapsedS,f.phase);
+        f.char.root.position.set(p.x,walkingHeightAt(p.x,p.z),p.z);
+        f.char.root.rotation.y=p.yaw;
+        return;
+      }
+      if (f.home.ritual) {
+        const phase = (elapsedS + f.phase * 38) % 38;
+        const near = phase < 5 ? phase / 5 : phase < 14 ? 1 : phase < 19 ? 1 - (phase - 14) / 5 : 0;
+        const x = f.home.x, z = f.home.z + (1 - near) * 0.8;
+        f.char.root.position.set(x, walkingHeightAt(x,z) + 0.08, z);
+        f.char.root.rotation.y = Math.atan2(OFFERING.x - x, OFFERING.z - z);
+        const action = phase >= 5 && phase < 10 ? 'Interact' : phase < 5 || (phase >= 14 && phase < 19) ? 'Walking_C' : 'Idle_A';
+        if (f.ritualAction !== action) { f.char.play(action, { fade: 0.5, timeScale: 0.65 }); f.ritualAction = action; }
+        return;
+      }
       const t = elapsedS * f.speed + f.phase * 20;
       // A slow organic loop around home, not a straight pace back and forth —
       // two out-of-phase sines trace a lazy, rounded path.
       const x = f.home.x + Math.sin(t) * f.wanderR;
       const z = f.home.z + Math.sin(t * 0.63 + 1.7) * f.wanderR;
-      f.char.root.position.set(x, smoothHeightAt(x, z), z);
+      if(blocked(x,z,.55)) return;
+      f.char.root.position.set(x, walkingHeightAt(x,z), z);
       // Face the way it is actually moving, taken from the velocity — a
       // walking figure facing its own heading is most of what makes it read
       // as walking rather than sliding.

@@ -1,38 +1,14 @@
-/**
- * The 3D stage: renderer, scene, lights, fog, and now a small post-processing
- * stack for the cel-shaded look.
- *
- * Why this replaced the 2D engine. In two dimensions you can have an
- * undistorted world or you can have a horizon, but not both — a flat
- * projection has nowhere to put the sky, and bending it to make room warps
- * every tile. In three dimensions a perspective camera gives both for nothing,
- * and the sun can be placed cleanly above the terrain.
- *
- * THE KEY LIGHT HOLDS AT 45°. Sky time still controls brightness and colour,
- * while the fixed elevation keeps the daylight read stable and the shadow
- * pattern useful at every time of day.
- *
- * Post-processing: RenderPass -> god rays -> bloom -> ink outline -> SMAA ->
- * output. The outline and the god rays both read the SAME depth texture
- * attached to the render target below rather than each paying for their own
- * extra scene pass — sky pixels are exactly the ones nothing was drawn on,
- * so raw depth already tells the god-ray pass where the sun is actually
- * visible, and depth discontinuities already tell the outline pass where a
- * silhouette is, with no separate normal-buffer render needed for either.
- */
+/** Scene lighting and a restrained depth-rays, bloom, antialiasing and output stack. */
 
 import {
-  Scene, PerspectiveCamera, WebGLRenderer, Color, FogExp2,
+  Scene, PerspectiveCamera, WebGLRenderer, Color, Fog,
   DirectionalLight, HemisphereLight, AmbientLight,
-  PCFSoftShadowMap, ACESFilmicToneMapping, SRGBColorSpace, Vector3, Vector2,
+  PCFShadowMap, ACESFilmicToneMapping, SRGBColorSpace, Vector3, Vector2, Frustum, Matrix4,
   WebGLRenderTarget, DepthTexture, MeshBasicMaterial,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { WorldEffectsPass } from './worldEffects.js';
 
 const WORLD_UP = new Vector3(0, 1, 0);
 
@@ -60,124 +36,21 @@ const SKY_NIGHT = new Color(0x1b2350);
 const GROUND_BOUNCE_DAY = new Color(0x6f8f5a);
 const GROUND_BOUNCE_NIGHT = new Color(0x232a44);
 
-/**
- * Depth-only ink outline. Sobel-style, but on LINEARISED DEPTH rather than
- * colour: a colour-edge filter also draws a line at every biome/vertex-colour
- * seam (the grass/sand blend, every cel band itself), which is noise, not
- * silhouette. Depth only breaks where one object actually stands in front of
- * another, which is what an ink outline is supposed to trace. The threshold
- * is scaled by the sample's own depth because a fixed world-space gap covers
- * fewer and fewer screen pixels the further away it is — unscaled, a distant
- * hillside silhouette either never triggers or a nearby one triggers on
- * texture noise, there is no one fixed number that gets both right.
- */
-const outlineShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    tDepth: { value: null },
-    resolution: { value: new Vector2(1, 1) },
-    cameraNear: { value: 0.5 },
-    cameraFar: { value: 3000 },
-    outlineColor: { value: new Color(0x1a1712) },
-    outlineThreshold: { value: 1.1 },
-  },
-  vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform sampler2D tDiffuse;
-    uniform sampler2D tDepth;
-    uniform vec2 resolution;
-    uniform float cameraNear;
-    uniform float cameraFar;
-    uniform vec3 outlineColor;
-    uniform float outlineThreshold;
-    varying vec2 vUv;
-    float linearDepth(float z) {
-      float ndc = z * 2.0 - 1.0;
-      return (2.0 * cameraNear * cameraFar) / (cameraFar + cameraNear - ndc * (cameraFar - cameraNear));
-    }
-    void main() {
-      vec2 texel = 1.0 / resolution;
-      float d0 = linearDepth(texture2D(tDepth, vUv).x);
-      float dx1 = linearDepth(texture2D(tDepth, vUv + vec2(texel.x, 0.0)).x);
-      float dx2 = linearDepth(texture2D(tDepth, vUv - vec2(texel.x, 0.0)).x);
-      float dy1 = linearDepth(texture2D(tDepth, vUv + vec2(0.0, texel.y)).x);
-      float dy2 = linearDepth(texture2D(tDepth, vUv - vec2(0.0, texel.y)).x);
-      float edge = abs(dx1 - d0) + abs(dx2 - d0) + abs(dy1 - d0) + abs(dy2 - d0);
-      float edgeThresh = outlineThreshold * d0 * 0.01;
-      float ink = smoothstep(edgeThresh, edgeThresh * 2.2, edge);
-      vec4 color = texture2D(tDiffuse, vUv);
-      gl_FragColor = vec4(mix(color.rgb, outlineColor, ink), color.a);
-    }
-  `,
-};
-
-/**
- * Warm sun shafts, screen-space. No sky-dome geometry involved on purpose —
- * one was tried earlier for a gradient sky and pulled back out after Kevin
- * reported "a weird foggy film," because its own horizon colour could never
- * be made to match FogExp2's colour exactly and the mismatch showed as a
- * seam (see sky3d.js). Rays here are computed from the depth texture instead:
- * a pixel nothing was drawn on still holds the GL clear depth (the far
- * plane), which is already a perfect "is the sun actually visible from here"
- * mask with no extra render and no dome to go out of sync with the fog again.
- */
-const godRayShader = {
-  uniforms: {
-    tDiffuse: { value: null },
-    tDepth: { value: null },
-    lightScreenPos: { value: new Vector2(0.5, 0.5) },
-    rayColor: { value: new Color(0xfff2d0) },
-    rayStrength: { value: 0 },
-  },
-  vertexShader: `
-    varying vec2 vUv;
-    void main() {
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform sampler2D tDiffuse;
-    uniform sampler2D tDepth;
-    uniform vec2 lightScreenPos;
-    uniform vec3 rayColor;
-    uniform float rayStrength;
-    varying vec2 vUv;
-    #define NUM_SAMPLES 12
-    void main() {
-      vec3 base = texture2D(tDiffuse, vUv).rgb;
-      if (rayStrength <= 0.001) { gl_FragColor = vec4(base, 1.0); return; }
-      vec2 deltaUv = (vUv - lightScreenPos) * (0.9 / float(NUM_SAMPLES));
-      vec2 uv = vUv;
-      float illum = 1.0;
-      float accum = 0.0;
-      for (int i = 0; i < NUM_SAMPLES; i++) {
-        uv -= deltaUv;
-        float sky = smoothstep(0.9993, 1.0, texture2D(tDepth, uv).x);
-        accum += sky * illum;
-        illum *= 0.94;
-      }
-      accum /= float(NUM_SAMPLES);
-      gl_FragColor = vec4(base + rayColor * accum * rayStrength, 1.0);
-    }
-  `,
-};
-
 export class Stage {
   constructor(canvasHost) {
-    this.renderer = new WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = PCFSoftShadowMap;
+    this.renderer.shadowMap.type = PCFShadowMap;
+    this.renderer.shadowMap.autoUpdate = false;
+    this.renderer.transmissionResolutionScale = 0.5;
+    this.depthUsers = [];
+    this._frustum = new Frustum();
+    this._viewProjection = new Matrix4();
+    this._lastShadowTime = -Infinity;
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.98;
+    this.renderer.toneMappingExposure = 1.08;
     this.renderer.outputColorSpace = SRGBColorSpace;
     // info.render normally resets at the start of every renderer.render()
     // call — fine when there was exactly one per frame, but render() below
@@ -191,13 +64,12 @@ export class Stage {
 
     this.scene = new Scene();
     this.scene.background = FOG_WARM.clone();
-    // Distance haze, matched to the sky, so far terrain softens into the
-    // horizon instead of ending at a hard line. Density raised on request —
-    // a shorter effective view distance is what makes distant ground melt
-    // into the sky rather than just visibly lightening toward it, which is
-    // most of the difference between "hazy golden-hour atmosphere" and
-    // "clear day with fog switched on."
-    this.scene.fog = new FogExp2(FOG_WARM.clone(), 0.009);
+    // Linear haze, not a uniform film. Exponential fog sat on the whole
+    // valley at once; this stays clear underfoot and takes over with distance,
+    // the way distant hills go pale before they disappear. Near/far are set
+    // from the camera distance in followShadow, so a close look still has
+    // country in the back, and a high look does not milk the town.
+    this.scene.fog = new Fog(FOG_WARM.clone(), 110, 210);
 
     this.camera = new PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.5, 3000);
     this.camera.position.set(34, 26, 34);
@@ -214,8 +86,8 @@ export class Stage {
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.camera.near = 1;
     this.sun.shadow.camera.far = 400;
-    this.sun.shadow.bias = -0.0012;
-    this.sun.shadow.normalBias = 0.04;
+    this.sun.shadow.bias = -0.00025;
+    this.sun.shadow.normalBias = 0.025;
     // A softer penumbra. Stylised light does not want a razor edge.
     this.sun.shadow.radius = 2.5;
     this.setShadowExtent(80);
@@ -246,26 +118,7 @@ export class Stage {
     addEventListener('resize', () => this.resize());
   }
 
-  /**
-   * The post-processing stack.
-   *
-   * Depth for the outline and god-ray passes comes from a SEPARATE render
-   * target (`depthTarget`), filled by its own explicit render() call every
-   * frame — not from the composer's own colour ping-pong buffers. The first
-   * version of this reused one of those buffers for depth directly (cheaper:
-   * no second render call) and threw a real, repeatable WebGL error —
-   * "Feedback loop formed between Framebuffer and active Texture" — because
-   * EffectComposer alternates which buffer is being WRITTEN each pass, and
-   * sooner or later that buffer is the exact one a later pass is also trying
-   * to SAMPLE from for `tDepth`, which WebGL correctly refuses: you cannot
-   * read an attachment of the framebuffer you are currently drawing into.
-   * three.js's own SSAOPass hits this same need and solves it the same way
-   * — a dedicated target, rendered separately — which is the tell that this
-   * is not a shortcut worth re-attempting, just a real second draw of the
-   * scene. `overrideMaterial` with colorWrite off keeps that draw cheap: it
-   * still walks every real mesh (instancing included) to get correct depth,
-   * it just skips every toon/water/grass fragment shader while doing it.
-   */
+  /** A separate depth target avoids reading from the composer's active framebuffer. */
   _buildComposer() {
     const { w, h } = this._drawingSize();
 
@@ -277,51 +130,10 @@ export class Stage {
 
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-
-    this.godRayPass = new ShaderPass(godRayShader);
-    this.godRayPass.uniforms.tDepth.value = this.depthTarget.depthTexture;
-    this.composer.addPass(this.godRayPass);
-
-    // Kept deliberately gentle — a soft glow on sunlit edges and water, not a
-    // wash over the whole frame. Earlier work in this file already learned
-    // that lesson once with cloud opacity; bloom is the same trap at a
-    // bigger scale if the strength is left at a library's realistic default.
-    // The resolution passed in is a QUARTER of the real drawing buffer on
-    // purpose: bloom is a soft blur by nature, its own internal mip chain
-    // downsamples further from here regardless, and measured real frame
-    // time — median 20.6ms with 58% of frames over the 16.7ms budget at
-    // full res — only came down to something reasonable once this, the
-    // god-ray sample count, and SMAA (see the note below) all gave up
-    // resolution or sample count they did not visibly need.
-    // strength 0.55, radius 0.6, threshold 0.85 — asked for a more visible
-    // painterly halo on sunlight and water than the first pass of this had;
-    // resolution stays quartered (see the note above the size line below),
-    // since that is what performance actually measured against, not these.
-    // Threshold near the very top of the range, and half the strength.
-    //
-    // At 0.85 the threshold sat BELOW what plain sunlit ground reaches: the
-    // sun runs at 2.27 intensity, so any slope turned toward it clipped past
-    // the cut and bloomed, smearing big soft white holes across the middle of
-    // perfectly ordinary grass. Bloom should be for the sun and the glint off
-    // the water, which are genuinely brighter than white, and nothing else.
-    this.bloom = new UnrealBloomPass(new Vector2(Math.round(w / 4), Math.round(h / 4)), 0.28, 0.5, 0.98);
-    this.composer.addPass(this.bloom);
-
-    this.outlinePass = new ShaderPass(outlineShader);
-    this.outlinePass.uniforms.tDepth.value = this.depthTarget.depthTexture;
-    this.outlinePass.uniforms.resolution.value.set(w, h);
-    this.outlinePass.uniforms.cameraNear.value = this.camera.near;
-    this.outlinePass.uniforms.cameraFar.value = this.camera.far;
-    this.composer.addPass(this.outlinePass);
-
-    // FXAA over SMAA — the ask named either as acceptable ("SMAAPass /
-    // FXAAPass"). SMAA looks a little cleaner but is a three-pass technique
-    // (edge detection, blend weights, neighbourhood blend); FXAA is one
-    // pass. On a scene already paying for a depth pre-pass, god rays, bloom
-    // and an outline pass every frame, the cheaper of two options the ask
-    // itself offered was the right call, confirmed against measured timing.
-    this.composer.addPass(new FXAAPass());
-    this.composer.addPass(new OutputPass());
+    this.effects = new WorldEffectsPass(this.depthTarget.depthTexture);
+    this.composer.addPass(this.effects);
+    this.contactShadows = this.effects;
+    this.godRayPass = this.effects;
 
     this._sunFar = new Vector3();
     this._ndc = new Vector3();
@@ -331,8 +143,14 @@ export class Stage {
   _renderDepth() {
     this.scene.overrideMaterial = this._depthOnlyMaterial;
     this.camera.layers.disable(1); // exclude the fallback floor — see its own constructor note
+    const shadowAutoUpdate = this.renderer.shadowMap.autoUpdate;
+    this.renderer.shadowMap.autoUpdate = false;
+    const shadowNeedsUpdate = this.renderer.shadowMap.needsUpdate;
+    this.renderer.shadowMap.needsUpdate = false;
     this.renderer.setRenderTarget(this.depthTarget);
     this.renderer.render(this.scene, this.camera);
+    this.renderer.shadowMap.autoUpdate = shadowAutoUpdate;
+    this.renderer.shadowMap.needsUpdate = shadowNeedsUpdate;
     this.camera.layers.enable(1);
     this.scene.overrideMaterial = null;
     this.renderer.setRenderTarget(null);
@@ -347,20 +165,7 @@ export class Stage {
     this.shadowExtent = halfSize;
   }
 
-  /**
-   * The renderer's real drawing-buffer size — CSS size times device pixel
-   * ratio. `renderer.setSize`/`composer.setSize` take CSS pixels and scale
-   * internally on their own; a plain `WebGLRenderTarget` (depthTarget below)
-   * does not, so sizing it off `window.innerWidth` directly left it at HALF
-   * the composer's actual resolution on this 2x display — confirmed live
-   * (devicePixelRatio 2, depthTarget.width 1280 against an actual 2560-pixel
-   * drawing buffer). The outline pass's texel offsets were then computed for
-   * a buffer four times smaller than the one they were reading, which turned
-   * ordinary texel noise into what looked like a depth discontinuity on
-   * nearly every pixel — not a thin ink line at real silhouettes, the entire
-   * frame darkening toward outlineColor at once. Any code sizing a manual
-   * render target has to multiply by this itself; nothing does it for you.
-   */
+  /** Manual render targets need physical pixels, unlike composer.setSize(). */
   _drawingSize() {
     const ratio = this.renderer.getPixelRatio();
     // Guarded to never return zero: seen live in one embedding where
@@ -382,21 +187,13 @@ export class Stage {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
-    // composer.setSize() already calls .setSize() on every pass it holds,
-    // FXAA included — sized correctly to the real drawing buffer with no
-    // help needed here. Bloom is the one exception: composer.setSize would
-    // hand it that same full resolution, quietly undoing the half-res
-    // construction-time choice the moment a window resize ever fired. The
-    // explicit call right after puts it back.
     this.composer.setSize(w, h);
     const d = this._drawingSize();
-    this.bloom.setSize(Math.round(d.w / 4), Math.round(d.h / 4));
-    this.outlinePass.uniforms.resolution.value.set(d.w, d.h);
     this.depthTarget.setSize(d.w, d.h);
   }
 
   /**
-   * Keep the key light at a stable, warm 45-degree elevation.
+   * Keep the key light at its stable, low elevation.
    *
    * The real local azimuth still chooses the compass direction. Azimuth is
    * measured north through east, and the world's +Z runs south.
@@ -416,9 +213,7 @@ export class Stage {
     // Colour: warm and low near the horizon, pale and high at noon.
     const lowness = Math.max(0, 1 - Math.max(0, sky.sun.alt) / 22);
     this.sun.color.copy(SUN_HIGH).lerp(SUN_LOW, lowness * 0.85);
-    // 2.27 at noon drove lit ground clean past white before tone mapping had
-    // any say; 1.62 keeps the cel bands reading as bands instead of as one
-    // blown highlight.
+    // Keep sunlight below clipping so rough materials retain their detail.
     this.sun.intensity = 0.10 + 1.52 * l;
 
     // The sky itself, not just the light: cool blue when the sun sits high,
@@ -429,32 +224,19 @@ export class Stage {
     const skyCol = SKY_NIGHT.clone().lerp(horizon, l);
     this.hemi.color.copy(skyCol);
     this.hemi.groundColor.copy(GROUND_BOUNCE_NIGHT.clone().lerp(GROUND_BOUNCE_DAY, l));
-    this.hemi.intensity = 0.28 + 0.55 * l;
-    this.ambient.intensity = 0.10 + 0.16 * l;
+    this.hemi.intensity = 0.28 + 0.77 * l;
+    this.ambient.intensity = 0.06 + 0.14 * l;
 
     this.scene.fog.color.copy(skyCol);
-    /**
-     * Light enough to SEE THROUGH, at any distance and from any angle.
-     *
-     * This was 0.013 falling to 0.009 in daylight, which is a density tuned
-     * for looking thirty units across a courtyard. Three attempts to rescue
-     * it by easing the density off as the camera pulled back all failed for
-     * the same reason: they keyed off camera HEIGHT, and height is not view
-     * distance. Standing at ground level looking across the valley is the
-     * longest sightline in the world and the shortest camera height, so the
-     * one case that most needed thinning got full-strength haze.
-     *
-     * There is no clever model here now. The fog is simply light: enough to
-     * soften the treeline on the far horizon, never enough to hide the
-     * settlement from anywhere you might stand.
-     */
-    this.scene.fog.density = 0.0026 - 0.0008 * l;
+    // How much of the far country the haze is allowed to take. Night and
+    // golden hour sit closer; noon leaves more of the hills readable.
+    this._haze = l;
     this.scene.background = skyCol;
 
     // Warm at low sun (dawn/dusk shafts), fading out near straight overhead
     // where real god rays would not read as directional anyway.
     this.godRayPass.uniforms.rayColor.value.copy(SUN_HIGH).lerp(SUN_LOW, lowness);
-    this._rayBaseStrength = (0.05 + lowness * 0.16) * l;
+    this._rayBaseStrength = (0.025 + lowness * 0.07) * l;
   }
 
   /**
@@ -482,12 +264,18 @@ export class Stage {
    *    real move still lands on the same grid the shadow map already uses.
    */
   followShadow(target, distance) {
+    const haze = this._haze ?? 1;
+    // Keep the focus and another 60 units clear at every zoom. Only the
+    // distant country fades; night shortens that fade, not the clear area.
+    this.scene.fog.near = distance + 60;
+    this.scene.fog.far = this.scene.fog.near + 100 * (0.80 + 0.20 * haze);
     const want = Math.max(36, Math.min(200, distance * 0.85));
     if (Math.abs(want - this.shadowExtent) > 6) this.setShadowExtent(want);
 
     if (!this._shadowMoved && this._shadowAt.distanceToSquared(target) < 0.01) return;
     this._shadowMoved = false;
     this._shadowAt.copy(target);
+    this._shadowInvalidated = true;
 
     // Snap the target onto the shadow map's own texel grid, measured in the
     // light's own right/up plane rather than world X/Z — the light is rarely
@@ -536,12 +324,51 @@ export class Stage {
     }
   }
 
-  render() {
+  /** Distant glazing keeps its authored texture without a second whole-scene refraction pass. */
+  prepareDetail() {
+    if (!this._glazing) {
+      this._glazing = [];
+      this.scene.traverse(mesh => {
+        const material = mesh.material;
+        if (!mesh.isMesh || !material?.isMeshPhysicalMaterial || !material.transmission) return;
+        const distant = material.clone();
+        distant.transmission = 0;
+        if (!mesh.geometry.boundingSphere) mesh.geometry.computeBoundingSphere();
+        this._glazing.push({ mesh, near: material, distant, center: new Vector3() });
+      });
+    }
+    for (const glass of this._glazing) {
+      glass.mesh.updateWorldMatrix(true, false);
+      glass.center.copy(glass.mesh.geometry.boundingSphere.center).applyMatrix4(glass.mesh.matrixWorld);
+      const distance = glass.center.distanceTo(this.camera.position);
+      if (distance > 48) glass.mesh.material = glass.distant;
+      else if (distance < 40) glass.mesh.material = glass.near;
+    }
+  }
+
+  render(elapsedMs = performance.now()) {
     this.renderer.info.reset();
-    this._renderDepth();
+    this.camera.updateMatrixWorld();
     this._updateGodRays();
+    this._viewProjection.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._viewProjection);
+    const needsDepth = this.contactShadows?.enabled || this.godRayPass.uniforms.rayStrength.value > 0.001 ||
+      this.depthUsers.some(mesh => mesh.visible && this._frustum.intersectsObject(mesh));
+    if (needsDepth) this._renderDepth();
+    if (this.contactShadows) {
+      const u = this.contactShadows.uniforms;
+      u.inverseProjection.value.copy(this.camera.projectionMatrixInverse);
+      u.projection.value.copy(this.camera.projectionMatrix);
+      u.aoResolution.value.set(this.depthTarget.width, this.depthTarget.height);
+    }
+    if (elapsedMs - this._lastShadowTime >= 50 || this._shadowInvalidated) {
+      this.renderer.shadowMap.needsUpdate = true;
+      this._lastShadowTime = elapsedMs;
+      this._shadowInvalidated = false;
+    }
     this.composer.render();
   }
+
 }
 
 export { Vector3 };

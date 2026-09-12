@@ -16,8 +16,11 @@
  * own procedural props.
  */
 
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { Box3, Vector3 } from 'three';
+import { naturalTrees } from './naturalTrees.js';
+import { weatheredMaterial } from './villageMaterials.js';
 
 const BASE = './assets/kenney-retro-fantasy/';
 const loader = new GLTFLoader();
@@ -57,6 +60,7 @@ export function loadPiece(name) {
       (err) => reject(err),
     );
   });
+  entry.catch(() => cache.delete(name));
   cache.set(name, entry);
   return entry;
 }
@@ -107,11 +111,28 @@ export function loadModel(name) {
     loader.load(
       `${KAYKIT}${name}.gltf`,
       (gltf) => {
-        const scene = gltf.scene;
+        const isTree = /^(tree_single_[AB]|trees_[AB]_(small|medium|large))$/.test(name);
+        const scene = isTree ? naturalTrees(gltf.scene) : gltf.scene;
+        const materials = new Map();
         scene.traverse((o) => {
           if (!o.isMesh) return;
           o.castShadow = true;
           o.receiveShadow = true;
+          const surface = /^(rock_|rocks_|resource_stone)/.test(name) ? 'rock'
+            : /^(crate|barrel|bucket|pallet|resource_lumber|ladder|wheelbarrow)/.test(name) ? 'prop'
+            : /^(building_|wall_|fence_)/.test(name) ? 'building' : null;
+          if (surface === 'rock') {
+            const geometry=o.geometry.clone();
+            geometry.deleteAttribute('normal'); geometry.deleteAttribute('uv');
+            o.geometry=mergeVertices(geometry);o.geometry.computeVertexNormals();geometry.dispose();
+          }
+          if (surface) {
+            const weather = material => {
+              if (!materials.has(material)) materials.set(material, weatheredMaterial(material, surface));
+              return materials.get(material);
+            };
+            o.material = Array.isArray(o.material) ? o.material.map(weather) : weather(o.material);
+          }
         });
         const box = new Box3().setFromObject(scene);
         resolve({ scene, box, size: box.getSize(new Vector3()) });
@@ -120,6 +141,7 @@ export function loadModel(name) {
       (err) => reject(new Error(`failed to load ${name}.gltf: ${err?.message ?? err}`)),
     );
   });
+  entry.catch(() => modelCache.delete(name));
   modelCache.set(name, entry);
   return entry;
 }

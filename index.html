@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="%BASE_URL%style.css">
 </head>
 <body>
+<div id="world-loading-status" role="status" aria-live="polite" style="position:fixed;bottom:48px;left:14px;z-index:30;pointer-events:none;color:#e8dbb5;background:#20271fcc;padding:6px 10px;border-radius:5px;font:12px system-ui">Preparing the nearby valley…</div>
 <div id="hud">
   <div id="title">The settlement</div>
   <div id="stat"></div>
@@ -19,6 +20,32 @@
 <aside id="crew" aria-label="Sessions at work"></aside>
 <aside id="chron" aria-label="The settlement chronicle"></aside>
 <button id="sound" type="button" aria-pressed="false" title="Sound"><span class="off">Sound off</span><span class="on">Sound on</span></button>
+<button id="sound-settings" type="button" aria-expanded="false" aria-controls="sound-panel">Mix sounds</button>
+<section id="sound-panel" aria-labelledby="sound-title" hidden>
+  <header><h2 id="sound-title">Sounds of the valley</h2><button id="sound-close" type="button" aria-label="Close sound mixer">×</button></header>
+  <p id="sound-state">Sound is off — turn it on to listen.</p>
+  <div id="sound-layers"></div>
+  <p class="sound-note">Layers follow the landscape and time of day. River recordings include a little wildlife.</p>
+  <footer><button id="sound-reset" type="button">Reset mix</button><button id="sound-retry" type="button" hidden>Retry loading</button><span id="sound-loading" role="status"></span></footer>
+</section>
+<div id="camdock" role="toolbar" aria-label="Camera">
+  <button type="button" id="camLeft" title="Turn left" aria-label="Turn left">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.5 12a4.5 4.5 0 1 1 8.4 2.2l1.5 1.3A6.5 6.5 0 1 0 11 5.5V3L7 7l4 4V8.5A4.5 4.5 0 0 1 7.5 12z"/></svg>
+  </button>
+  <button type="button" id="camOut" title="Zoom out" aria-label="Zoom out">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 11h14v2H5z"/></svg>
+  </button>
+  <button type="button" id="camHome" class="home" title="The Stone" aria-label="Go to the Settlement Stone">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3.2 4.4 12.4h2.3V20h4.2v-5.2h2.2V20h4.2v-7.6h2.3L12 3.2z"/></svg>
+  </button>
+  <button type="button" id="camIn" title="Zoom in" aria-label="Zoom in">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+  </button>
+  <button type="button" id="camRight" title="Turn right" aria-label="Turn right">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12a4.5 4.5 0 1 0-8.4 2.2l-1.5 1.3A6.5 6.5 0 1 1 13 5.5V3l4 4-4 4V8.5A4.5 4.5 0 0 1 16.5 12z"/></svg>
+  </button>
+</div>
+<a href="credits.html" style="position:fixed;bottom:12px;left:14px;z-index:30;color:#c7cbb7;font:11px system-ui">Wildlife credits</a>
 <div id="hint">drag to move · <b>shift-drag to spin</b> · scroll to zoom</div>
 <div id="people"></div>
 <div id="card"></div>

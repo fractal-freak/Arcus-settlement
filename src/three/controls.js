@@ -90,6 +90,27 @@ export class Rig {
     c.update();
   }
 
+  orbit(deltaAz) {
+    const c = this.controls;
+    this.autoTilt = false;
+    const d = this.distance;
+    const sph = this._v.copy(this.camera.position).sub(c.target);
+    const len = sph.length() || d;
+    const polar = Math.acos(Math.min(1, Math.max(-1, sph.y / len)));
+    const az = Math.atan2(sph.x, sph.z) + deltaAz;
+    this.camera.position.set(
+      c.target.x + Math.sin(polar) * Math.sin(az) * d,
+      c.target.y + Math.cos(polar) * d,
+      c.target.z + Math.sin(polar) * Math.cos(az) * d,
+    );
+    c.update();
+  }
+
+  nudgeDistance(factor) {
+    this.autoTilt = true;
+    this.setDistance(this.distance * factor);
+  }
+
   update(dtMs) {
     const c = this.controls;
     if (this.autoTilt) {

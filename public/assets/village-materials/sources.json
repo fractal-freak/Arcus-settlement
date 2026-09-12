@@ -1,0 +1,27 @@
+{
+  "license": "CC0-1.0",
+  "licenseURL": "https://polyhaven.com/license",
+  "author": "Rob Tuytel",
+  "assets": [
+    {
+      "file": "medieval_wood_diff_1k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/medieval_wood/medieval_wood_diff_1k.jpg",
+      "asset": "https://polyhaven.com/a/medieval_wood"
+    },
+    {
+      "file": "medieval_wood_disp_1k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/medieval_wood/medieval_wood_disp_1k.jpg",
+      "asset": "https://polyhaven.com/a/medieval_wood"
+    },
+    {
+      "file": "medieval_blocks_03_diff_1k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/medieval_blocks_03/medieval_blocks_03_diff_1k.jpg",
+      "asset": "https://polyhaven.com/a/medieval_blocks_03"
+    },
+    {
+      "file": "medieval_blocks_03_disp_1k.jpg",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/medieval_blocks_03/medieval_blocks_03_disp_1k.jpg",
+      "asset": "https://polyhaven.com/a/medieval_blocks_03"
+    }
+  ]
+}

@@ -113,6 +113,44 @@ export const EXTRA_PROJECTS = [
     ]
   },
   {
+    "key": "raise_windmills",
+    "dim": "silhouette",
+    "want": "to raise a mill on the high ground beyond the houses",
+    "needs": 92,
+    "place": "outskirt",
+    "tag": "tall",
+    "n": 1,
+    "kinds": [
+      "building_windmill_green",
+      "building_windmill_red"
+    ]
+  },
+  {
+    "key": "raise_keep_towers",
+    "dim": "silhouette",
+    "want": "to raise taller keeps where the skyline is still flat",
+    "needs": 84,
+    "place": "outskirt",
+    "tag": "tall",
+    "n": 1,
+    "kinds": [
+      "building_tower_A_green",
+      "building_tower_A_red"
+    ]
+  },
+  {
+    "key": "works_scaffolding",
+    "dim": "silhouette",
+    "want": "to put scaffolding up on unfinished yards",
+    "needs": 58,
+    "place": "rim",
+    "tag": "tall",
+    "n": 1,
+    "kinds": [
+      "building_scaffolding"
+    ]
+  },
+  {
     "key": "build_stone_enclosure",
     "dim": "fortification",
     "want": "to partition inner plot boundaries with low stone walls",
@@ -240,20 +278,6 @@ export const EXTRA_DIMENSIONS = [
     "why": "The broad central thoroughfares offer no public gathering stages or fenced enclosure to structure civic life.",
     "tag": "tall",
     "target": 35
-  },
-  {
-    "key": "quarry_workings",
-    "name": "Quarry Operations",
-    "why": "The grey dirt patch on the left field is a bare extraction site without wheelbarrows, ladders, or stone stockpiles.",
-    "tag": "clutter",
-    "target": 80
-  },
-  {
-    "key": "outpost_wayfinding",
-    "name": "Outpost Wayfinding",
-    "why": "The wide wooden deck and main thoroughfare transitions lack boundary markers, banners, or posts.",
-    "tag": "accent",
-    "target": 60
   }
 ];
 
@@ -264,6 +288,16 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-11",
+    "seen": "Skyline is the only score still behind, and the critic's heraldry jobs never get taken because they share the tall tag and already read as finished. The outskirts have no mills or taller keeps, only the same flags and watchposts.",
+    "added": "raise_windmills, raise_keep_towers, works_scaffolding"
+  },
+  {
+    "at": "2026-09-11",
+    "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",
+    "added": "waterfront, heraldry, plant_water_reeds, scatter_waterlilies, dockside_staging, raise_heraldic_flags, skyline_scaffolding"
+  },
   {
     "at": "2026-09-12",
     "seen": "The raw grey dirt clearing on the left is an empty quarry patch lacking tools or stone stockpiles, while the expansive wooden platform on the right sits unbordered and featureless.",
@@ -278,10 +312,5 @@ export const JOURNAL = [
     "at": "2026-09-11",
     "seen": "A dense clump of identical small trees dominates the foreground while major structures like the red tower stand exposed on bare grass without defensive stone boundaries or organized staging yards.",
     "added": "fortification, industry, build_curtain_wall, build_stone_enclosure, assemble_goods_depot, stockpile_resources"
-  },
-  {
-    "at": "2026-09-11",
-    "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",
-    "added": "waterfront, heraldry, plant_water_reeds, scatter_waterlilies, dockside_staging, raise_heraldic_flags, skyline_scaffolding"
   }
 ];

@@ -19,6 +19,7 @@
  * the whole set is rebuilt wholesale on change and then left completely alone.
  */
 
+import { outsideBridgeWorks } from '../app/bridge.js';
 import { Group, InstancedMesh, Object3D, Matrix4 } from 'three';
 import { smoothHeightAt } from '../app/terrain.js';
 import { loadModels } from './assets.js';
@@ -74,12 +75,7 @@ export class Built3D {
     // because citizens REPLACE things as well as add them: pull five pieces
     // out of the middle and put five back, and a count would not have moved.
     // Four hundred numbers, once every few seconds, costs nothing.
-    let h = 2166136261;
-    for (const p of placements) {
-      h ^= (p.x * 97 + p.z * 31 + p.rot * 7 + p.kind.length) | 0;
-      h = Math.imul(h, 16777619);
-    }
-    const sig = `${placements.length}:${h >>> 0}`;
+    const sig = JSON.stringify(placements.map(p => [p.kind, p.x, p.z, p.rot]));
     if (sig === this._signature) return;
     this._signature = sig;
     this._pending = placements;
@@ -88,21 +84,33 @@ export class Built3D {
       // Another sync may have landed while these were downloading; only the
       // newest list is worth drawing.
       if (this._pending === placements) this._rebuild(placements);
-    }).catch(() => { /* a model that will not load simply does not appear */ });
+    }).catch(error => { this.error = error; this._signature = ''; });
   }
 
   _rebuild(placements) {
-    for (const m of this.group.children) m.dispose?.();
-    this.group.clear();
+    this.error = null;
+    this._batches ??= new Map();
 
     const byKind = new Map();
     for (const p of placements) {
+      if (!outsideBridgeWorks(p)) continue;
       if (!this.models[p.kind]) continue;
       if (!byKind.has(p.kind)) byKind.set(p.kind, []);
       byKind.get(p.kind).push(p);
     }
 
+    for (const [kind, batch] of this._batches) {
+      if (byKind.has(kind)) continue;
+      for (const mesh of batch.meshes) { this.group.remove(mesh); mesh.dispose(); }
+      this._batches.delete(kind);
+    }
     for (const [kind, list] of byKind) {
+      const signature = JSON.stringify(list.map(p => [p.x, p.z, p.rot]));
+      const previous = this._batches.get(kind);
+      if (previous?.signature === signature) continue;
+      if (previous) for (const mesh of previous.meshes) { this.group.remove(mesh); mesh.dispose(); }
+      const batch = { signature, meshes: [] };
+      this._batches.set(kind, batch);
       const model = this.models[kind];
       // A kit model can be several meshes — a mill's sails are their own mesh.
       // Each gets its own instanced copy, sharing one transform per placement,
@@ -126,6 +134,7 @@ export class Built3D {
         });
         inst.instanceMatrix.needsUpdate = true;
         this.group.add(inst);
+        batch.meshes.push(inst);
       }
     }
     this.ready = true;

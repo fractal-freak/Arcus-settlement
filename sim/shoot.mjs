@@ -85,7 +85,8 @@ const url = `http://127.0.0.1:${server.address().port}/`;
 // frames rather than an absolute median — it catches "this got much worse",
 // which is the thing worth catching, without pretending a runner is a laptop.
 const browser = await chromium.launch({
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
+  args: process.platform === 'darwin' && !process.env.CI ? []
+    : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
 });
 // Small on purpose: every pixel of this is rasterised on a CPU.
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
@@ -105,6 +106,8 @@ page.on('console', (m) => {
   errors.push(`${m.text()} ${m.location()?.url ?? ''}`.trim());
 });
 
+// Keep the animation clock deterministic; step() still runs the real frame body.
+await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
 await page.goto(url, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000 });
 
@@ -114,23 +117,44 @@ const report = await page.evaluate(async () => {
   // software rendering makes each of these expensive and this has to finish
   // inside a scheduled job, not inside an afternoon.
   w.look(34, -4, 8);
-  for (let i = 0; i < 140; i++) w.step(1);
-  await new Promise((r) => setTimeout(r, 5000));
-  for (let i = 0; i < 60; i++) w.step(1);
+  // Worker replies require an event-loop turn; synchronous batches cannot load terrain.
+  const deadline = performance.now() + 90000;
+  do {
+    w.step(1);
+    await new Promise(r => setTimeout(r, 5));
+    if (performance.now() > deadline) throw new Error('The opening view did not finish loading: ' + JSON.stringify({stats:w.stats(),startup:w.startup,feedReady:!!w.feed.data,assetsReady:w.built.ready && w.folk.ready && w.people.ready && w.landmarks.ready}));
+  // Background tiles continue streaming after entry. Readiness means the current
+  // view is complete, matching the app's loading gate, not an empty distant queue.
+  } while (!w.startup?.complete || w.terrain.pendingVisible > 0);
+  for (let i = 0; i < 10; i++) { w.step(1); await new Promise(r => setTimeout(r, 0)); }
 
   const t = [];
-  for (let i = 0; i < 60; i++) { const a = performance.now(); w.step(1); t.push(performance.now() - a); }
+  for (let i = 0; i < 60; i++) {
+    const a = performance.now(); w.step(1); t.push(performance.now() - a);
+    // Give the GPU and browser time to present, instead of queuing sixty frames in one task.
+    await new Promise(r => setTimeout(r, 16));
+  }
   t.sort((a, b) => a - b);
   const s = w.stats();
+  const gl = w.stage.renderer.getContext();
+  const debug = gl.getExtension('WEBGL_debug_renderer_info');
   return {
+    backend: gl.getParameter(debug?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER),
     median: +t[30].toFixed(2),
+    p95: +t[57].toFixed(2),
+    max: +t[59].toFixed(2),
+    startupMs: Math.round(w.startup.readyAt - w.startup.startedAt),
     chunks: s.chunks,
     triangles: s.triangles,
     drawCalls: s.drawCalls,
+    ready: w.startup.complete,
+    terrainWorker: s.terrainWorker,
+    pendingVisible: s.pendingVisible,
     placed: (w.built?._pending ?? []).length,
   };
 });
 
+console.log('Frame check:', JSON.stringify(report));
 mkdirSync(join(HERE, '..', 'state'), { recursive: true });
 mkdirSync(dirname(OUT), { recursive: true });
 // Generous, and no waiting on fonts: capturing a software-rendered WebGL
@@ -150,21 +174,28 @@ server.close();
  * test that fires on a change of hardware is not a regression test.
  */
 const WHERE = process.env.CI ? 'ci' : 'local';
-const REPORT = join(HERE, '..', 'state', 'report.json');
+const REPORT = process.env.CRITIC_REPORT || join(HERE, '..', 'state', 'report.json');
 let reports = {};
 try { reports = JSON.parse(await readFile(REPORT, 'utf8')); } catch { /* first run */ }
 if (reports.median) reports = {};             // the old single-machine shape
-const before = reports[WHERE] ?? null;
+const previous = reports[WHERE] ?? null;
+// Compare matching renderer backends only; headless macOS may also use software rendering.
+const before = previous?.backend === report.backend ? previous : null;
 
 const problems = [];
 if (errors.length) problems.push(`the page threw: ${errors.slice(0, 3).join(' | ')}`);
 if (!report.chunks) problems.push('the ground never built');
+if (report.pendingVisible) problems.push('visible terrain was still missing after the frame check');
 if (before?.median && report.median > before.median * WORSE_BY
   && report.median - before.median > AND_AT_LEAST) {
   problems.push(`${report.median}ms a frame against ${before.median}ms last time — the new rules cost too much`);
 }
 
-console.log(`[${WHERE}] chunks ${report.chunks} · ${report.placed} placed · ${report.drawCalls} draws · median ${report.median}ms`
+if (before?.p95 && report.p95 > before.p95 * WORSE_BY && report.p95 - before.p95 > 8) {
+  problems.push(`${report.p95}ms at the 95th percentile against ${before.p95}ms last time`);
+}
+
+console.log(`[${WHERE}] chunks ${report.chunks} · ${report.placed} placed · ${report.drawCalls} draws · median ${report.median}ms · p95 ${report.p95}ms`
   + (before?.median ? ` (was ${before.median}ms here)` : ' (first run on this machine)'));
 
 // Recorded only if it passed — otherwise a slow run would raise the bar it is

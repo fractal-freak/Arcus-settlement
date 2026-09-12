@@ -36,14 +36,17 @@
  */
 
 import {
-  Group, CircleGeometry, IcosahedronGeometry, TubeGeometry, CatmullRomCurve3,
-  MeshStandardMaterial, Mesh, InstancedMesh, Object3D, BufferAttribute,
-  CanvasTexture, SRGBColorSpace, Vector3, Color, DoubleSide,
+  Group, IcosahedronGeometry,
+  MeshStandardMaterial, Mesh, BufferGeometry, Float32BufferAttribute,
+  CanvasTexture, Vector3,
 } from 'three';
+import { visibilityMeshes } from './visibility.js';
 import { smoothHeightAt, hash2 } from '../app/terrain.js';
 import { GLYPHS, GLYPH_UPM } from '../app/glyphs.js';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { loadPiece } from './assets.js';
+import { sanctuaryMaterials } from './sanctuaryMaterials.js';
+import { makeSanctuaryRitual, growStoneVines } from './sanctuaryRitual3d.js';
+import { makeSacredCourt } from './sacredCourt3d.js';
 
 const SIGNS = ['♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓'];
 /**
@@ -320,7 +323,7 @@ function erode(ctx, size) {
     const x = hash2(i, 3, 71) * size, y = hash2(i, 5, 72) * size;
     const r = size * (0.035 + hash2(i, 7, 73) * 0.13);
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    const a = 0.40 + hash2(i, 9, 74) * 0.55;
+    const a = i < 4 ? 0.70 : 0.14 + hash2(i, 9, 74) * 0.24;
     g.addColorStop(0, `rgba(0,0,0,${a})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g;
@@ -364,81 +367,98 @@ function chartLayer(size, founding, ink, weight) {
   return c;
 }
 
-/** Colour and height-field passes of the same artwork, as two canvases. */
-function chartTextures(founding) {
-  const size = 2048;
-  const make = () => {
-    const c = document.createElement('canvas');
-    c.width = size; c.height = size;
-    return c;
+/** Only the grooves are projected: there is no separate disc or pale decal. */
+function chartTexture(founding) {
+  const worn = chartLayer(2048, founding, '#000000', 1.85);
+  const softened = document.createElement('canvas');
+  softened.width = softened.height = 2048;
+  const ctx = softened.getContext('2d');
+  ctx.filter = 'blur(1.1px)'; ctx.drawImage(worn, 0, 0);
+  const tex = new CanvasTexture(softened);
+  tex.anisotropy = 8;
+  return tex;
+}
+
+function carvedMaterial(chart, panelY, panelZ, radius) {
+  const material = new MeshStandardMaterial({ roughness: 0.96, metalness: 0 });
+  const maps = sanctuaryMaterials();
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.stoneGrain = { value: maps.rock.color };
+    shader.uniforms.stoneMoss = { value: maps.moss.color };
+    shader.uniforms.stoneHeightMap = { value: maps.rock.height };
+    shader.uniforms.stoneChart = { value: chart };
+    shader.vertexShader = 'varying vec3 vStonePosition; varying vec3 vStoneNormal;\n' + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\nvStonePosition = position; vStoneNormal = normal;');
+    shader.fragmentShader = `
+      uniform sampler2D stoneGrain;
+      uniform sampler2D stoneChart;
+      uniform sampler2D stoneMoss;
+      uniform sampler2D stoneHeightMap;
+      varying vec3 vStonePosition;
+      varying vec3 vStoneNormal;
+      float ageHash(vec3 p) { return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453); }
+      float ageNoise(vec3 p) {
+        vec3 i=floor(p), f=fract(p);f=f*f*(3.0-2.0*f);
+        return mix(mix(mix(ageHash(i),ageHash(i+vec3(1,0,0)),f.x),
+          mix(ageHash(i+vec3(0,1,0)),ageHash(i+vec3(1,1,0)),f.x),f.y),
+          mix(mix(ageHash(i+vec3(0,0,1)),ageHash(i+vec3(1,0,1)),f.x),
+          mix(ageHash(i+vec3(0,1,1)),ageHash(i+vec3(1,1,1)),f.x),f.y),f.z);
+      }
+    ` + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+      #include <color_fragment>
+      vec3 weights = pow(abs(normalize(vStoneNormal)), vec3(4.0));
+      weights /= max(dot(weights, vec3(1.0)), 0.001);
+      vec3 rockColor = texture2D(stoneGrain, vStonePosition.yz * 0.32).rgb * weights.x
+        + texture2D(stoneGrain, vStonePosition.xz * 0.32).rgb * weights.y
+        + texture2D(stoneGrain, vStonePosition.xy * 0.32).rgb * weights.z;
+      vec3 mossColor = texture2D(stoneMoss, vStonePosition.yz * 0.46).rgb * weights.x
+        + texture2D(stoneMoss, vStonePosition.xz * 0.46).rgb * weights.y
+        + texture2D(stoneMoss, vStonePosition.xy * 0.46).rgb * weights.z;
+      float grain = dot(vec3(texture2D(stoneHeightMap, vStonePosition.yz * 0.32).r,
+        texture2D(stoneHeightMap, vStonePosition.xz * 0.32).r,
+        texture2D(stoneHeightMap, vStonePosition.xy * 0.32).r), weights);
+      vec2 chartUV = (vStonePosition.xy - vec2(0.0, ${panelY.toFixed(4)})) / ${(radius * 2).toFixed(4)} + 0.5;
+      float face = smoothstep(${(panelZ - .28).toFixed(4)}, ${(panelZ - .20).toFixed(4)}, vStonePosition.z);
+      float bounds = step(0.0, chartUV.x) * step(chartUV.x, 1.0) * step(0.0, chartUV.y) * step(chartUV.y, 1.0);
+      float cut = texture2D(stoneChart, clamp(chartUV, 0.0, 1.0)).a * face * bounds;
+      float moss = smoothstep(0.22, 0.64, grain + max(vStoneNormal.y, 0.0) * 0.42
+        + max(0.0, -vStonePosition.y) * 0.23);
+      float dressedFace = 1.0 - smoothstep(0.88, 1.22, length((chartUV - 0.5) * 2.0));
+      moss *= 1.0 - face * dressedFace * 0.73;
+      float rockLuma=dot(rockColor,vec3(.2126,.7152,.0722));
+      float mossLuma=dot(mossColor,vec3(.2126,.7152,.0722));
+      rockColor=mix(vec3(rockLuma),rockColor,.16)*vec3(1.03,1.02,.99);
+      mossColor=mix(vec3(mossLuma*.8+.04),mossColor,.25)*vec3(.98,1.02,.90);
+      vec3 agedStone=mix(rockColor*1.12,mossColor,moss*.9);
+      float colony=ageNoise(vStonePosition*2.4);
+      float lichen=smoothstep(.61,.77,colony)*smoothstep(.35,.64,ageNoise(vStonePosition*19.0));
+      lichen*=1.0-cut*.9;
+      agedStone=mix(agedStone,vec3(.40,.42,.35),lichen*.58);
+      float damp=1.0-smoothstep(-1.6,-.15,vStonePosition.y+colony*.38);
+      float rain=smoothstep(.56,.75,ageNoise(vStonePosition*vec3(7.0,.32,7.0)))
+        *(1.0-abs(normalize(vStoneNormal).y));
+      agedStone*=1.0-damp*.20-rain*.12;
+      // Sediment softens some cuts, while the remaining recesses stay deep.
+      float sediment=smoothstep(.54,.74,ageNoise(vStonePosition*5.0));
+      diffuseColor.rgb*=agedStone*(1.0-cut*mix(.58,.34,sediment));
+      float stoneHeight=grain*.16-cut*.018+lichen*.008;
+    `);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', `
+      #include <normal_fragment_maps>
+      vec3 sx = normalize(dFdx(-vViewPosition)), sy = normalize(dFdy(-vViewPosition));
+      vec3 r1 = cross(sy, normal), r2 = cross(normal, sx);
+      float determinant = dot(sx, r1) * faceDirection;
+      vec3 gradient = sign(determinant) * (dFdx(stoneHeight) * r1 + dFdy(stoneHeight) * r2);
+      normal = normalize(abs(determinant) * normal - gradient);
+    `);
   };
-
-  // One worn layer, composited into both passes, so the colour and the depth
-  // agree about every chip.
-  const worn = chartLayer(size, founding, '#1a140e', 1.55);
-
-  // Colour: granite with the cut lines sitting in their own shadow.
-  const colour = make();
-  const cctx = colour.getContext('2d');
-  paintGranite(cctx, size, 0xb8b2a8);
-  cctx.globalAlpha = 0.97;
-  cctx.drawImage(worn, 0, 0);
-  cctx.globalAlpha = 1;
-
-  // Height: mid-grey is the uncut face, dark is the bottom of the groove.
-  // three.js reads bumpMap by luminance, so darker genuinely means deeper.
-  const bump = make();
-  const bctx = bump.getContext('2d');
-  bctx.fillStyle = '#9a9a9a';
-  bctx.fillRect(0, 0, size, size);
-  bctx.drawImage(chartLayer(size, founding, '#000000', 1.85), 0, 0);
-
-  const colourTex = new CanvasTexture(colour);
-  colourTex.colorSpace = SRGBColorSpace;
-  colourTex.anisotropy = 8;
-  const bumpTex = new CanvasTexture(bump);
-  bumpTex.anisotropy = 8;
-  return { colourTex, bumpTex };
+  material.customProgramCacheKey = () => 'sacred-aged-granite-v3';
+  return material;
 }
 
 // ── The stone ─────────────────────────────────────────────────────────────
-
-/**
- * Procedural granite: a mottle of warm and cool greys with mineral speckle.
- * Cheap value noise rather than a downloaded texture — the whole project has
- * no texture pipeline, and a monolith only needs to read as stone, not as a
- * specific quarry.
- */
-function paintGranite(ctx, size, base) {
-  const r = (base >> 16) & 255, g = (base >> 8) & 255, b = base & 255;
-  ctx.fillStyle = `rgb(${r},${g},${b})`;
-  ctx.fillRect(0, 0, size, size);
-
-  // Broad blotches, then finer ones, then mineral grain.
-  for (const [count, radius, alpha] of [[90, size * 0.16, 0.10], [420, size * 0.05, 0.09], [2600, size * 0.012, 0.10]]) {
-    for (let i = 0; i < count; i++) {
-      const x = hash2(i, count, 11) * size;
-      const y = hash2(i, count, 12) * size;
-      const t = hash2(i, count, 13);
-      const warm = t > 0.5;
-      const d = Math.round((t - 0.5) * 46);
-      ctx.fillStyle = warm
-        ? `rgba(${r + d + 10},${g + d + 4},${b + d - 4},${alpha})`
-        : `rgba(${r + d - 8},${g + d - 4},${b + d + 8},${alpha})`;
-      ctx.beginPath();
-      ctx.arc(x, y, radius * (0.4 + hash2(i, count, 14)), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  // Dark flecks, the bit that actually reads as granite rather than concrete.
-  for (let i = 0; i < 5200; i++) {
-    const x = hash2(i, 7, 21) * size, y = hash2(i, 7, 22) * size;
-    const s = size * 0.0016 * (0.5 + hash2(i, 7, 23) * 1.6);
-    ctx.fillStyle = hash2(i, 7, 24) > 0.72 ? 'rgba(250,248,242,0.30)' : 'rgba(28,26,24,0.34)';
-    ctx.fillRect(x, y, s, s);
-  }
-}
-
 
 /**
  * The boulder's overall size. It is a rock, not a monument: wider than it is
@@ -453,6 +473,40 @@ function lumps(x, y, z) {
     + Math.sin(y * 2.1 + x * 0.7) * 0.30
     + Math.sin((x + z) * 3.1 + y * 1.1) * 0.20
     + Math.sin((x - y) * 5.3 + z * 2.7) * 0.10;
+}
+
+/** Subdivide only the carved face and physically sink each surviving cut.
+ * The rest of the boulder stays inexpensive. Colour, relief and shadows all
+ * use the same worn inscription; the darkest cuts are 12 cm deep.
+ */
+function chiselFace(geometry, chart, panel, radius) {
+  const source = geometry.attributes.position, indices = geometry.index;
+  const pixels = chart.image.getContext('2d').getImageData(0, 0, chart.image.width, chart.image.height);
+  const size = pixels.width, out = [];
+  const point = i => [source.getX(i), source.getY(i), source.getZ(i)];
+  const mid = (a,b) => a.map((v,i)=>(v+b[i])*0.5);
+  function emit(a,b,c,depth) {
+    if (depth) { const ab=mid(a,b),bc=mid(b,c),ca=mid(c,a);
+      emit(a,ab,ca,depth-1);emit(ab,b,bc,depth-1);emit(ca,bc,c,depth-1);emit(ab,bc,ca,depth-1);return; }
+    for (const p of [a,b,c]) {
+      let cut=0;
+      const u=p[0]/(radius*2)+.5, v=.5-(p[1]-panel.y)/(radius*2);
+      if (p[2]>panel.z-.02 && u>0 && u<1 && v>0 && v<1) {
+        const x=Math.floor(u*(size-1)),y=Math.floor(v*(size-1));
+        cut=pixels.data[(y*size+x)*4+3]/255;
+      }
+      out.push(p[0],p[1],p[2]-Math.pow(cut,.65)*.12);
+    }
+  }
+  const count = indices ? indices.count : source.count;
+  for(let i=0;i<count;i+=3) {
+    const tri=[0,1,2].map(j=>point(indices ? indices.getX(i+j) : i+j));
+    const near=tri.some(p=>p[2]>panel.z-.03 && Math.hypot(p[0],p[1]-panel.y)<radius*1.2);
+    emit(...tri,near?4:0);
+  }
+  const result=new BufferGeometry();result.setAttribute('position',new Float32BufferAttribute(out,3));
+  geometry.dispose();
+  return mergeVertices(result,1e-5);
 }
 
 /**
@@ -470,7 +524,7 @@ function lumps(x, y, z) {
  * dressed panel on an otherwise rough rock, exactly what carving a boulder
  * actually involves.
  */
-function makeBoulder(dressZ, dressR) {
+function makeBoulder(dressZ, dressR, chart) {
   // WELDED, and that is the whole difference between a rock and a
   // twenty-sided die. IcosahedronGeometry hands back an unindexed mesh — every
   // triangle carries its own three vertices — so computeVertexNormals can only
@@ -479,8 +533,8 @@ function makeBoulder(dressZ, dressR) {
   // across the faces that meet at each point, so the surface shades as one
   // continuous rock, and the moss painted on those vertices blends instead of
   // stopping dead at every triangle edge.
-  const geo = mergeVertices(new IcosahedronGeometry(ROCK_R, 5), 1e-4);
-  const pos = geo.attributes.position;
+  let geo = mergeVertices(new IcosahedronGeometry(ROCK_R, 18), 1e-4);
+  let pos = geo.attributes.position;
   const v = new Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
@@ -489,7 +543,7 @@ function makeBoulder(dressZ, dressR) {
     // over the top of them. One octave alone came out egg-smooth.
     const broad = lumps(d.x * 1.9, d.y * 1.9, d.z * 1.9);
     const fine = lumps(d.x * 5.7 + 11, d.y * 5.7 - 4, d.z * 5.7 + 7);
-    v.multiplyScalar(1 + broad * 0.34 + fine * 0.13);
+    v.multiplyScalar(1 + broad * 0.18 + fine * 0.035);
     // Squat and broad, and broader still at the foot where it meets the earth.
     v.y *= 0.82;
     const sink = Math.max(0, -v.y / ROCK_R);
@@ -511,97 +565,21 @@ function makeBoulder(dressZ, dressR) {
     if (t <= 0) continue;
     pos.setZ(i, v.z + (dressZ.z - v.z) * t);
   }
+  geo = chiselFace(geo, chart, dressZ, dressR);
+  pos = geo.attributes.position;
   pos.needsUpdate = true;
   geo.computeVertexNormals();
 
-  // Moss, painted per vertex — no UVs needed, and an icosahedron has none
-  // worth using. It grows where moss grows: on what faces the sky, thicker
-  // in the damp low places, and nowhere on the dressed panel, which is kept
-  // clear the way a tended stone would be.
-  const nor = geo.attributes.normal;
-  const colors = new Float32Array(pos.count * 3);
-  const stone = new Color(), moss = new Color(0x4e7031), dark = new Color(0x67635b);
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const up = nor.getY(i);
-    const grain = 0.5 + 0.5 * lumps(v.x * 3.1, v.y * 3.1, v.z * 3.1);
-    stone.setHex(0xa9a49b).lerp(dark, grain * 0.55);
-    const damp = Math.max(0, 1 - (v.y + ROCK_R * 0.5) / (ROCK_R * 1.3));
-    let m = Math.max(0, (up - 0.02) / 0.55) * (0.45 + 0.55 * grain) + damp * 0.42 * grain;
-    const onPanel = v.z > 0 && Math.hypot(v.x, v.y - dressZ.y) < dressR * 1.30;
-    if (onPanel) m *= 0.06;
-    stone.lerp(moss, Math.min(0.92, Math.max(0, m)));
-    colors[i * 3] = stone.r; colors[i * 3 + 1] = stone.g; colors[i * 3 + 2] = stone.b;
-  }
-  geo.setAttribute('color', new BufferAttribute(colors, 3));
   return geo;
-}
-
-/**
- * Vines draped over the rock. Each is a tube following a curve that starts up
- * near the crown, hugs the shoulder and then falls away down the side, with
- * leaves threaded along it. Kept off the front so nothing grows across the
- * chart.
- */
-function makeVines(baseY) {
-  const g = new Group();
-  const vineMat = new MeshStandardMaterial({ color: 0x4f6b33, roughness: 0.9, metalness: 0 });
-  const leafMat = new MeshStandardMaterial({ color: 0x6b8f42, roughness: 0.85, metalness: 0, side: DoubleSide });
-  const leafGeo = new IcosahedronGeometry(0.13, 0);
-
-  for (let v = 0; v < 7; v++) {
-    // Start round the BACK and the sides only. The front of this rock is at
-    // a = PI/2 in this parameterisation, and the first pass swept straight
-    // through it — vines hanging over the chart, which is the one surface
-    // that has to stay readable. The sweep now starts a good way past it and
-    // runs the long way round.
-    const a0 = Math.PI * 0.80 + (v / 7) * Math.PI * 1.40 + hash2(v, 3, 61) * 0.20;
-    const pts = [];
-    const steps = 9;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      // Down from the crown, drifting round the rock as it falls.
-      const phi = (0.14 + t * 1.30) * Math.PI * 0.5;
-      const a = a0 + Math.sin(t * 3.1 + v) * 0.22;
-      const rr = ROCK_R * (1.02 + lumps(Math.cos(a) * 2.3, Math.cos(phi) * 2.3, Math.sin(a) * 2.3) * 0.16);
-      pts.push(new Vector3(
-        Math.cos(a) * Math.sin(phi) * rr,
-        Math.cos(phi) * rr * 0.82 + 0.06,
-        Math.sin(a) * Math.sin(phi) * rr,
-      ));
-    }
-    const curve = new CatmullRomCurve3(pts);
-    const tube = new Mesh(new TubeGeometry(curve, 26, 0.045 + hash2(v, 5, 62) * 0.022, 5, false), vineMat);
-    tube.castShadow = true;
-    g.add(tube);
-
-    for (let l = 0; l < 9; l++) {
-      const t = 0.12 + (l / 9) * 0.86;
-      const p = curve.getPoint(t);
-      const leaf = new Mesh(leafGeo, leafMat);
-      const off = 0.10 + hash2(v * 10 + l, 7, 63) * 0.09;
-      leaf.position.set(
-        p.x * (1 + off * 0.1) + (hash2(v * 10 + l, 11, 64) - 0.5) * 0.2,
-        p.y + (hash2(v * 10 + l, 13, 65) - 0.5) * 0.18,
-        p.z * (1 + off * 0.1) + (hash2(v * 10 + l, 17, 66) - 0.5) * 0.2,
-      );
-      const sc = 0.7 + hash2(v * 10 + l, 19, 67) * 0.9;
-      leaf.scale.set(sc * 1.5, sc * 0.42, sc);
-      leaf.rotation.set(hash2(v * 10 + l, 23, 68) * 3, hash2(v * 10 + l, 29, 69) * 6.28, hash2(v * 10 + l, 31, 70) * 3);
-      leaf.castShadow = true;
-      g.add(leaf);
-    }
-  }
-  g.position.y = baseY;
-  return g;
 }
 
 export class SettlementStone3D {
   constructor(scene) {
     this.scene = scene;
     this.built = false;
-    this._pavingReady = loadPiece('floor-flat');
   }
+
+  tick(elapsedS) { this.ritual?.tick(elapsedS); }
 
   sync(founding) {
     if (this.built || !founding) return;
@@ -609,11 +587,11 @@ export class SettlementStone3D {
     this._build(founding);
   }
 
-  async _build(founding) {
+  _build(founding) {
     const group = new Group();
     const h = smoothHeightAt(0, 0);
 
-    const { colourTex, bumpTex } = chartTextures(founding);
+    const chart = chartTexture(founding);
 
     // Where the chart is cut: on the front of the rock, a little above the
     // middle, at about the height of someone standing in front of it.
@@ -625,70 +603,22 @@ export class SettlementStone3D {
     // there a very long time does — there is no plinth under it, because
     // nobody built this, they found it.
     const rock = new Mesh(
-      makeBoulder({ y: panelY, z: panelZ }, rChart),
-      new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0.02 }),
+      makeBoulder({ y: panelY, z: panelZ }, rChart, chart),
+      carvedMaterial(chart, panelY, panelZ, rChart),
     );
     rock.castShadow = true;
     rock.receiveShadow = true;
     rock.position.set(0, h + ROCK_R * 0.46, 0);
     group.add(rock);
 
-    const chart = new Mesh(
-      new CircleGeometry(rChart, 96),
-      new MeshStandardMaterial({
-        map: colourTex,
-        bumpMap: bumpTex,
-        // Deep enough that the grooves catch a real edge as the sun moves
-        // across the day, shallow enough to still read as cut stone.
-        bumpScale: 0.30,
-        roughness: 0.93,
-        metalness: 0.02,
-      }),
-    );
-    chart.position.set(0, h + ROCK_R * 0.46 + panelY, panelZ + 0.05);
-    chart.receiveShadow = true;
-    group.add(chart);
-
-    group.add(makeVines(h + ROCK_R * 0.46));
-
+    rock.name = 'Settlement Stone — carved granite';
+    group.add(makeSacredCourt());
+    // Hundreds of vine probes share one acceleration structure on this static rock.
+    visibilityMeshes(rock);
+    group.add(growStoneVines(rock));
+    this.ritual = makeSanctuaryRitual();
+    group.add(this.ritual.group);
+    this.group = group;
     this.scene.add(group);
-
-    // Cobblestone paving, a real Kenney tile — a ring around the stone rather
-    // than a filled slab, so the monolith stands IN a plaza rather than on a
-    // platform.
-    // The plaza. Kenney's floor-flat is exactly one unit square and exactly
-    // ZERO units thick — a plane, measured, not assumed — so two things had
-    // to change for it to read as a paved square rather than scattered strips.
-    //
-    // It now fills a DISC instead of a ring: the old version left a hole
-    // around the stone and stopped short of the square's edge, which is the
-    // patchiness Kevin saw. And each tile sits at the HIGHEST of its own four
-    // corners plus a hair, because a flat plane dropped at the height of its
-    // centre point buries its own corners wherever the ground curves away,
-    // and a half-buried plane looks exactly like a missing one.
-    const paving = await this._pavingReady;
-    const positions = [];
-    const RING = 9;
-    for (let gx = -RING; gx <= RING; gx++) {
-      for (let gz = -RING; gz <= RING; gz++) {
-        if (Math.hypot(gx, gz) > RING) continue;
-        positions.push([gx, gz]);
-      }
-    }
-    const tiles = new InstancedMesh(paving.geometry, paving.material, positions.length);
-    tiles.receiveShadow = true;
-    const dummy = new Object3D();
-    positions.forEach(([gx, gz], i) => {
-      const top = Math.max(
-        smoothHeightAt(gx - 0.5, gz - 0.5), smoothHeightAt(gx + 0.5, gz - 0.5),
-        smoothHeightAt(gx - 0.5, gz + 0.5), smoothHeightAt(gx + 0.5, gz + 0.5),
-      );
-      dummy.position.set(gx, top + 0.035, gz);
-      dummy.rotation.set(0, 0, 0);
-      dummy.updateMatrix();
-      tiles.setMatrixAt(i, dummy.matrix);
-    });
-    tiles.instanceMatrix.needsUpdate = true;
-    this.scene.add(tiles);
   }
 }

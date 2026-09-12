@@ -55,14 +55,16 @@ jobs:
 
       # ── The clock ────────────────────────────────────────────────────────
       - name: Advance the settlement
+        env:
+          SUBSCRIBER_COUNT_URL: ${{ secrets.SUBSCRIBER_COUNT_URL }}
         run: node sim/tick.mjs
 
       # ── Prove what we already have still works, and get a picture of it ──
+      - name: Check world logic
+        run: node --test sim/*.test.mjs
+
       - name: Build
         run: npm run build
-
-      - name: Copy the settlement into the build
-        run: mkdir -p dist/state && cp state/settlement.json dist/state/settlement.json
 
       - name: Boot it and photograph it
         run: node sim/shoot.mjs
@@ -102,7 +104,6 @@ jobs:
       - name: Rebuild with whatever survived
         run: |
           npm run build
-          mkdir -p dist/state && cp state/settlement.json dist/state/settlement.json
 
       - name: Prove it still runs
         id: runs
@@ -115,7 +116,6 @@ jobs:
           echo "::warning::the world would not run with the new rules; keeping the last good ones"
           git checkout -- sim/rulebook.mjs
           npm run build
-          mkdir -p dist/state && cp state/settlement.json dist/state/settlement.json
           node sim/shoot.mjs
 
       # ── Write it down, and put it up ─────────────────────────────────────

@@ -15,8 +15,8 @@
  * not lighting tricks, which are a finish, but whether there is anything to
  * look at and whether it was placed by something with intent. The eighth is
  * the Stone, which is not about looking expensive at all: it is the reason
- * there is a settlement here, and tending it is the one job that can never be
- * undone. See SACRED.
+ * there is a settlement here, with an open court that must remain clear.
+ * See SACRED.
  *
  * WHY NOT ASK A MODEL. A language model has opinions about what looks good and
  * cannot see this world, so its opinions would be about games in general. The
@@ -26,26 +26,13 @@
  * where it disagrees — which is a job that only exists once the rubric does.
  */
 
-import { PLOTS, CIVIC, SQUARE, propNear, pathAmountAt, landmarkNear } from '../src/app/village.js';
+import { PLOTS, CIVIC, SQUARE, SANCTUARY, sanctuaryNear, propNear, pathAmountAt, landmarkNear } from '../src/app/village.js';
 import { smoothHeightAt, isWater, groundAt, GROUND, STEP, WATER_LEVEL } from '../src/app/terrain.js';
 import { clearance, propRadius, propHeight } from '../src/app/propSizes.js';
 import { EXTRA_PROJECTS, EXTRA_DIMENSIONS } from './rulebook.mjs';
 
-/**
- * The Stone's own ground, and the one rule that overrides every other rule
- * here.
- *
- * The settlement exists because of the Stone: its founding chart is carved into
- * it, and that chart is fixed forever. So the citizens may NEVER clear, move or
- * take anything from this circle. Everything they bring to it stays, and the
- * only work they can do here is more of it and better. `redundant` refuses to
- * touch anything standing inside this radius, which is what makes that a rule
- * of the world rather than a good intention.
- *
- * The Stone's own body is separately protected — `standable` keeps everything
- * clear of it — so tending it never means leaning a crate against the carving.
- */
-export const SACRED = { r: 8.5 };
+/** Sacred ground stays OPEN. Offerings belong outside the sanctuary. */
+export const SACRED = SANCTUARY;
 
 /**
  * The sightline to the carved face.
@@ -197,8 +184,7 @@ export function grade(placements) {
  * settlement stops asking for fences.
  */
 export const PROJECTS = [
-  // Work at the Stone. Nothing put here is ever taken away again — see SACRED
-  // — so these are the only jobs in the settlement that purely accumulate.
+  // Work around the sanctuary perimeter, never inside the open court.
   // Everything is deliberately LOW: a sapling or a stall in front of the
   // carved face would hide the one thing this place is for.
   { key: 'kerb', dim: 'sacred', want: 'to lay a stone kerb around the Stone', needs: 50,
@@ -295,10 +281,7 @@ export function redundant(placements, scores, want, r, n = 1, rule = null, spari
 
   const ranked = placements.map((p, i) => {
     const dim = TAG_DIM[p.tag] || 'density';
-    // THE ONE ABSOLUTE. Nothing at the Stone is ever cleared away, whatever it
-    // is and however long it has stood there. Not a low score, not a strong
-    // preference — out of the running entirely.
-    if (p.tag === 'sacred' || Math.hypot(p.x, p.z) < SACRED.r) return { i, score: -Infinity };
+    // Offerings may be renewed or removed; they must not accumulate forever.
     let score = 0;
     // Doing a job the settlement no longer needs done.
     score += (scores[dim] ?? 0) * 3.0;
@@ -401,7 +384,7 @@ function standable(x, z, rad = 1.0, onPaving = false, height = 1.0) {
   // people walk down.
   for (const p of PLOTS) if (Math.hypot(p.x - x, p.z - z) < 4.6 + rad) return false;
   if (CIVIC && Math.hypot(CIVIC.x - x, CIVIC.z - z) < 7.0 + rad) return false;
-  if (Math.hypot(x, z) < 3.4 + rad) return false; // the Stone itself, never touched
+  if (sanctuaryNear(x, z, rad)) return false; // the whole open court
   if (landmarkNear(x, z, 1.2 + rad)) return false; // the well, the tower, the gate, the keep
   if (propNear(x, z, 0.9 + rad)) return false;
   // Paving is normally a refusal — a barrel in the middle of the road is a
@@ -423,12 +406,8 @@ function tryRule(rule, r) {
       return { x: p.x + Math.cos(a) * d, z: p.z + Math.sin(a) * d };
     }
     case 'shrine': {
-      // The apron around the Stone, inside the paving, clear of the Stone
-      // itself. Two concentric RINGS rather than a scatter across the whole
-      // apron — an inner one for what is laid down and an outer one for what
-      // stands up. Things at the same distance from a centre read as placed;
-      // the same things at random distances read as dropped.
-      const d = r() < 0.5 ? 5.4 : 7.6;
+      // Offerings belong beyond the open court, on its outer approaches.
+      const d = SANCTUARY.r + 4 + r() * 5;
       return { x: Math.cos(a) * d, z: Math.sin(a) * d };
     }
     case 'square': {

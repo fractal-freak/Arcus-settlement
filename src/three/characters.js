@@ -24,7 +24,7 @@
  *    load rather than assumed (see retarget()).
  */
 
-import { AnimationMixer, LoopRepeat, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial } from 'three';
+import { AnimationMixer, LoopRepeat, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial, Color } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
@@ -46,7 +46,33 @@ export const KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barb
 export const DIG_CREW = 'Ranger';
 
 /** Everyone who is not on the dig — so a villager is never mistaken for crew. */
-export const VILLAGER_KINDS = KINDS.filter((k) => k !== DIG_CREW);
+export const VILLAGER_KINDS = ['Rogue', 'Rogue_Hooded'];
+
+const CLOTH=[0x706249,0x565c46,0x62544e,0x716d60,0x535c60,0x745b4f];
+const citizenMaterials=new WeakMap();
+function citizenMaterial(source,seed,preserveSkin) {
+  let variants=citizenMaterials.get(source);
+  if(!variants){variants=new Map();citizenMaterials.set(source,variants);}
+  const index=Math.abs(Math.floor(seed))%CLOTH.length;
+  const key=`${index}-${preserveSkin}`;
+  if(variants.has(key))return variants.get(key);
+  const material=source.clone();material.roughness=1;material.metalness=0;
+  material.onBeforeCompile=shader=>{
+    shader.uniforms.citizenCloth={value:new Color(CLOTH[index])};
+    shader.fragmentShader='uniform vec3 citizenCloth;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+      float high=max(diffuseColor.r,max(diffuseColor.g,diffuseColor.b));
+      float low=min(diffuseColor.r,min(diffuseColor.g,diffuseColor.b));
+      bool skin=${preserveSkin ? 'true' : 'false'} && diffuseColor.r>diffuseColor.g*1.15 && diffuseColor.g>diffuseColor.b*1.15;
+      if(!skin && high-low>.045){
+        float lightness=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+        diffuseColor.rgb=mix(diffuseColor.rgb,citizenCloth*(.65+lightness),.88);
+      }
+    `);
+  };
+  material.customProgramCacheKey=()=>`citizen-cloth-${key}`;
+  variants.set(key,material);return material;
+}
 
 const ANIM_FILES = ['Rig_Medium_General', 'Rig_Medium_MovementBasic'];
 
@@ -88,7 +114,7 @@ export function clipNames() { return [...clips.keys()]; }
  * single shared multiplier would have left the Mage a head taller than
  * everyone else for no reason anyone could see.
  */
-export function makeCharacter(kind, targetHeight, { background = false } = {}) {
+export function makeCharacter(kind, targetHeight, { background = false, appearanceSeed = 0 } = {}) {
   const src = models.get(kind) ?? models.get(KINDS[0]);
   if (!src) return null;
   const root = skeletonClone(src);
@@ -97,6 +123,12 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
   let maxY = 0;
   root.traverse((o) => {
     if (!o.isMesh || !o.geometry) return;
+    if(background) {
+      // These cape mesh names were inspected in the source GLBs. The rig,
+      // body proportions and animation binding remain the authored assets.
+      if(/_Cape$/.test(o.name))o.visible=false;
+      o.material=Array.isArray(o.material)?o.material.map(m=>citizenMaterial(m,appearanceSeed,/Head|Arm/.test(o.name))):citizenMaterial(o.material,appearanceSeed,/Head|Arm/.test(o.name));
+    }
     // A `background` character is drawn once and only once: no shadow-map
     // pass, and layer 1 to skip stage.js's depth-only pre-pass the same way
     // the grass already does. That pre-pass feeds the ink outline and the god
@@ -104,7 +136,7 @@ export function makeCharacter(kind, targetHeight, { background = false } = {}) {
     // of them, where each was otherwise being drawn three times over (depth,
     // shadow, colour) to decorate the middle distance.
     o.castShadow = !background;
-    o.receiveShadow = !background;
+    o.receiveShadow = true;
     if (background) o.layers.set(1);
     o.geometry.computeBoundingBox();
     maxY = Math.max(maxY, o.geometry.boundingBox.max.y);

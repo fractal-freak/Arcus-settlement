@@ -272,3 +272,29 @@ Accepted for local integration and normal isolated release, pending deployment
 verification. Next castle priority: junctions between surviving roof, exposed
 vault ribs and masonry; then a useful village workplace/furnishing pass so
 citizens' environments receive sustained attention alongside the landmark.
+
+## September 12 — replace recurring Codex usage with API development
+
+User requested all recurring loops use the free API. Paused the existing
+refine-the-settlement Codex heartbeat, retaining its prompt and target. The
+original critic uses the Gemini endpoint/model defaults; no repository API
+provider overrides were configured. The API project's billing tier is not
+visible from GitHub's secret and remains unconfirmed.
+
+Prepared a separate API-only candidate workflow with read-only permissions.
+It selects source context, proposes bounded edits, validates in a job without
+API/write credentials, and obtains a before/after visual review. It produces
+artifacts only. The workflow is gated on FREE_API_CONFIRMED=true; no new API
+calls or paid fallback were used. Owner confirmation of a Free-plan project
+with billing disabled is required before activation.
+
+Automatic approval review rejected the initial scheduled automatic-main-push
+implementation because of broad write permissions. Removed all publishing
+code and write permissions from this candidate; do not restore automatic
+publication without an explicit decision. The draft does not by itself make
+tested changes live. Existing citizen simulation/critic deployment is unchanged.
+
+All 35 Node tests, strict verifier, build and standard headless check pass.
+M4 Pro CPU median/p95 5.9/11.9ms, completed 20.94/33.08ms. Tests cover path
+allowlisting, immutable preimages, all-or-nothing checks and symlink refusal.
+Live API execution and scheduled release integration remain pending.

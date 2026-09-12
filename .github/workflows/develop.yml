@@ -1,0 +1,99 @@
+name: API world development
+on:
+  schedule:
+    - cron: '22,52 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: api-world-development
+  cancel-in-progress: false
+jobs:
+  propose:
+    if: vars.FREE_API_CONFIRMED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Propose through Gemini free-tier project
+        env:
+          CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
+          FREE_API_CONFIRMED: ${{ vars.FREE_API_CONFIRMED }}
+        run: node sim/developer.mjs propose
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developer-proposal
+          path: .local/api-development
+          retention-days: 7
+  validate:
+    needs: propose
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Generated source is tested without the API key or a write credential.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-proposal
+          path: .local/api-development
+      - run: node sim/developer.mjs apply
+      - run: node --test sim/*.test.mjs
+      - run: node sim/verify.mjs
+      - run: npm run build
+      - name: Existing boot and completed-frame gate
+        env:
+          CRITIC_SHOT: .local/api-development/after.png
+        run: node sim/shoot.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developer-validation-image
+          path: .local/api-development/after.png
+          retention-days: 7
+  review:
+    needs: [propose, validate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      # This job runs only trusted runner code. It never builds/imports candidate source.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-proposal
+          path: .local/api-development
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-validation-image
+          path: .local/api-development
+      - name: Independent visual review through Gemini
+        env:
+          CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
+          FREE_API_CONFIRMED: ${{ vars.FREE_API_CONFIRMED }}
+        run: node sim/developer.mjs review
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developer-visual-review
+          path: .local/api-development/review.json
+          retention-days: 7

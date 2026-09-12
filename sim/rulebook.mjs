@@ -287,6 +287,19 @@ export const EXTRA_PROJECTS = [
       "building_market_red",
       "building_market_green"
     ]
+  },
+  {
+    "key": "monolith_sacred_enclosure",
+    "dim": "monolith_sanctuary",
+    "want": "to enclose the rune stone circle with formal stone boundaries",
+    "needs": 55,
+    "place": "shrine",
+    "tag": "sacred",
+    "n": 3,
+    "kinds": [
+      "fence_stone_straight",
+      "building_well_green"
+    ]
   }
 ];
 
@@ -354,6 +367,13 @@ export const EXTRA_DIMENSIONS = [
     "why": "The area around the upper houses lacks active market structures or trade hubs, leaving visual voids in the residential quarter.",
     "tag": "accent",
     "target": 40
+  },
+  {
+    "key": "hillside_procession",
+    "name": "Hillside Procession",
+    "why": "The long stair path ascending the castle hill is a bare stone strip without heraldry or structural framing.",
+    "tag": "accent",
+    "target": 80
   }
 ];
 
@@ -364,6 +384,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-12",
+    "seen": "The carved stone monolith draws large crowds onto unbordered cobbles while the massive stair path climbing the castle hill in the background sits completely unadorned on bare turf.",
+    "added": "hillside_procession, monolith_sanctuary, hillside_banner_posts, hillside_stone_retaining, monolith_sacred_enclosure, monolith_devotional_banners"
+  },
   {
     "at": "2026-09-12",
     "seen": "The open ground between the upper timber houses and the monolith plaza is a bare grass expanse dotted randomly with lone barrels, while the residential area lacks any market structures or defined trade space.",

@@ -220,3 +220,25 @@ preserve its generated state and journal, rebase if needed, and publish only
 this isolated terrain candidate through the normal gates. Do not reintroduce
 indexing or diagnostic workflows, and do not stage the shared unfinished UI.
 No new user-facing visual change or decision this pass.
+
+## September 12, 2026 — Publish the isolated terrain candidate
+
+Confirmed normal repair run 34698536765 succeeded and advanced public state;
+rebased the terrain candidate onto its generated commit 2a207ad. All 32 tests
+pass. Strict verification found the newly published lane_thresholds dimension
+had no job producing its edge tag. Ran the existing verifier with --prune,
+which removed that one unreachable dimension; strict verification then passed.
+No simulation memory was edited. Include that precise verifier cleanup.
+
+Build and the repaired standard browser/performance gate pass on the current
+public feed: M4 Pro submission median/p95 6.9/11.8 ms and completed-frame
+21.54/35.34 ms, compared with this candidate's prior 6.6/11.2 and 20.93/32.95.
+No pending visible terrain, errors or loosened thresholds. The previously
+reviewed matching scene and Hermes images remain applicable: the terrain
+source did not change during rebase. All unrelated local game work is excluded.
+
+Prepared for normal publication; verify its exact deployment before reporting
+it live. Follow-up after release: inspect whether verifier pruning needs a
+second dependency validation after dropping jobs, since an unreachable
+critic dimension survived the preceding workflow. Keep that separate from
+this already verified terrain change. Resume castle craft afterward.

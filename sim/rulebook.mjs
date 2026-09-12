@@ -354,13 +354,6 @@ export const EXTRA_DIMENSIONS = [
     "why": "The area around the upper houses lacks active market structures or trade hubs, leaving visual voids in the residential quarter.",
     "tag": "accent",
     "target": 40
-  },
-  {
-    "key": "lane_thresholds",
-    "name": "Lane Thresholds",
-    "why": "The open ground connecting the well to the monolith plaza lacks stone edging or framed paths to guide movement.",
-    "tag": "edge",
-    "target": 55
   }
 ];
 

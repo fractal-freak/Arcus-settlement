@@ -158,8 +158,10 @@ while (true) {
   await pause(5);
 }
 // Preserve the startup gate's streaming workload, then drain its outstanding
-// work once before warmup. Steady-state samples never queue behind each other.
-await finishGpuFrame(page);
+// work once before warmup. This drains many loading frames, so use the
+// existing capture allowance. Individual measured frames retain a 90s bound.
+console.log('Draining the startup render queue');
+await finishGpuFrame(page, { timeout: 180000 });
 console.log('Opening view ready; warming up completed frames');
 for (let i = 0; i < 10; i++) {
   await page.evaluate(() => window.__world.step(1));

@@ -353,3 +353,22 @@ uses only contents:write; workflow_run invokes the existing deployment, with
 no actions:write permission. Both API loops are gated by FREE_API_CONFIRMED,
 use the same pinned Gemini configuration, and have no paid fallback. The
 Codex heartbeat remains paused.
+
+## September 12 — Persistent, faster milestone development
+
+Implemented a durable JSON progress branch, cumulative validated drafts,
+rejection/failure memory, stage-specific visual/simulation review, bounded new
+simulation modules and a fixed bakery behavior contract. The first milestone
+is a polished square with a functioning bakery chain and visible citizen work.
+Changed cadence from 30 to 15 minutes, cached exact unchanged-world baselines,
+and avoided deployment/critic reruns when no stage is released. Kept full frame
+gates, added matched opening/stone/gatehouse views and a shared public fixture.
+Local validation and activation are recorded separately; this infrastructure
+change alone does not claim a visual improvement or an implemented bakery.
+
+Pre-release checks found a pre-existing invalid public rulebook. The existing
+sim/verify.mjs --prune removed monolith_sacred_enclosure (missing measured score)
+and hillside_procession (no reachable serving job). Strict verification then
+passed. This repair is included so the development loop is not blocked on
+invalid published input; generated development edits still cannot alter the
+rulebook or its verifier.

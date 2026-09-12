@@ -1,20 +1,23 @@
 /** Trusted publisher. Never imports or executes candidate game source. */
 import {execFileSync} from 'node:child_process';
-import {readFile,appendFile} from 'node:fs/promises';
+import {readFile,appendFile,writeFile} from 'node:fs/promises';
 import {validateCandidate,applyCandidate} from './developer-policy.mjs';
 const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
 const dir='.local/api-development';
+const record=async(published,reason)=>{await writeFile(dir+'/publication.json',JSON.stringify({published,reason}));if(process.env.GITHUB_OUTPUT)await appendFile(process.env.GITHUB_OUTPUT,`released=${published}\n`);};
 const review=JSON.parse(await readFile(dir+'/review.json','utf8'));
 const candidate=validateCandidate(JSON.parse(await readFile(dir+'/candidate.json','utf8')));
 if(review.approved!==true||!candidate.files.length){
-  console.log('No visually approved change; preserving the published world.');
+  await record(false,'Stage not ready for release; progress is recorded separately.');
+  console.log('Stage not ready; preserving the published world.');
   process.exit(0);
 }
 const expected=process.env.EXPECTED_SHA;
 if(!/^[a-f0-9]{40}$/.test(expected||''))throw Error('Missing tested revision');
 git('fetch','origin','main');
 if(git('rev-parse','HEAD')!==expected||git('rev-parse','origin/main')!==expected){
-  console.log('Main changed during validation; skip this candidate.');
+  await record(false,'Main changed during validation; retain the reviewed draft for reconciliation.');
+  console.log('Main changed during validation; keep the draft.');
   process.exit(0);
 }
 await applyCandidate(candidate);
@@ -27,3 +30,5 @@ git('commit','-m','Improve the world after API validation and visual review');
 // A race with another publisher is rejected, never force-pushed or rebased untested.
 git('push','origin','HEAD:main');
 console.log('Approved source published; settlement workflow handles deployment.');
+
+await record(true,'Completed stage published after validation and review.');

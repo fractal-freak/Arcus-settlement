@@ -100,3 +100,39 @@ useful belongings. Small roof/material edits are supporting steps, not proof
 that the milestone is complete. Inspect actual arrival and walking views and
 show matched before/after images with where the player can see the change.
 Keep local and public release status explicit. Fix movement regressions first.
+
+## Persistent development — September 12 update
+
+Kevin requested faster progress toward a polished, increasingly complex world.
+DEVELOPMENT_PLAN.json now defines the active living-village-square milestone:
+coherent square composition, a real farming/bakery/meals simulation, then visible
+work and furnishing driven by that simulation. Treat each stage as a project
+that spans attempts, not a requirement to ship a tiny cosmetic edit.
+
+The API development schedule is every 15 minutes, subject to GitHub scheduling,
+run duration and the existing free API quota. There is no paid fallback and the
+Codex heartbeat stays paused. Exact unchanged-world baselines are cached; every
+candidate still runs the full original logic/build/completed-frame checks.
+Before/after comparisons share a deterministic public fixture and three views.
+The measured frame sample count and rejection thresholds are unchanged.
+
+The JSON-only codex/world-progress branch stores the last validated useful draft,
+the active stage and the last 40 attempt outcomes. Every run reads this memory.
+Rejected and failed attempts preserve feedback without erasing the last useful
+draft. Main changes are reconciled against file preimages; conflicts cause a
+fresh assessment instead of overwriting public work. This branch never supplies
+executable runner code, tests, credentials or workflow definitions.
+
+A reviewer can retain an unfinished foundation without publishing it. A stage
+is published only after its acceptance criteria and unchanged checks pass.
+Simulation changes are judged on integration and behavior, not on whether they
+change a screenshot. The fixed bakery contract tests conservation, shortages,
+feeding and deterministic long runs when that module is introduced. Passing a
+standalone contract is insufficient: the running world must use the system.
+
+Generated edits may add game source and sim/systems modules and update life or
+citizens integration, at most six edited files per attempt and twelve files/
+200 KB in a cumulative draft. Tests, transport, private feeds, rulebook, state,
+runner, plan and workflows stay outside the generated-edit allowlist. Completed
+stages deploy through the existing reusable settlement workflow; retained or
+rejected drafts do not trigger an extra deployment or extra critic call.

@@ -4,14 +4,14 @@ import {readFile,writeFile,lstat,mkdir} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
 export const digest=text=>createHash('sha256').update(text).digest('hex');
 export function validateCandidate(c) {
-  if(!c||typeof c.summary!=='string'||!Array.isArray(c.files)||c.files.length>6)throw Error('Invalid candidate');
+  if(!c||typeof c.summary!=='string'||!Array.isArray(c.files)||c.files.length>12)throw Error('Invalid candidate');
   const seen=new Set();let bytes=0;
   for(const f of c.files){
-    if(typeof f.path!=='string'||!(/^(src\/[a-zA-Z0-9_/-]+\.(js|css)|public\/style\.css)$/.test(f.path))||f.path.includes('..')||f.path.includes('//')||seen.has(f.path))throw Error('Disallowed path');
+    if(typeof f.path!=='string'||!(/^(src\/[a-zA-Z0-9_/-]+\.(js|css)|public\/style\.css|sim\/(life|citizens)\.mjs|sim\/systems\/[a-zA-Z0-9_/-]+\.mjs)$/.test(f.path))||f.path.includes('..')||f.path.includes('//')||seen.has(f.path))throw Error('Disallowed path');
     if(typeof f.content!=='string'||typeof f.before!=='string'||!/^([a-f0-9]{64}|new)$/.test(f.before))throw Error('Invalid edit');
     seen.add(f.path);bytes+=Buffer.byteLength(f.content);
   }
-  if(bytes>120000)throw Error('Candidate exceeds size limit');
+  if(bytes>200000)throw Error('Candidate exceeds size limit');
   return c;
 }
 export async function applyCandidate(c,root=process.cwd()) {

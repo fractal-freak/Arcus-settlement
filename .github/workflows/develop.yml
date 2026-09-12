@@ -1,7 +1,7 @@
 name: API world development
 on:
   schedule:
-    - cron: '22,52 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,21 +17,43 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Reuse an exact unchanged-world baseline
+        id: baseline_cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .local/api-development/before*.png
+            .local/api-development/fixture.json
+            .local/api-development/baseline-report.json
+          key: world-baseline-v3-${{ runner.os }}-${{ hashFiles('src/**', 'public/**', 'index.html', 'package-lock.json', 'sim/shoot.mjs', 'sim/gpu-frame.mjs', 'sim/capture-world.mjs', 'state/settlement.json', 'state/report.json', 'sim/developer-fixture.mjs', 'sim/sky.mjs', 'sim/place.mjs') }}
       - uses: actions/setup-node@v4
+        if: steps.baseline_cache.outputs.cache-hit != 'true'
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run build
+      - if: steps.baseline_cache.outputs.cache-hit != 'true'
+        run: npm ci
+      - if: steps.baseline_cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.baseline_cache.outputs.cache-hit != 'true'
+        run: npm run build
+      - if: steps.baseline_cache.outputs.cache-hit != 'true'
+        run: node sim/developer-fixture.mjs
       - name: Capture the actual tested baseline
+        if: steps.baseline_cache.outputs.cache-hit != 'true'
         env:
           CRITIC_SHOT: .local/api-development/before.png
+          DEVELOPMENT_FIXTURE: .local/api-development/fixture.json
+          DEVELOPMENT_VIEWS: .local/api-development/before
+          CRITIC_REPORT: .local/api-development/baseline-report.json
         run: node sim/shoot.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: developer-baseline
-          path: .local/api-development/before.png
+          path: |
+            .local/api-development/before*.png
+            .local/api-development/fixture.json
+            .local/api-development/baseline-report.json
           include-hidden-files: true
           retention-days: 7
   propose:
@@ -50,6 +72,8 @@ jobs:
         with:
           name: developer-baseline
           path: .local/api-development
+      - name: Load retained draft and prior feedback
+        run: node sim/developer-memory.mjs load
       - name: Propose through Gemini free-tier project
         env:
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
@@ -83,19 +107,28 @@ jobs:
           name: developer-proposal
           path: .local/api-development
       - run: node sim/developer.mjs apply
-      - run: node --test sim/*.test.mjs
-      - run: node sim/verify.mjs
-      - run: npm run build
+      - name: Fixed checks with actionable failure evidence
+        run: node sim/developer-checks.mjs
       - name: Existing boot and completed-frame gate
         env:
           CRITIC_SHOT: .local/api-development/after.png
+          DEVELOPMENT_FIXTURE: .local/api-development/fixture.json
+          DEVELOPMENT_VIEWS: .local/api-development/after
+          CRITIC_REPORT: .local/api-development/baseline-report.json
         run: node sim/shoot.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: developer-validation-image
-          path: .local/api-development/after.png
+          path: .local/api-development/after*.png
           retention-days: 7
           include-hidden-files: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developer-check-results
+          path: .local/api-development/validation.json
+          include-hidden-files: true
+          retention-days: 7
   review:
     needs: [propose, validate]
     runs-on: ubuntu-latest
@@ -131,6 +164,8 @@ jobs:
           retention-days: 7
           include-hidden-files: true
   publish:
+    outputs:
+      released: ${{ steps.release.outputs.released }}
     needs: [propose, validate, review]
     if: github.ref == 'refs/heads/main' && vars.FREE_API_CONFIRMED == 'true'
     runs-on: ubuntu-latest
@@ -151,7 +186,50 @@ jobs:
         with:
           name: developer-visual-review
           path: .local/api-development
-      - name: Publish only an approved unchanged-base candidate
+      - name: Publish only a completed unchanged-base stage
+        id: release
         env:
           EXPECTED_SHA: ${{ github.sha }}
         run: node sim/developer-publish.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: developer-publication
+          path: .local/api-development/publication.json
+          include-hidden-files: true
+          retention-days: 7
+  remember:
+    needs: [baseline, propose, validate, review, publish]
+    if: always() && github.ref == 'refs/heads/main' && vars.FREE_API_CONFIRMED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # Trusted JSON-only writer: candidate source is never executed here.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: developer-*
+          merge-multiple: true
+          path: .local/api-development
+      - name: Preserve useful drafts and every attempt's feedback
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+          DEVELOPMENT_RESULT: ${{ needs.publish.result }}
+        run: node sim/developer-memory.mjs save
+  deploy:
+    needs: publish
+    if: needs.publish.outputs.released == 'true'
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/settlement.yml
+    with:
+      skip_critic: true
+    secrets: inherit

@@ -287,19 +287,6 @@ export const EXTRA_PROJECTS = [
       "building_market_red",
       "building_market_green"
     ]
-  },
-  {
-    "key": "monolith_sacred_enclosure",
-    "dim": "monolith_sanctuary",
-    "want": "to enclose the rune stone circle with formal stone boundaries",
-    "needs": 55,
-    "place": "shrine",
-    "tag": "sacred",
-    "n": 3,
-    "kinds": [
-      "fence_stone_straight",
-      "building_well_green"
-    ]
   }
 ];
 
@@ -367,13 +354,6 @@ export const EXTRA_DIMENSIONS = [
     "why": "The area around the upper houses lacks active market structures or trade hubs, leaving visual voids in the residential quarter.",
     "tag": "accent",
     "target": 40
-  },
-  {
-    "key": "hillside_procession",
-    "name": "Hillside Procession",
-    "why": "The long stair path ascending the castle hill is a bare stone strip without heraldry or structural framing.",
-    "tag": "accent",
-    "target": 80
   }
 ];
 

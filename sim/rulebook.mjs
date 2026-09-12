@@ -232,6 +232,48 @@ export const EXTRA_PROJECTS = [
       "fence_wood_straight",
       "fence_wood_straight_gate"
     ]
+  },
+  {
+    "key": "shrine_votive_offerings",
+    "dim": "monolith_sanctity",
+    "want": "to line the sacred monolith with votive vessels and ritual markers",
+    "needs": 35,
+    "place": "shrine",
+    "tag": "sacred",
+    "n": 4,
+    "kinds": [
+      "bucket_water",
+      "barrel",
+      "resource_stone",
+      "flag_yellow"
+    ]
+  },
+  {
+    "key": "monolith_stone_enclosure",
+    "dim": "monolith_sanctity",
+    "want": "to frame the carved monolith plaza with decorative stone boundaries",
+    "needs": 50,
+    "place": "shrine",
+    "tag": "sacred",
+    "n": 3,
+    "kinds": [
+      "fence_stone_straight"
+    ]
+  },
+  {
+    "key": "riverbank_boulder_accent",
+    "dim": "waterfront_flourish",
+    "want": "to naturalize the muddy shoreline with stone riverbank edging",
+    "needs": 40,
+    "place": "rim",
+    "tag": "edge",
+    "n": 4,
+    "kinds": [
+      "rock_single_A",
+      "rock_single_B",
+      "rock_single_C",
+      "rock_single_D"
+    ]
   }
 ];
 
@@ -278,6 +320,20 @@ export const EXTRA_DIMENSIONS = [
     "why": "The broad central thoroughfares offer no public gathering stages or fenced enclosure to structure civic life.",
     "tag": "tall",
     "target": 35
+  },
+  {
+    "key": "monolith_sanctity",
+    "name": "Monolith Sanctity",
+    "why": "The carved stone monolith is the focal gathering point of the town, yet it lacks votive vessels, banners, or decorative stone borders to elevate it to a proper shrine.",
+    "tag": "sacred",
+    "target": 80
+  },
+  {
+    "key": "waterfront_flourish",
+    "name": "Waterfront Edge Detail",
+    "why": "The river bank leading up to the stone bridge is stark dirt meeting bare water without reed beds or riverbank rock lining.",
+    "tag": "edge",
+    "target": 60
   }
 ];
 
@@ -288,6 +344,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-12",
+    "seen": "The large carved stone monolith dominating the central plaza sits on unbordered cobbles without sacred offerings or boundary markers, while the riverbank beside the stone bridge remains a bare dirt drop into open water.",
+    "added": "monolith_sanctity, waterfront_flourish, shrine_votive_offerings, monolith_stone_enclosure, bridgehead_waterplants, riverbank_boulder_accent"
+  },
   {
     "at": "2026-09-11",
     "seen": "Skyline is the only score still behind, and the critic's heraldry jobs never get taken because they share the tall tag and already read as finished. The outskirts have no mills or taller keeps, only the same flags and watchposts.",

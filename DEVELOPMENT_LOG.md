@@ -432,3 +432,21 @@ passed every original gate: completed median/p95 23.2/35.23ms control and
 21.74/38.22ms release; CPU 8.4/13.1ms control and 6.8/11.5ms release. Full walking
 route passed at 0.0245m error. Both failed and successful measurements are retained
 in local evidence; this remains a compatibility repair, not a speedup claim.
+
+## September 12 — unblock review views and avoid duplicate unchanged checks
+
+The restored renderer passed the cloud opening-frame gate, but development run
+34718496685 exhausted the separate 90-second walking-view preparation budget.
+Additional screenshots now stream terrain without submitting disposable loading
+frames, restore rendering in a finally block, and complete two real GPU frames
+before capture. The opening startup, 60 measured frames, thresholds, final
+capture and walking-route contract are unchanged. Tests cover successful frame
+completion and renderer restoration after a streaming failure. Full local shoot
+passes (20.55/35.31ms completed median/p95; route error 0.0245m).
+
+Deployment now records the rulebook hash after the first full validation and
+only repeats build/render validation if the critic or pruning actually changes
+that validated rulebook. Changed rules still receive the full original checks
+and rollback behavior. This avoids a second identical several-minute software
+render after unavailable/no-change critic calls. Baseline cache keys include the
+new screenshot preparation helper.

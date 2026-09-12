@@ -25,7 +25,7 @@ jobs:
             .local/api-development/before*.png
             .local/api-development/fixture.json
             .local/api-development/baseline-report.json
-          key: world-baseline-v4-${{ runner.os }}-${{ hashFiles('src/**', 'public/**', 'index.html', 'package-lock.json', 'sim/shoot.mjs', 'sim/gpu-frame.mjs', 'sim/capture-world.mjs', 'state/settlement.json', 'state/report.json', 'sim/developer-fixture.mjs', 'sim/sky.mjs', 'sim/place.mjs') }}
+          key: world-baseline-v4-${{ runner.os }}-${{ hashFiles('src/**', 'public/**', 'index.html', 'package-lock.json', 'sim/shoot.mjs', 'sim/prepare-view.mjs', 'sim/gpu-frame.mjs', 'sim/capture-world.mjs', 'state/settlement.json', 'state/report.json', 'sim/developer-fixture.mjs', 'sim/sky.mjs', 'sim/place.mjs') }}
       - uses: actions/setup-node@v4
         if: steps.baseline_cache.outputs.cache-hit != 'true'
         with:

@@ -1,3 +1,4 @@
+import {prepareView} from './prepare-view.mjs';
 /**
  * Boot the world on a machine with no screen, prove it works, and photograph it.
  *
@@ -219,13 +220,7 @@ if (process.env.DEVELOPMENT_VIEWS) {
       if(v.walk){w.walk.enter();Object.assign(w.walk.position,{x:v.x,y:v.y,z:v.z});w.walk.motion.stop();w.walk.yaw=Math.atan2(v.x-v.tx,v.z-v.tz);w.walk.pitch=.06;w.walk.tick(0);}
       else w.look(v.distance,v.x,v.z);
     },{...view,y:walkingHeightAt(view.x,view.z)});
-    const until=Date.now()+90000;let stable=0;
-    while(stable<2){
-      const pending=await page.evaluate(()=>{window.__world.step(1);return window.__world.terrain.pendingVisible;});
-      await finishGpuFrame(page,{timeout:Math.max(1,until-Date.now())});
-      stable=pending===0?stable+1:0;
-      if(Date.now()>until)throw Error('Milestone view did not settle: '+view.name);
-    }
+    await prepareView(page);
     writeFileSync(process.env.DEVELOPMENT_VIEWS+'-'+view.name+'.png',await captureWorld(page));
   }
   const points=Array.from({length:Math.ceil(APPROACH_LENGTH/.1)+1},(_,i)=>{const p=approachPoint(Math.min(APPROACH_LENGTH,i*.1));return {...p,y:walkingHeightAt(p.x,p.z)};});

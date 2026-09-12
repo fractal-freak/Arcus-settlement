@@ -74,6 +74,9 @@ jobs:
       - name: Boot it and photograph it
         run: node sim/shoot.mjs
 
+      - name: Record the validated rulebook
+        run: git hash-object sim/rulebook.mjs > "$RUNNER_TEMP/validated-rulebook"
+
       # ── The critic, and the gate ─────────────────────────────────────────
       #
       # `continue-on-error` because a model being unavailable is not a reason
@@ -107,11 +110,22 @@ jobs:
           echo "::warning::the critic's rulebook was refused; keeping the last good one"
           git checkout -- sim/rulebook.mjs
 
+      - name: Check whether the validated world changed
+        id: rules
+        run: |
+          if [ "$(git hash-object sim/rulebook.mjs)" = "$(cat "$RUNNER_TEMP/validated-rulebook")" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rebuild with whatever survived
+        if: steps.rules.outputs.changed == 'true'
         run: |
           npm run build
 
       - name: Prove it still runs
+        if: steps.rules.outputs.changed == 'true'
         id: runs
         continue-on-error: true
         run: node sim/shoot.mjs

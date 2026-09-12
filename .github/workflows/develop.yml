@@ -9,7 +9,33 @@ concurrency:
   group: api-world-development
   cancel-in-progress: false
 jobs:
+  baseline:
+    if: vars.FREE_API_CONFIRMED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Capture the actual tested baseline
+        env:
+          CRITIC_SHOT: .local/api-development/before.png
+        run: node sim/shoot.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: developer-baseline
+          path: .local/api-development/before.png
+          include-hidden-files: true
+          retention-days: 7
   propose:
+    needs: baseline
     if: vars.FREE_API_CONFIRMED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -20,6 +46,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: developer-baseline
+          path: .local/api-development
       - name: Propose through Gemini free-tier project
         env:
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}

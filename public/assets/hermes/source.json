@@ -1,0 +1,14 @@
+{
+  "title": "Hermes, Antinoos fra Belvedere",
+  "object": "SMK KAS1161",
+  "institution": "Statens Museum for Kunst, National Gallery of Denmark",
+  "catalogue": "https://open.smk.dk/artwork/image/KAS1161",
+  "metadata": "https://api.smk.dk/api/v1/art?object_number=KAS1161",
+  "sourceDownload": "https://api.smk.dk/api/v1/download-3d/0v838549t_KAS1161_small.stl",
+  "rights": "https://creativecommons.org/publicdomain/mark/1.0/",
+  "public_domain": true,
+  "retrieved": "2026-09-12",
+  "sourceSha256": "49abb747541735d476c81d414e440d2030249e678825e559a873270d7af373e8",
+  "derivedSha256": "cc30a10f6f346935dd9bdba42b536adf021f168a379c439bb9bccd5682e7442f",
+  "processing": "Museum cast scan; display plinth and foot extremities removed, fracture capped, decimated to 99,999 triangles; deterministic geometric occlusion baked to vertex colors. Exported four units tall before the common 5.0 world scale; fallen orientation and burial are fictional game presentation."
+}

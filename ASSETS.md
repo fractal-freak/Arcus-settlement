@@ -157,9 +157,25 @@ The palace causeway, arched spandrels, flared abutments, worn paving, and connec
 
 ## The Buried Messenger — Hermes excavation
 
-`src/three/hermes3d.js` is original procedural sculpture and site furniture:
-a fallen wing-helmeted Hermes, carved drapery, fractured forearm, winged sandal,
-survey ropes, timber boards, finds trays and spoil heaps. No external statue
-model or reference image is included. The sculpture reuses the existing CC0
-sanctuary rock scans through `villageMaterials.js`; geometry and material
-arrangement are original project work, dedicated to CC0.
+The statue is an optimized public-domain museum scan of **Hermes, Antinoos fra
+Belvedere**, SMK KAS1161, from Statens Museum for Kunst (National Gallery of Denmark).
+It is a scan of the museum's plaster cast of the ancient marble sculpture,
+not a scan of a freshly excavated artifact. The burial scene is fictional.
+
+- Catalogue: https://open.smk.dk/artwork/image/KAS1161
+- Primary metadata: https://api.smk.dk/api/v1/art?object_number=KAS1161
+- STL: https://api.smk.dk/api/v1/download-3d/0v838549t_KAS1161_small.stl
+- Rights: public domain, https://creativecommons.org/publicdomain/mark/1.0/
+  (the museum API explicitly marks KAS1161 public_domain=true and supplies the 3D file).
+- Local derivative: `public/assets/hermes/belvedere-hermes.glb`; provenance and
+  checksums: `public/assets/hermes/source.json`.
+
+`tools/prepare-hermes.py` removes the display plinth and foot extremities, closes
+and roughens the ankle break, reduces the scan to 99,999 triangles, and bakes
+geometric occlusion to vertex colors. The four-unit export uses the common 5.0
+world scale. `tools/measure-hermes.mjs` derives the exposed collision profile.
+
+The statue reuses the existing CC0 sanctuary rock scans through villageMaterials.js.
+Its mineral/soil patina shader, fallen placement, marble chips, ropes, boards,
+finds trays and spoil heaps are original project work, dedicated to CC0. The old
+procedural face/body, horn-like wings and detached sandal have been removed.

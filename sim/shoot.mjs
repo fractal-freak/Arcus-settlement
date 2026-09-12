@@ -29,6 +29,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { extname, join, dirname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { createHash } from 'node:crypto';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', 'dist');
@@ -67,6 +68,9 @@ const TYPES = {
 
 const server = createServer(async (req, res) => {
   const path = decodeURIComponent(req.url.split('?')[0]);
+  // Modern Chromium requests an optional tab icon even though the page does
+  // not declare one. Serve an empty icon response; missing game assets still fail.
+  if (path === '/favicon.ico') { res.writeHead(204).end(); return; }
   const file = join(ROOT, normalize(path === '/' ? '/index.html' : path));
   if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
   // Read BEFORE answering: writing the header first and then failing to find
@@ -84,12 +88,37 @@ const url = `http://127.0.0.1:${server.address().port}/`;
 // Kevin's Mac by a long way, which is why the budget check below is a share of
 // frames rather than an absolute median — it catches "this got much worse",
 // which is the thing worth catching, without pretending a runner is a laptop.
-const browser = await chromium.launch({
+let browser;
+try {
+browser = await chromium.launch({
+  // The full bundled browser uses modern headless mode on the Mac. The
+  // headless shell can fall back to extremely slow software rasterisation.
+  channel: process.platform === 'darwin' && !process.env.CI ? 'chromium' : undefined,
   args: process.platform === 'darwin' && !process.env.CI ? []
     : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-dev-shm-usage'],
 });
 // Small on purpose: every pixel of this is rasterised on a CPU.
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+const reviewDir = process.env.DESIGN_REVIEW_DIR;
+let reviewFixture;
+if (reviewDir) {
+  reviewFixture = await readFile(process.env.DESIGN_FIXTURE, 'utf8');
+  await page.route('**/state/settlement.json', route => route.fulfill({ contentType: 'application/json', body: reviewFixture }));
+  // Freeze wall time only. Keep real timers/performance for worker streaming
+  // and frame measurement, and leave RAF under the explicit step() harness.
+  await page.addInitScript(now => {
+    let seed = 0x5e771e;
+    Math.random = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const RealDate = Date;
+    window.Date = class extends RealDate {
+      constructor(...args) { super(...(args.length ? args : [now])); }
+      static now() { return now; }
+    };
+  }, JSON.parse(reviewFixture).now);
+}
 
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
@@ -109,50 +138,50 @@ page.on('console', (m) => {
 // Keep the animation clock deterministic; step() still runs the real frame body.
 await page.addInitScript(() => { window.requestAnimationFrame = () => 0; });
 await page.goto(url, { waitUntil: 'load' });
-await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000 });
+await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000, polling: 100 });
 
-const report = await page.evaluate(async () => {
-  const w = window.__world;
-  // Enough to stream the ground and download every model, and no more —
-  // software rendering makes each of these expensive and this has to finish
-  // inside a scheduled job, not inside an afternoon.
-  w.look(34, -4, 8);
-  // Worker replies require an event-loop turn; synchronous batches cannot load terrain.
-  const deadline = performance.now() + 90000;
-  do {
+// Pace from Node: background browsers can suspend page timers even while
+// explicit evaluate/step calls still work. Time only the real frame body.
+const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+await page.evaluate(() => window.__world.look(34, -4, 8));
+const deadline = Date.now() + 90000;
+while (true) {
+  const status = await page.evaluate(() => {
+    const w = window.__world;
     w.step(1);
-    await new Promise(r => setTimeout(r, 5));
-    if (performance.now() > deadline) throw new Error('The opening view did not finish loading: ' + JSON.stringify({stats:w.stats(),startup:w.startup,feedReady:!!w.feed.data,assetsReady:w.built.ready && w.folk.ready && w.people.ready && w.landmarks.ready}));
-  // Background tiles continue streaming after entry. Readiness means the current
-  // view is complete, matching the app's loading gate, not an empty distant queue.
-  } while (!w.startup?.complete || w.terrain.pendingVisible > 0);
-  for (let i = 0; i < 10; i++) { w.step(1); await new Promise(r => setTimeout(r, 0)); }
-
-  const t = [];
-  for (let i = 0; i < 60; i++) {
-    const a = performance.now(); w.step(1); t.push(performance.now() - a);
-    // Give the GPU and browser time to present, instead of queuing sixty frames in one task.
-    await new Promise(r => setTimeout(r, 16));
-  }
-  t.sort((a, b) => a - b);
-  const s = w.stats();
+    return { ready: w.startup?.complete, pending: w.terrain.pendingVisible, stats: w.stats() };
+  });
+  if (status.ready && status.pending === 0) break;
+  if (Date.now() > deadline) throw new Error('Opening view did not load: ' + JSON.stringify(status));
+  await pause(5);
+}
+for (let i = 0; i < 10; i++) {
+  await page.evaluate(() => window.__world.step(1));
+  await pause(1);
+}
+const timings = [];
+for (let i = 0; i < 60; i++) {
+  timings.push(await page.evaluate(() => {
+    const start = performance.now();
+    window.__world.step(1);
+    return performance.now() - start;
+  }));
+  await pause(16);
+}
+timings.sort((a, b) => a - b);
+const report = await page.evaluate(t => {
+  const w = window.__world, s = w.stats();
   const gl = w.stage.renderer.getContext();
   const debug = gl.getExtension('WEBGL_debug_renderer_info');
   return {
     backend: gl.getParameter(debug?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER),
-    median: +t[30].toFixed(2),
-    p95: +t[57].toFixed(2),
-    max: +t[59].toFixed(2),
+    median: +t[30].toFixed(2), p95: +t[57].toFixed(2), max: +t[59].toFixed(2),
     startupMs: Math.round(w.startup.readyAt - w.startup.startedAt),
-    chunks: s.chunks,
-    triangles: s.triangles,
-    drawCalls: s.drawCalls,
-    ready: w.startup.complete,
-    terrainWorker: s.terrainWorker,
-    pendingVisible: s.pendingVisible,
-    placed: (w.built?._pending ?? []).length,
+    chunks: s.chunks, triangles: s.triangles, drawCalls: s.drawCalls,
+    ready: w.startup.complete, terrainWorker: s.terrainWorker,
+    pendingVisible: s.pendingVisible, placed: (w.built?._pending ?? []).length,
   };
-});
+}, timings);
 
 console.log('Frame check:', JSON.stringify(report));
 mkdirSync(join(HERE, '..', 'state'), { recursive: true });
@@ -161,8 +190,41 @@ mkdirSync(dirname(OUT), { recursive: true });
 // frame is slow enough that Playwright's default patience runs out first.
 writeFileSync(OUT, await page.screenshot({ type: 'png', timeout: 180_000, animations: 'disabled', caret: 'initial' }));
 
-await browser.close();
-server.close();
+if (reviewDir) {
+  // Fixed composition, not whatever camera angle the last operator left behind.
+  const views = [
+    { name: 'overview', distance: 95, x: -22, z: -12, azimuth: 0.65 },
+    { name: 'stone', distance: 24, x: 0, z: 0, azimuth: 0.45 },
+    { name: 'gatehouse', distance: 25, x: -55, z: -29, azimuth: 0.08 },
+  ];
+  for (const view of views) {
+    await page.evaluate(v => {
+      const w = window.__world;
+      w.look(v.distance, v.x, v.z);
+      const camera = w.stage.camera, target = w.rig.target;
+      const horizontal = Math.hypot(camera.position.x - target.x, camera.position.z - target.z);
+      camera.position.x = target.x + Math.sin(v.azimuth) * horizontal;
+      camera.position.z = target.z + Math.cos(v.azimuth) * horizontal;
+      w.rig.controls.update();
+    }, view);
+    const viewDeadline = Date.now() + 90000;
+    let settled = 0;
+    while (settled < 20) {
+      const pending = await page.evaluate(() => {
+        window.__world.step(1);
+        return window.__world.terrain.pendingVisible;
+      });
+      settled = pending === 0 ? settled + 1 : 0;
+      if (Date.now() > viewDeadline) throw new Error('Review view did not load: ' + view.name);
+      await pause(10);
+    }
+    writeFileSync(join(reviewDir, `${view.name}.png`), await page.screenshot({ timeout: 180000 }));
+  }
+  writeFileSync(join(reviewDir, 'evidence.json'), JSON.stringify({
+    fixtureSha256: createHash('sha256').update(reviewFixture).digest('hex'), seed: '0x5e771e',
+    viewport: { width: 900, height: 600 }, views, performance: report,
+  }, null, 2));
+}
 
 /**
  * Baselines are kept PER MACHINE, and the first version was not.
@@ -207,6 +269,10 @@ if (!problems.length) {
 if (problems.length) {
   console.error('REFUSED:');
   for (const p of problems) console.error('  ·', p);
-  process.exit(1);
+  process.exitCode = 1;
 }
-console.log('world runs');
+else console.log('world runs');
+} finally {
+  await browser?.close();
+  server.close();
+}

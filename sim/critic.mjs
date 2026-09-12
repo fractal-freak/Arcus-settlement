@@ -47,6 +47,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { criticContext } from './critic-context.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const RULEBOOK = join(HERE, 'rulebook.mjs');
@@ -176,14 +177,13 @@ const statePath = process.env.SETTLEMENT_STATE || join(HERE, '..', 'state', 'set
 const shotPath = process.env.CRITIC_SHOT || join(HERE, '..', 'state', 'world.png');
 
 const saved = JSON.parse(readFileSync(statePath, 'utf8'));
-const byTag = {};
-for (const p of saved.placements ?? []) byTag[p.tag] = (byTag[p.tag] ?? 0) + 1;
+const context = criticContext(saved);
 
 const existing = await import('./rulebook.mjs');
 const shot = existsSync(shotPath) ? readFileSync(shotPath).toString('base64') : null;
 if (!shot) console.log('no screenshot — the critic will be working blind');
 
-const answer = await ask({ quality: saved.quality, byTag, journal: existing.JOURNAL.slice(0, 12) }, shot);
+const answer = await ask({ ...context, journal: existing.JOURNAL.slice(0, 12) }, shot);
 if (!answer) process.exit(0);                    // nothing written, nothing broken
 
 write(existing, answer);

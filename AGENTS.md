@@ -93,7 +93,18 @@ node sim/shoot.mjs     # the world boots headlessly and is not slower
 The scheduled job runs all three anyway and refuses anything that fails, but
 finding out here is faster than finding out in twenty minutes.
 
-## What the AI is allowed to write
+## Two separate kinds of AI work
+
+Kevin authorized a broader recurring development loop on September 12, 2026.
+The Codex development task may improve this repository's engine, rendering,
+terrain, interactions, sound, tests and tooling, following ART_DIRECTION.md
+and DEVELOPMENT.md. Preserve unrelated work in progress. This authorization
+does not extend to the separate Arcus product or to private session data.
+
+The half-hourly API critic retains the narrower permissions below. It is a
+citizen-job generator, not the development task.
+
+## What the half-hourly critic is allowed to write
 
 `sim/rulebook.mjs`, and nothing else — new jobs for the citizens and new things
 for the town to care about. It cannot reach the renderer, the terrain or the
@@ -103,7 +114,8 @@ job must find real ground in fifty real attempts. Anything refused is reverted
 and the last good rulebook kept.
 
 If you want the citizens to be able to do something new, that is where it goes.
-If they want something the engine cannot do yet, the engine is a human job.
+If they want something the engine cannot do yet, it belongs in the separate
+development loop; never give the API critic arbitrary source execution.
 
 ## What must never be published
 

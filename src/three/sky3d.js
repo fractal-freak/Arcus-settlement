@@ -79,6 +79,7 @@ const moteVert = `
   attribute float aSeed;
   uniform float uTime;
   varying float vSeed;
+  varying float vVisibility;
   void main() {
     vSeed = aSeed;
     // A slow rise, wrapping back to the bottom of its own band, plus a lazy
@@ -90,27 +91,21 @@ const moteVert = `
     p.z += cos(uTime * 0.33 + aSeed * 30.0) * 0.6;
     vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mvPosition;
-    // Perspective size falloff, and a fade for anything that has drifted
-    // uncomfortably close to the near plane rather than a mote suddenly
-    // filling the screen.
-    // Clamped, not just floored — a mote can genuinely drift within a couple
-    // of units of the camera (MOTE_RADIUS is 16, well inside typical camera
-    // distance), and 24.0 / dist blows up hard as dist approaches zero. One
-    // point sized in the thousands still only costs one draw call, but its
-    // fragment shader then runs across most of the screen every frame —
-    // measured live: median frame time 8ms with this line fixed, 46ms
-    // without it, on a scene that was not otherwise any different.
+    // Pollen should catch the light without becoming a veil of white flakes.
+    // Fade near the lens and cap the projected size, including at close zoom.
     float dist = clamp(-mvPosition.z, 6.0, 400.0);
-    gl_PointSize = min(30.0, (5.0 + aSeed * 3.0) * (24.0 / dist));
+    vVisibility = smoothstep(3.0, 9.0, -mvPosition.z);
+    gl_PointSize = min(6.0, (1.2 + aSeed * 1.6) * (24.0 / dist));
   }
 `;
 const moteFrag = `
   uniform vec3 uColor;
   uniform float uOpacity;
   varying float vSeed;
+  varying float vVisibility;
   void main() {
     float d = length(gl_PointCoord - 0.5);
-    float alpha = smoothstep(0.5, 0.05, d) * uOpacity * (0.5 + vSeed * 0.5);
+    float alpha = (1.0 - smoothstep(0.05, 0.5, d)) * uOpacity * (0.5 + vSeed * 0.5) * vVisibility;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(uColor, alpha);
   }
@@ -187,7 +182,7 @@ export class Sky3D {
       uniforms: {
         uTime: { value: 0 },
         uColor: { value: new Color(0xfff3d0) },
-        uOpacity: { value: 0.5 },
+        uOpacity: { value: 0.22 },
       },
       vertexShader: moteVert,
       fragmentShader: moteFrag,
@@ -249,7 +244,7 @@ export class Sky3D {
     // lake to grey — not the water material. Same night/day range, capped
     // lower so a cloud never gets dense enough to blank out what is behind it.
     this.cloudMat.uniforms.uOpacity.value = 0.34 + 0.28 * l;
-    this.moteMat.uniforms.uOpacity.value = 0.28 + 0.3 * l;
+    this.moteMat.uniforms.uOpacity.value = 0.08 + 0.14 * l;
   }
 
   update(dtMs, target) {

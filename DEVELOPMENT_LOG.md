@@ -91,3 +91,30 @@ The verifier also pruned two unreachable goals already present on remote main.
 
 Evidence: .local/hermes-scan/{overhead,excavation,face}.png in the shared checkout.
 Release: verified locally and prepared on codex/hermes-scan for publication.
+
+## September 12, 2026 — Preserve the real frame for CI capture
+
+The isolated Linux diagnostic 34682603315 produced a valid world screenshot
+and passed the unchanged performance gate using a buffered capture. Inspected
+the downloaded image: actual terrain, buildings, citizens and HUD are present.
+The shell/modern-browser comparisons failed during startup; they do not prove
+a rendering-speed improvement. The buffered job measured 19.4 ms median and
+16,754.4 ms p95 on SwiftShader against 26 / 25,859.1 in the saved CI baseline.
+Software rendering remains very slow and these numbers do not describe normal
+GPU play. Changing browser channels alone was not accepted as a fix.
+
+Added sim/capture-world.mjs: execute one real world step, read the WebGL canvas
+immediately before its drawing buffer is discarded, decode those actual pixels
+as an image for Chromium's page capture, then restore the original canvas.
+The HUD remains in the screenshot and multi-view reviews can continue. Readback
+and screenshot share the existing 180-second deadline. No scene settings,
+quality thresholds, browser choices or startup limits changed. The diagnostic
+workflow was deliberately excluded from this release.
+
+All 29 isolated tests, strict rulebook verification, build and the real review
+passed. Inspected all four local views to verify canvas restoration and HUD
+composition. M4 Pro check: median 6.0 ms / p95 9.8 ms, no pending visible
+terrain. Game source and public feed are unchanged. Release prepared on
+codex/capture-release for the normal pipeline; verify that run before reporting
+publication. The worked-earth candidate and concurrent local game work remain
+separate. Continue with castle/village/possessions once publication recovers.

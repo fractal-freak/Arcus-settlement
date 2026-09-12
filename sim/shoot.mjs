@@ -24,6 +24,7 @@
  */
 
 import { createServer } from 'node:http';
+import { captureWorld } from './capture-world.mjs';
 import { readFile } from 'node:fs/promises';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { extname, join, dirname, normalize } from 'node:path';
@@ -188,7 +189,7 @@ mkdirSync(join(HERE, '..', 'state'), { recursive: true });
 mkdirSync(dirname(OUT), { recursive: true });
 // Generous, and no waiting on fonts: capturing a software-rendered WebGL
 // frame is slow enough that Playwright's default patience runs out first.
-writeFileSync(OUT, await page.screenshot({ type: 'png', timeout: 180_000, animations: 'disabled', caret: 'initial' }));
+writeFileSync(OUT, await captureWorld(page));
 
 if (reviewDir) {
   // Fixed composition, not whatever camera angle the last operator left behind.
@@ -218,7 +219,7 @@ if (reviewDir) {
       if (Date.now() > viewDeadline) throw new Error('Review view did not load: ' + view.name);
       await pause(10);
     }
-    writeFileSync(join(reviewDir, `${view.name}.png`), await page.screenshot({ timeout: 180000 }));
+    writeFileSync(join(reviewDir, `${view.name}.png`), await captureWorld(page));
   }
   writeFileSync(join(reviewDir, 'evidence.json'), JSON.stringify({
     fixtureSha256: createHash('sha256').update(reviewFixture).digest('hex'), seed: '0x5e771e',

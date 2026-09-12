@@ -2,8 +2,9 @@
  * The dig sites, and which one each archaeologist works.
  *
  * Every session standing in this world is an archaeologist — that is what the
- * dig crew's uniform has always meant — and when a session is WORKING, it is
- * working a site, not standing about on the square. The sites are the ruins
+ * dig crew's uniform has always meant. Excavation continues while its coding
+ * session waits; session status belongs to the ring above the character.
+ * The sites are the ruins
  * `terrain.js` already places: broken columns and a fallen slab, two per ten
  * thousand tiles, on a plateau or in a real forest clearing. Nothing new is
  * invented here; this file only finds what the land already has and says who
@@ -122,11 +123,22 @@ export function digFor(id) {
   const r = 0.9 + hash2(h, 11, 42) * 1.9;
   return {
     ...site,
+    center: { x: site.x, z: site.z },
     x: site.x + Math.cos(a) * r,
     z: site.z + Math.sin(a) * r,
     // Facing the trench, which is the middle of the site.
     look: Math.atan2(-Math.cos(a), -Math.sin(a)),
   };
+}
+
+/** Presence supplies the crew; coding-session activity does not stop a dig. */
+export function excavationCrew(people) {
+  const seen = new Set();
+  return (people ?? []).filter(p => {
+    if (!p || typeof p.id !== 'string' || !p.id || seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
 }
 
 function hashId(s) {

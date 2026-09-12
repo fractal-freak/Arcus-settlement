@@ -1,3 +1,4 @@
+import {makeCourtFlags} from './courtFlags3d.js';
 import { makeFieldstones } from './fieldstones3d.js';
 /** Worn fieldstones, each irregular, with moss filling their recessed joints. */
 import { Group, InstancedMesh, Object3D, Color, MeshStandardMaterial, IcosahedronGeometry,
@@ -12,8 +13,8 @@ import { sanctuaryMaterials, earthPalette } from './sanctuaryMaterials.js';
 export function makeSacredCourt() {
   const group = new Group(); group.name = 'Ancient moss-grown court';
   const maps = sanctuaryMaterials();
-  const stones = COURT_STONES;
-  group.add(makeFieldstones(stones));
+  const stones = COURT_STONES.filter(s=>Math.hypot(s.x,s.z)>8.1);
+  group.add(makeCourtFlags(),makeFieldstones(stones));
   // Thin damp moss bed shows through gaps, instead of bright bare-earth seams.
   const positions=[], uv=[], coverage=[];
   const step=.4, radius=SANCTUARY.pavingRadius;

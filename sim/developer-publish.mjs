@@ -4,7 +4,7 @@ import {readFile,appendFile,writeFile} from 'node:fs/promises';
 import {validateCandidate,applyCandidate} from './developer-policy.mjs';
 const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
 const dir='.local/api-development';
-const record=async(published,reason)=>{await writeFile(dir+'/publication.json',JSON.stringify({published,reason}));if(process.env.GITHUB_OUTPUT)await appendFile(process.env.GITHUB_OUTPUT,`released=${published}\n`);};
+const record=async(published,reason)=>{await writeFile(dir+'/publication.json',JSON.stringify({published,reason,stageComplete:published&&review.stageComplete===true}));if(process.env.GITHUB_OUTPUT)await appendFile(process.env.GITHUB_OUTPUT,`released=${published}\n`);};
 const review=JSON.parse(await readFile(dir+'/review.json','utf8'));
 const candidate=validateCandidate(JSON.parse(await readFile(dir+'/candidate.json','utf8')));
 if(review.approved!==true||!candidate.files.length){
@@ -31,4 +31,4 @@ git('commit','-m','Improve the world after API validation and visual review');
 git('push','origin','HEAD:main');
 console.log('Approved source published; settlement workflow handles deployment.');
 
-await record(true,'Completed stage published after validation and review.');
+await record(true,'Completed task published after validation and review.');

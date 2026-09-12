@@ -24,14 +24,16 @@
  *    load rather than assumed (see retarget()).
  */
 
-import { AnimationMixer, LoopRepeat, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial, Color } from 'three';
+import { AnimationMixer, LoopRepeat, LoopOnce, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial, Color, LatheGeometry, Vector2, SphereGeometry, TorusGeometry } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 const BASE = './assets/kaykit-characters/';
 
 /** The six the free tier ships. Picked per person by a stable hash, never at random. */
-export const KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barbarian'];
+const BASE_KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barbarian'];
+export const KINDS = [...BASE_KINDS, 'Witch', 'Wizard', 'Starfarer'];
+const BASE_KIND = { Witch:'Rogue', Wizard:'Mage', Starfarer:'Ranger' };
 
 /**
  * The dig crew's uniform: every active session wears this one.
@@ -46,15 +48,15 @@ export const KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barb
 export const DIG_CREW = 'Ranger';
 
 /** Everyone who is not on the dig — so a villager is never mistaken for crew. */
-export const VILLAGER_KINDS = ['Rogue', 'Rogue_Hooded'];
+export const VILLAGER_KINDS = ['Rogue', 'Witch', 'Ranger', 'Wizard', 'Starfarer', 'Rogue_Hooded', 'Knight', 'Barbarian'];
 
-const CLOTH=[0x706249,0x565c46,0x62544e,0x716d60,0x535c60,0x745b4f];
+const CLOTH=[0x416f69,0x69517e,0x944e51,0x456782,0x648052,0xa17c45];
 const citizenMaterials=new WeakMap();
-function citizenMaterial(source,seed,preserveSkin) {
+function citizenMaterial(source,seed,preserveSkin,alien=false) {
   let variants=citizenMaterials.get(source);
   if(!variants){variants=new Map();citizenMaterials.set(source,variants);}
   const index=Math.abs(Math.floor(seed))%CLOTH.length;
-  const key=`${index}-${preserveSkin}`;
+  const key=`${index}-${preserveSkin}-${alien}`;
   if(variants.has(key))return variants.get(key);
   const material=source.clone();material.roughness=1;material.metalness=0;
   material.onBeforeCompile=shader=>{
@@ -64,9 +66,10 @@ function citizenMaterial(source,seed,preserveSkin) {
       float high=max(diffuseColor.r,max(diffuseColor.g,diffuseColor.b));
       float low=min(diffuseColor.r,min(diffuseColor.g,diffuseColor.b));
       bool skin=${preserveSkin ? 'true' : 'false'} && diffuseColor.r>diffuseColor.g*1.15 && diffuseColor.g>diffuseColor.b*1.15;
+      if(skin && ${alien ? 'true' : 'false'}) diffuseColor.rgb=vec3(.28,.69,.64)*(.7+high*.5);
       if(!skin && high-low>.045){
         float lightness=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
-        diffuseColor.rgb=mix(diffuseColor.rgb,citizenCloth*(.65+lightness),.88);
+        diffuseColor.rgb=mix(diffuseColor.rgb,citizenCloth*(.65+lightness),.65);
       }
     `);
   };
@@ -95,7 +98,7 @@ const clips = new Map();  // clip name -> AnimationClip
 export function loadCharacters() {
   if (readyPromise) return readyPromise;
   readyPromise = Promise.all([
-    ...KINDS.map((k) => load(k).then((g) => models.set(k, g.scene))),
+    ...BASE_KINDS.map((k) => load(k).then((g) => models.set(k, g.scene))),
     ...ANIM_FILES.map((f) => load(f).then((g) => {
       for (const c of g.animations) if (!clips.has(c.name)) clips.set(c.name, c);
     })),
@@ -115,7 +118,7 @@ export function clipNames() { return [...clips.keys()]; }
  * everyone else for no reason anyone could see.
  */
 export function makeCharacter(kind, targetHeight, { background = false, appearanceSeed = 0 } = {}) {
-  const src = models.get(kind) ?? models.get(KINDS[0]);
+  const src = models.get(BASE_KIND[kind] ?? kind) ?? models.get(KINDS[0]);
   if (!src) return null;
   const root = skeletonClone(src);
 
@@ -123,11 +126,11 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
   let maxY = 0;
   root.traverse((o) => {
     if (!o.isMesh || !o.geometry) return;
-    if(background) {
+    if(background || BASE_KIND[kind]) {
       // These cape mesh names were inspected in the source GLBs. The rig,
       // body proportions and animation binding remain the authored assets.
-      if(/_Cape$/.test(o.name))o.visible=false;
-      o.material=Array.isArray(o.material)?o.material.map(m=>citizenMaterial(m,appearanceSeed,/Head|Arm/.test(o.name))):citizenMaterial(o.material,appearanceSeed,/Head|Arm/.test(o.name));
+      if(/_Cape$/.test(o.name) && !['Wizard','Witch','Starfarer'].includes(kind))o.visible=false;
+      o.material=Array.isArray(o.material)?o.material.map(m=>citizenMaterial(m,appearanceSeed,/Head|Arm/.test(o.name),kind==='Starfarer')):citizenMaterial(o.material,appearanceSeed,/Head|Arm/.test(o.name),kind==='Starfarer');
     }
     // A `background` character is drawn once and only once: no shadow-map
     // pass, and layer 1 to skip stage.js's depth-only pre-pass the same way
@@ -142,13 +145,42 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     maxY = Math.max(maxY, o.geometry.boundingBox.max.y);
   });
   const scale = maxY > 0 ? targetHeight / maxY : 1;
+  // Accessories are fitted to the measured bind-pose head, then parented to its bone.
+  if(kind==='Witch'||kind==='Starfarer') {
+    const headMesh=root.getObjectByName(`${BASE_KIND[kind]}_Head`);
+    const bounds=headMesh.geometry.boundingBox;
+    const crown=bounds.max.y, cx=(bounds.min.x+bounds.max.x)/2, cz=(bounds.min.z+bounds.max.z)/2;
+    const detail=new Group();detail.name=`${kind} regalia`;
+    const cloth=new MeshLambertMaterial({color:kind==='Witch'?0x493455:0xc2ae6f});
+    const gold=new MeshLambertMaterial({color:0xdab568});
+    const gem=new MeshLambertMaterial({color:0x73e4d1,emissive:0x123e38});
+    const add=(geo,mat,x,y,z)=>{const m=new Mesh(geo,mat);m.position.set(x,y,z);detail.add(m);return m;};
+    if(kind==='Witch') {
+      const brim=add(new CylinderGeometry(.64,.66,.045,32),cloth,cx,crown-.07,cz);brim.scale.z=.86;
+      const points=[[.43,0],[.4,.08],[.32,.24],[.23,.46],[.15,.65],[.075,.8],[0,.86]].map(([x,y])=>new Vector2(x,y));
+      const hat=add(new LatheGeometry(points,28),cloth,cx,crown-.05,cz);hat.rotation.z=-.16;
+      add(new CylinderGeometry(.39,.42,.1,28),gold,cx,crown+.03,cz);
+      const jewel=add(new SphereGeometry(.07,10,8),gem,cx,crown+.05,cz+.4);jewel.scale.z=.45;
+    }else {
+      for(const side of [-1,1]) {
+        const stem=add(new CylinderGeometry(.025,.035,.38,8),gold,cx+side*.25,crown+.08,cz);stem.rotation.z=-side*.35;
+        add(new SphereGeometry(.075,12,8),gem,cx+side*.31,crown+.27,cz);
+        const ring=add(new TorusGeometry(.1,.018,6,16),gold,cx+side*.4,crown-.35,cz);ring.rotation.y=Math.PI/2;
+      }
+    }
+    root.add(detail);root.updateMatrixWorld(true);
+    let head;root.traverse(o=>{if(o.isBone&&o.name==='head')head=o;});
+    head?.attach(detail);
+    detail.traverse(o=>{if(o.isMesh){o.castShadow=!background;if(background)o.layers.set(1);}});
+    root.userData.accessories=detail;
+  }
   root.scale.setScalar(scale);
 
   const mixer = new AnimationMixer(root);
   const actions = new Map();
   let current = null;
 
-  function play(name, { fade = 0.25, timeScale = 1 } = {}) {
+  function play(name, { fade = 0.25, timeScale = 1, once = false } = {}) {
     const clip = clips.get(name);
     if (!clip) return false;
     let action = actions.get(name);
@@ -159,6 +191,9 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     }
     action.timeScale = timeScale;
     if (current === action) return true;
+    action.setLoop(once ? LoopOnce : LoopRepeat, once ? 1 : Infinity);
+    action.clampWhenFinished = once;
+    action.enabled = true;
     action.reset().fadeIn(fade).play();
     if (current) current.fadeOut(fade);
     current = action;
@@ -207,9 +242,10 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     play,
     hold,
     bone,
+    get animation() { return current?.getClip().name ?? null; },
     /** Advance the animation. Seconds, not milliseconds. */
     update: (dt) => mixer.update(dt),
-    dispose: () => { mixer.stopAllAction(); mixer.uncacheRoot(root); },
+    dispose: () => { root.userData.accessories?.traverse(o=>{o.geometry?.dispose();}); mixer.stopAllAction(); mixer.uncacheRoot(root); },
   };
 }
 

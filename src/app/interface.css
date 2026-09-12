@@ -1,0 +1,132 @@
+/* The settlement's interface: one scale, one surface, one drawer. */
+:root{--ui-bg:#192321;--ui-raised:#24302c;--ui-line:#d8c9a326;--ui-text:#eeeade;--ui-muted:#b0bab2;--ui-gold:#cfb785;--ui-radius:16px;--ui-shadow:0 16px 48px #07100e55;--ui-bottom:88px;color-scheme:dark}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.ui-icon{display:block;width:20px;height:20px;flex-shrink:0}
+body button{touch-action:manipulation}
+body :focus-visible{outline:2px solid var(--ui-gold);outline-offset:3px}
+body #hud{position:fixed;inset:0 0 auto;min-height:68px;padding:18px 24px;display:flex;align-items:baseline;gap:14px;background:linear-gradient(#101b20d9,#101b2066,transparent);pointer-events:none;box-sizing:border-box}
+body #title{font:22px/1.2 "Iowan Old Style",Georgia,serif;letter-spacing:-.025em;color:var(--ui-text);white-space:nowrap}
+body #stat{font-size:11px;color:#e0e3d7b3;max-width:calc(100vw - 440px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body #sky{display:none}
+#world-tools{position:fixed;top:16px;right:20px;display:flex;gap:6px;z-index:40;padding:4px;background:var(--ui-bg);border:1px solid var(--ui-line);border-radius:12px;box-shadow:0 4px 18px #08110f22}
+body #world-tools button{position:static;display:flex;align-items:center;gap:8px;width:auto;min-height:38px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:var(--ui-text);font:500 12px/1.3 system-ui;box-shadow:none;letter-spacing:0;text-transform:none}
+body #journal-toggle::before{content:none}
+body #world-tools button:hover,body #world-tools button[aria-expanded=true]{background:var(--ui-raised);color:var(--ui-gold)}
+body .village-journal{position:static}
+body #crew-panel,body #village-work-panel,body #sound-panel,body #player-help,body #player-wardrobe{position:fixed;inset:80px 20px var(--ui-bottom) auto;z-index:38;margin:0;width:min(420px,calc(100vw - 40px));height:auto;max-height:none;box-sizing:border-box;overflow:auto;background:var(--ui-bg);color:var(--ui-text);border:1px solid var(--ui-line);border-radius:var(--ui-radius);box-shadow:var(--ui-shadow);font:13px/1.6 system-ui;transform:none;padding:24px;scrollbar-width:thin;scrollbar-color:#56665a var(--ui-bg);overscroll-behavior:contain}
+body #village-work-panel{display:flex;overflow:hidden;padding:0}
+body .world-panel[hidden]{display:none!important}
+body #player-hud{z-index:38}
+body .world-panel header,body #village-work-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:0;margin-bottom:20px}
+body #village-work-panel header{padding:24px 24px 0;margin-bottom:18px}
+body .world-panel h2,body #village-work-panel h2{font:28px/1.2 "Iowan Old Style",Georgia,serif;letter-spacing:-.025em;color:var(--ui-text);margin:0 0 6px;font-weight:400}
+body #village-work-panel h3{font:23px/1.3 "Iowan Old Style",Georgia,serif;color:var(--ui-text)}
+body .world-panel button{min-height:36px;border:1px solid var(--ui-line);border-radius:8px;padding:8px 12px;background:transparent;color:var(--ui-text);font:500 12px/1.4 system-ui;cursor:pointer}
+body .world-panel button:hover{background:var(--ui-raised);border-color:#d8c9a355}
+body .world-panel header button,body #village-work-panel .journal-close,body #sound-panel #sound-close{display:grid;place-items:center;flex-shrink:0;width:36px;height:36px;min-height:36px;padding:8px;border:1px solid var(--ui-line);border-radius:50%;background:transparent}
+body .journal-eyebrow,body .player-eyebrow{font:600 9px/1.5 system-ui;letter-spacing:.14em;color:var(--ui-gold);margin-bottom:6px}
+body #village-work-panel .journal-date{font-size:11px;color:var(--ui-muted);margin:0}
+body #village-work-panel nav{padding:0 24px 16px;gap:4px;border-bottom:1px solid var(--ui-line)}
+body #village-work-panel nav button{border:0;border-radius:6px;font-size:11px;min-height:36px;padding:7px 8px;color:var(--ui-muted)}
+body #village-work-panel button[aria-pressed=true]{background:var(--ui-raised);color:var(--ui-gold);border-color:#cfb78566}
+body .journal-search{padding:18px 24px 10px;font-size:11px;color:var(--ui-muted)}
+body .journal-search input{background:#101b18;border:1px solid var(--ui-line);border-radius:8px;padding:11px 12px;font:12px system-ui;color:var(--ui-text);margin-top:7px}
+body .journal-content{padding:16px 24px 24px;scrollbar-color:#56665a var(--ui-bg)}
+body .journal-intro,body .journal-card p,body .journal-meta,body #village-work-panel small{color:var(--ui-muted)}
+body .journal-card{border:0;border-top:1px solid var(--ui-line);border-radius:0;background:none;margin:0;padding:20px 0}
+body #village-work-panel .journal-person-link{color:var(--ui-gold);text-decoration:none;min-height:28px;font-size:12px;padding:0}
+body #village-work-panel .journal-person-link:hover{text-decoration:underline;background:none}
+body #village-work-panel h4{font-size:14px;font-weight:500;line-height:1.5;color:var(--ui-text)}
+body .journal-focus{border:1px solid var(--ui-line);border-left:2px solid var(--ui-gold);border-radius:8px;background:var(--ui-raised);padding:14px;margin:20px 0}
+body .journal-card progress{height:3px;background:#39473e}
+body #sound{position:static;display:inline-flex;align-items:center;background:var(--ui-raised);border:1px solid var(--ui-line);color:var(--ui-gold);padding:10px 14px;border-radius:8px;font:500 12px system-ui;letter-spacing:0;text-transform:none;min-height:40px}
+body #sound-state,body .sound-note,body .sound-condition{color:var(--ui-muted);font-size:12px}
+body .sound-row{padding:18px 0;border-top:1px solid var(--ui-line);gap:12px;font-size:13px}
+body .sound-row output{color:var(--ui-gold);font-variant-numeric:tabular-nums;font-size:11px}
+body #sound-panel .sound-row button{font-size:11px;min-height:32px}
+body #sound-panel footer{margin-top:24px}
+body #sound-loading{font-size:11px;color:var(--ui-muted)}
+body #camdock,body.player-mode #camdock{position:fixed;inset:auto auto 20px 50%;transform:translateX(-50%);display:flex;flex-wrap:nowrap;align-items:center;gap:4px;padding:6px;background:var(--ui-bg);border:1px solid var(--ui-line);border-radius:14px;box-shadow:var(--ui-shadow);z-index:40;max-width:calc(100vw - 24px)}
+body #camdock button,body #camdock button.home{height:42px;width:42px;border:0;border-radius:8px;background:transparent;box-shadow:none;color:var(--ui-text);font:500 12px system-ui}
+body #camdock button:hover{background:var(--ui-raised);color:var(--ui-gold)}
+body #camdock button.home{color:var(--ui-gold)}
+body #camdock #walkMode{background:var(--ui-gold);color:#192321;min-width:72px;padding:0 18px}
+body #camdock #camDigs{border-left:1px solid var(--ui-line);border-radius:0;padding:0 16px}
+body #hint{bottom:88px;left:50%;right:auto;transform:translateX(-50%);white-space:nowrap;font-size:10px;color:#f4f3e0bf;text-shadow:0 1px 6px #000}
+body #world-credits{bottom:25px!important;left:24px!important;color:#e2e4d0b3!important;font-size:10px!important;text-decoration:none}
+body #world-loading-status{bottom:94px!important;left:24px!important;max-width:calc(100vw - 48px);background:var(--ui-bg)!important;border:1px solid var(--ui-line);border-radius:8px!important}
+body .traveller-card{position:absolute;left:24px;bottom:82px;display:flex;align-items:center;gap:12px;padding:12px 14px;min-width:230px;border:1px solid var(--ui-line);border-radius:12px;background:var(--ui-bg);box-shadow:0 4px 18px #0002}
+body .traveller-card strong{font:18px "Iowan Old Style",Georgia,serif;color:var(--ui-text)}
+body .traveller-seal{display:grid;place-items:center;border:0;background:none;width:30px;height:30px;color:var(--ui-gold)}
+body #player-outfit{display:grid;place-items:center;align-self:center;width:36px;height:36px;margin-left:auto;border:1px solid var(--ui-line);border-radius:8px}
+body .player-toolbar{left:24px;bottom:28px;gap:6px}
+body .player-toolbar button{padding:10px 12px;min-height:40px;border:1px solid var(--ui-line);background:var(--ui-bg);font-size:11px!important;border-radius:8px}
+body #player-help p{font-size:13px;line-height:2;margin:18px 0;color:var(--ui-muted)}
+body .player-help-title{font:18px Georgia,serif;color:var(--ui-gold);margin-top:26px}
+body #player-help .controller-help{display:block;font-size:12px}
+body #player-wardrobe > div{gap:10px;margin-top:20px}
+body #player-wardrobe > div button{min-height:48px;font-size:12px}
+body #player-wardrobe button[aria-pressed=true]{border-color:var(--ui-gold);background:var(--ui-raised);color:var(--ui-gold)}
+body #player-interact{background:var(--ui-bg);border:1px solid #cfb78570;border-radius:12px;color:var(--ui-text)}
+body.panel-open #player-interact,body.panel-open #player-touch{visibility:hidden}
+body.player-mode #world-credits{display:none}
+body #village-conversation{inset:auto 20px 20px auto;width:min(520px,calc(100vw - 40px));max-height:calc(100dvh - 40px);padding:26px;background:var(--ui-bg);border:1px solid var(--ui-line);border-radius:var(--ui-radius);box-shadow:var(--ui-shadow);color:var(--ui-text)}
+body #village-conversation::backdrop{background:#08120f55}
+body .conversation-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--ui-line);border-radius:50%;padding:8px}
+body #conversation-sign{width:44px;height:44px;border-color:var(--ui-line);background:var(--ui-raised);font-size:25px;color:var(--ui-gold)}
+body #conversation-name{font:26px/1.2 "Iowan Old Style",Georgia,serif}
+body .conversation-speech{font-size:14px;color:var(--ui-text);line-height:1.8;margin:24px 0}
+body .conversation-choices{grid-template-columns:1fr;gap:7px}
+body .conversation-choices button{min-height:46px;border:1px solid var(--ui-line);border-radius:8px;font-size:12px!important;background:transparent}
+body .choice-symbol{font:10px system-ui;min-width:20px;color:var(--ui-gold)}
+body #village-conversation footer{font-size:11px;gap:16px}
+body:has(#village-conversation[open]) #world-tools,body:has(#village-conversation[open]) #camdock{visibility:hidden}
+@media(max-width:760px){
+ body #hud,body.player-mode #hud{padding:18px 16px;display:block}
+ body #title{font-size:20px}body #stat{display:none!important}
+ #world-tools{right:12px;top:12px}
+ body #world-tools button{padding:0 9px;gap:6px;min-height:36px;font-size:11px}
+ body #world-tools .ui-icon{width:17px;height:17px}
+ body #crew-panel,body #village-work-panel,body #sound-panel,body #player-help,body #player-wardrobe{inset:74px 12px 88px;width:auto;padding:20px;border-radius:14px}
+ body #village-work-panel{padding:0}body #village-work-panel header{padding:20px 20px 0}
+ body #village-work-panel nav{padding:0 20px 14px}body .journal-search{padding:16px 20px 8px}body .journal-content{padding:14px 20px 20px}
+ body #camdock,body.player-mode #camdock{bottom:max(16px,env(safe-area-inset-bottom));gap:2px;padding:5px}
+ body #camdock button,body #camdock button.home{width:34px;height:42px}
+ body #camdock #camDigs{padding:0 10px;font-size:11px}body #camdock #walkMode{padding:0 12px;min-width:65px}
+ body #world-credits,body #hint{display:none}
+ body .traveller-card{left:12px;bottom:138px;min-width:0;padding:10px;gap:8px}
+ body .traveller-card .player-eyebrow{display:none}body .traveller-card strong{font-size:16px}
+ body .player-toolbar{left:12px;bottom:88px}
+ body #village-conversation{inset:auto 12px 12px;width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:20px}
+ body #conversation-name{font-size:22px}
+}
+@media(pointer:coarse){
+ body.player-mode #camdock{bottom:auto;top:74px;right:12px;left:auto;transform:none}
+ body .traveller-card{left:12px;bottom:152px}
+ body .player-toolbar{left:12px;bottom:102px}
+ body #player-touch{inset:auto 16px max(16px,env(safe-area-inset-bottom))}
+ body #player-stick{width:76px;height:76px;background:#192321bb}
+ body #player-stick span{width:34px;height:34px}
+ body.panel-open .traveller-card,body.panel-open .player-toolbar{visibility:hidden}
+ body.player-mode #village-work-panel,body.player-mode #sound-panel,body.player-mode #player-help,body.player-mode #player-wardrobe{top:138px;bottom:16px}
+}
+@media(prefers-reduced-motion:reduce){body .world-panel,body button{transition:none!important}}
+
+body #sound-panel h2,body #player-help h2,body #player-wardrobe h2{font:28px/1.2 "Iowan Old Style",Georgia,serif;letter-spacing:-.025em;color:var(--ui-text);font-weight:400;margin:0 0 6px}
+body #player-wardrobe header button,body #player-help header button{width:36px;height:36px;border-radius:50%;padding:8px;min-height:36px}
+body #crew{position:static;background:none;border:0;padding:0;box-shadow:none;transform:none;max-height:none;overflow:visible}
+body #crew-panel header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+body #crewToggle{font:24px Georgia,serif;color:var(--ui-text);display:block;padding:0}
+body #crewToggle .chev{display:none}body #crewToggle .count{display:block;margin:6px 0 0;font:11px system-ui;color:var(--ui-muted)}
+body #crew .row{border-bottom:1px solid var(--ui-line);padding:14px 0;color:var(--ui-text)}
+body #crew .nm,body #crew .job{color:var(--ui-text)}body #crew .sub{color:var(--ui-muted)}
+body #world-tools button[hidden]{display:none}
+body.panel-open #hint{visibility:hidden}
+@media(max-width:760px){body.panel-open .traveller-card,body.panel-open .player-toolbar{visibility:hidden}}
+@media(max-width:370px){body #world-tools button{padding:0 10px}body #world-tools button span{display:none}}
+
+body #world-tools button.player-unavailable{display:none}
+@media(max-width:760px){body #world-tools #crew-menu span{display:none}}
+/* Short landscape windows scroll the complete journal, keeping its content reachable. */
+@media(max-height:500px){body #village-work-panel{display:block;overflow:auto}body .journal-content{overflow:visible}body #village-work-panel header{padding-top:18px}}
+body #title{width:fit-content}

@@ -41,20 +41,23 @@ test('retired buildings and intrusive props are hidden without modifying saved h
   const copy=structuredClone(source);assert.deepEqual(realmPlacements(source),[source[2]]);assert.deepEqual(source,copy);
 });
 test('walking crosses the relocated ramp and rotated cottage entrances',async()=>{
-  const {Walk3D}=await import('../src/three/walk3d.js');
-  const {Vector3}=await import('three');
+  const {PlayerMotion,PLAYER}=await import('../src/app/player.js');
   const {smoothHeightAt}=await import('../src/app/terrain.js');
-  const walker=Object.create(Walk3D.prototype),gate=REALM_GATE;
-  walker.position=new Vector3(gate.x,smoothHeightAt(gate.x,gate.approachZ),gate.approachZ);
-  walker.move(0,-34);
+  const walker=new PlayerMotion(),gate=REALM_GATE;
+  const travel=(distance,yaw=0)=>{
+    walker.stop();
+    for(let i=0;i<Math.ceil((distance/PLAYER.walk+.05)*120);i++)walker.update(1/120,{forward:1,yaw});
+  };
+  walker.reset(gate.x,gate.approachZ);
+  travel(34);
   assert.ok(walker.position.z < REALM.seat.z-2,'walk through gate into hall');
   assert.equal(walker.position.y,REALM.seat.floor,'stand on courtyard floor');
-  walker.move(0,-20);
+  travel(20);
   assert.ok(walker.position.z > REALM.seat.z-7.7,'high table blocks movement');
   for(const b of REALM_BUILDINGS.filter(b=>b.id.startsWith('Croft'))) {
     const start=point(b,0,b.d/2+.8);
-    walker.position.set(start.x,smoothHeightAt(start.x,start.z),start.z);
-    walker.move(-Math.sin(b.rot)*2,-Math.cos(b.rot)*2);
+    walker.reset(start.x,start.z);
+    travel(2,b.rot);
     const end=point(b,0,b.d/2-1.2);
     assert.ok(Math.hypot(walker.position.x-end.x,walker.position.z-end.z)<.15,`${b.id} reachable from outside`);
   }

@@ -12,7 +12,8 @@ test('retains useful drafts across rejected attempts and advances only after pub
  assert.deepEqual(p.draft,candidate);assert.equal(p.stage,0);assert.equal(p.history[0].candidate,undefined);
  p=advanceProgress(p,{validated:false,retain:true,candidate:{bad:true},reason:'syntax failed'});
  assert.deepEqual(p.draft,candidate);assert.equal(p.history.at(-1).reason,'syntax failed');
- p=advanceProgress(p,{published:true});assert.equal(p.draft,null);assert.equal(p.stage,1);
+ p=advanceProgress(p,{published:true,stageComplete:false});assert.equal(p.stage,0);
+ p=advanceProgress(p,{published:true,stageComplete:true});assert.equal(p.draft,null);assert.equal(p.stage,1);
 });
 test('reconciles against file contents rather than discarding work on unrelated main commits',async()=>{
  const root=await mkdtemp(join(tmpdir(),'world-reconcile-'));

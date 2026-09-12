@@ -305,15 +305,19 @@ export function realmBlocked(x,z,r=.4) {
 }
 export function realmPlacements(placements=[]) {
   const kept=[], householdCounts=new Map();
+  // Grain fields are productive landscape, not the retired building kit.
+  const fields=placements.filter(p=>p.kind==='building_grain'&&!realmReserved(p.x,p.z,7)&&realmPath(p.x,p.z)<.25)
+    .map(p=>({...p,id:`field:${p.x}:${p.z}`,w:10,d:10}));
   for(const p of placements) {
-    if(/^building_|^wall_/.test(p.kind) || realmReserved(p.x,p.z,2) || realmPath(p.x,p.z)>=.25)continue;
+    if((/^building_|^wall_/.test(p.kind)&&p.kind!=='building_grain') || realmReserved(p.x,p.z,2) || realmPath(p.x,p.z)>=.25)continue;
     // Natural features remain in place. Household objects need a household;
     // training equipment belongs at the castle, not across the sacred clearing.
     const equipment=/^(crate|barrel|sack|pallet|bucket|ladder|wheelbarrow|resource_|flag_|target|weaponrack)/.test(p.kind);
     if(equipment) {
       if(Math.hypot(p.x,p.z)<15)continue;
       const military=/^(flag_|target|weaponrack|bucket_arrows)/.test(p.kind);
-      const homes=military?[REALM.seat]:REALM_BUILDINGS;
+      const farmSupply=/^(sack|bucket_empty|wheelbarrow|crate|pallet|barrel)/.test(p.kind);
+      const homes=military?[REALM.seat]:farmSupply?[...REALM_BUILDINGS,...fields]:REALM_BUILDINGS;
       const home=homes.find(b=>Math.hypot(p.x-b.x,p.z-b.z)<Math.max(b.w,b.d)/2+7);
       if(!home)continue;
       const key=home.id??'castle',limit=military?3:4;

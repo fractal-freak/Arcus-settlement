@@ -68,3 +68,18 @@ export const COURT_GROWTH = (()=>{
   }
   return plants;
 })();
+
+/** Broad laid limestone follows the court, with eroded fieldstones only at its edge. */
+export const COURT_FLAGS = (()=>{
+ const flags=[];
+ for(let ring=0,inner=3.85;inner<7.85;ring++,inner+=.82){
+  const outer=inner+.77,mid=(inner+outer)/2,count=Math.round(2*Math.PI*mid/1.15);
+  for(let i=0;i<count;i++){
+   const start=(i+(ring%2)*.5)/count*Math.PI*2+.006,end=start+Math.PI*2/count-.014;
+   const points=[[inner,start],[outer,start],[outer,end],[inner,end]].map(([r,a])=>({x:Math.cos(a)*r,z:Math.sin(a)*r}));
+   if(points.some(p=>!courtGroundSafe(p.x,p.z,.15)||courtCoverage(p.x,p.z)<.15))continue;
+   flags.push({points,tone:.9+hash2(i,ring,781)*.09});
+  }
+ }
+ return flags;
+})();

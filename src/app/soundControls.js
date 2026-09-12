@@ -1,3 +1,4 @@
+import { registerPanel, setPanel } from './panels.js';
 import { SOUND_LAYERS } from './ambience.js';
 
 const CONDITIONS = {
@@ -74,9 +75,9 @@ export function mountSoundControls(ambience) {
   };
   ambience.onChange = render;
   render();
+  registerPanel(panel,open);
   const setOpen = (value) => {
-    panel.hidden = !value;
-    open.setAttribute('aria-expanded', String(value));
+    setPanel(panel,value);
     if (value) document.getElementById('sound-close').focus();
   };
   open.addEventListener('click', () => setOpen(panel.hidden));

@@ -37,7 +37,7 @@ import { realmReserved, realmPath } from './realm.js';
 import { propRadius } from './propSizes.js';
 import { ancientPavingNear } from './ancientPaths.js';
 import { bridgeContains, bridgePathContains } from './bridge.js';
-import { smoothHeightAt, isWater, groundAt, propAt, GROUND } from './terrain.js';
+import { smoothHeightAt, isWater, groundAt, propAt, nearPit, GROUND } from './terrain.js';
 
 /** The square: open ground around the Settlement Stone, never built on. */
 export const SQUARE = { x: 0, z: 0, r: 12.0 };
@@ -424,7 +424,9 @@ export function pathAmountAt(x, z) {
  */
 export function propStandsAt(tx, tz) {
   if (isReserved(tx, tz)) return false;
-  return !!propAt(tx, tz);
+  // Excavations clear their vegetation and old small ruins. Match the exact
+  // tile-centre test in terrain3d.buildProps, or invisible trees evict the crew.
+  return !!propAt(tx, tz) && !nearPit(tx + 0.5, tz + 0.5, 1.0);
 }
 
 /** Is any prop close enough to `radius` of this point to overlap something standing there? */

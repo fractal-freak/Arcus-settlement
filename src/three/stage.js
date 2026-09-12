@@ -4,7 +4,7 @@ import {
   Scene, PerspectiveCamera, WebGLRenderer, Color, Fog,
   DirectionalLight, HemisphereLight, AmbientLight,
   PCFShadowMap, ACESFilmicToneMapping, SRGBColorSpace, Vector3, Vector2, Frustum, Matrix4,
-  WebGLRenderTarget, DepthTexture, MeshBasicMaterial,
+  WebGLRenderTarget, DepthTexture, MeshBasicMaterial, HalfFloatType,
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
@@ -128,7 +128,11 @@ export class Stage {
     });
     this._depthOnlyMaterial = new MeshBasicMaterial({ colorWrite: false });
 
-    this.composer = new EffectComposer(this.renderer);
+    // Thin branches and leaf edges need geometry coverage before postprocessing.
+    // FXAA alone cannot recover a twig that missed the single raster sample.
+    const colorTarget = new WebGLRenderTarget(w, h, { type: HalfFloatType,
+      samples: Math.min(2, this.renderer.capabilities.maxSamples) });
+    this.composer = new EffectComposer(this.renderer, colorTarget);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.effects = new WorldEffectsPass(this.depthTarget.depthTexture);
     this.composer.addPass(this.effects);

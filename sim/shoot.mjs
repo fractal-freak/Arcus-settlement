@@ -153,11 +153,13 @@ while (true) {
     w.step(1);
     return { ready: w.startup?.complete, pending: w.terrain.pendingVisible, stats: w.stats() };
   });
-  await finishGpuFrame(page, { timeout: Math.max(1, deadline - Date.now()) });
   if (status.ready && status.pending === 0) break;
   if (Date.now() > deadline) throw new Error('Opening view did not load: ' + JSON.stringify(status));
   await pause(5);
 }
+// Preserve the startup gate's streaming workload, then drain its outstanding
+// work once before warmup. Steady-state samples never queue behind each other.
+await finishGpuFrame(page);
 console.log('Opening view ready; warming up completed frames');
 for (let i = 0; i < 10; i++) {
   await page.evaluate(() => window.__world.step(1));

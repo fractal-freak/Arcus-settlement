@@ -272,3 +272,49 @@ Accepted for local integration and normal isolated release, pending deployment
 verification. Next castle priority: junctions between surviving roof, exposed
 vault ribs and masonry; then a useful village workplace/furnishing pass so
 citizens' environments receive sustained attention alongside the landmark.
+
+## September 12 — Stone-to-gatehouse route milestone, first landscape pass
+
+Roof release 34704247290 succeeded; exact public bundle index-BGs4VfWv.js matches the tested roof build. Current milestone remains a coherent stone-to-gatehouse journey, then a complete village workplace. Hypothesis before editing: isolated patches of fieldstones and near-identical meadow obscure the main castle approach. A continuous worn limestone lane with intact edge courses and sheltered planting will make the journey readable from the stone, through the village bend and at the bridge landing. Preserve the existing route, door clearance, shared walking height and newer local movement/UI work. Acceptance requires matched overview plus actual walking-camera evidence, traversing the entire approach, and unchanged performance gates. This pass does not complete the courtyard/workplace milestone.
+
+Accepted approach experiment: a 58m processional lane now connects the stone's
+western departure to the causeway, following existing village junctions with
+rounded bends. Low bevelled slabs follow the shared height to within 3.6cm;
+missing centre stones expose worn earth, intact side courses retain direction.
+Interrupted fern drifts frame the verges. Existing branch paths remain rough.
+All alignment, slab and planting locations are in world data. No obstacles,
+private feed data, or hand-edited simulation state were introduced.
+
+Rejected initial right-angle junctions and a narrower scenery reservation that
+regenerated unwanted roadside trees (249 additional opening draws). The final
+soft verge preserves a clear route with just four additional opening draws;
+rendered triangles are lower than before because heavy scattered fieldstones
+are replaced along this lane. Also corrected the review harness to initialize
+walking-camera elevation from the actual floor; earlier low-camera captures
+are superseded by matched walk-before/walk-after images.
+
+Reviewed every standard opening/overview/stone/gatehouse image and three actual
+walking-camera comparisons. The route is clearly continuous in the overview
+and around the village bend toward the bridge. The starting stone composition
+is mostly unchanged; the bare castle hillside, cottage craft and courtyard
+still need a substantial coherent pass. Do not call this milestone complete.
+A returning player will notice the stone lane leading past the blue-roofed
+croft toward the Jupiter bridge, with fern banks at its bends and landing.
+
+All 35 isolated tests, strict rulebook verification, build and unchanged world
+frame gates pass. Sampled the corridor at three lateral offsets, checking
+collision and steps. The real Walk3D move method traversed the full lane and
+causeway into the gatehouse with zero positional error. Matched review before
+CPU median/p95 6.7/10.9ms, completed 21.95/37.79ms; final layout 6.2/11.5ms,
+completed 20.53/32.64ms on M4 Pro. Final data/render separation build also
+passed shoot: 7.0/11.4ms, completed 22.29/47.22ms while local integration checks
+were active; no speedup claimed and no gate loosened. Evidence under
+.local/approach/{before,after,walk-before,walk-after}.
+
+NEXT milestone work: compose the exposed hill and arrival courtyard as one
+place, with a readable discovery and coherent ground/material transitions.
+Then develop one complete village workplace with useful owned furnishings.
+Preserve the newer local player, journal, UI and occupied-waypoint fixes.
+Local integration is built; isolated publication and public verification follow.
+
+Integrated local validation: all 62 tests, strict verifier and build passed. The existing 307-second close-encounter crowd audit completed with all 48 citizens delivering, minimum separation 1.100004m, zero scenery violations and no page errors. Evidence: root .local/approach/crowd/evidence.json. Local build index-CiJA4pad.js includes the approach plus the preserved newer player/UI/navigation stack; the isolated public release contains only this approach change and the already-published base.

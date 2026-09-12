@@ -75,3 +75,16 @@ Notify Kevin on a visible accepted improvement, a failed deployment, or a
 decision requiring his input. Remain quiet on unchanged or non-actionable runs.
 Do not guarantee that every visit looks different or that autonomous aesthetic
 judgment is objective. Revisit priorities when Kevin gives feedback.
+
+## September 12 visual milestone clarification
+
+Kevin cannot see sufficient progress. Treat the stone-to-Jupiter-gatehouse
+walk as one coherent visual milestone across several passes: composed terrain
+and vegetation, a readable approach, coherent castle materials/architecture,
+and a rewarding arrival courtyard. Hogwarts Legacy and Breath of the Wild
+are references for atmosphere, composition and discovery; production parity
+is not promised. Follow this with a complete village workplace and citizens'
+useful belongings. Small roof/material edits are supporting steps, not proof
+that the milestone is complete. Inspect actual arrival and walking views and
+show matched before/after images with where the player can see the change.
+Keep local and public release status explicit. Fix movement regressions first.

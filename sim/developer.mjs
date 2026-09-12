@@ -23,15 +23,14 @@ await mkdir(output,{recursive:true});
 if(mode==='propose'){
   const paths=[...await files('src'),'public/style.css'];
   const docs=(await Promise.all(['AGENTS.md','ART_DIRECTION.md','DEVELOPMENT.md','DEVELOPMENT_LOG.md'].map(async p=>{try{return p+'\n'+(await readFile(p,'utf8')).slice(-18000);}catch{return '';}}))).join('\n');
-  const selected=await ask(`Choose up to 6 existing source files to inspect for the strongest visual improvement. Respond {"paths":[...]}.\n${docs}\nFILES\n${paths.join('\n')}`,['state/world.png']);
+  const selected=await ask(`Choose up to 6 existing source files to inspect for the strongest visual improvement. Respond {"paths":[...]}.\n${docs}\nFILES\n${paths.join('\n')}`,[output+'/before.png']);
   if(!Array.isArray(selected.paths)||!selected.paths.length||selected.paths.length>6||selected.paths.some(p=>!paths.includes(p)))throw Error('Invalid file selection');
   const sources=await Promise.all([...new Set(selected.paths)].map(async path=>({path,content:await readFile(path,'utf8')})));
   if(sources.reduce((n,f)=>n+f.content.length,0)>200000)throw Error('Selected context too large; skip this pass');
-  const answer=await ask(`Implement one coherent visible improvement using these files. Return {"summary":"player-visible change and location","files":[{"path":"existing selected path","content":"complete replacement file"}]}. Return files:[] if no defensible improvement. No markdown.\n${docs}\nSOURCES\n${JSON.stringify(sources)}`,['state/world.png']);
+  const answer=await ask(`Implement one coherent visible improvement using these files. Return {"summary":"player-visible change and location","files":[{"path":"existing selected path","content":"complete replacement file"}]}. Return files:[] if no defensible improvement. No markdown.\n${docs}\nSOURCES\n${JSON.stringify(sources)}`,[output+'/before.png']);
   if(!Array.isArray(answer.files)||answer.files.some(f=>!sources.some(s=>s.path===f.path)))throw Error('Unselected file edit refused');
   const candidate=validateCandidate({summary:answer.summary,files:answer.files.map(f=>({...f,before:digest(sources.find(s=>s.path===f.path).content)}))});
   await writeFile(output+'/candidate.json',JSON.stringify(candidate));
-  await writeFile(output+'/before.png',await readFile('state/world.png'));
   console.log(candidate.files.length?'Proposal saved for isolated validation':'No improvement proposed');
 }else if(mode==='apply'){
   await applyCandidate(await json(output+'/candidate.json'));

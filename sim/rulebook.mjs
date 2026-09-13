@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-13",
+    "seen": "The riverbank adjacent to the monolith plaza drops abruptly into bare water without reeds or stone edging, while the open ground between the timber cottages and the monolith plaza feels visually empty and unanchored.",
+    "added": "riverbank_flank_edging, shrine_flank_composition, flank_waterplant_buffer, monolith_shore_edging_rocks, monolith_water_flank_votives, monolith_flank_stone_boundary"
+  },
+  {
+    "at": "2026-09-13",
     "seen": "The dirt riverbank around the monolith plaza drops bare into the water without revetment stone or aquatic plants, while the well area near the residential timber cottages sits open on plain turf without functional barrels or water gear.",
     "added": "riverbank_embankment, wellside_working_yard, monolith_river_revetment, monolith_shore_reeds, wellside_utility_staging, wellside_timber_store"
   },

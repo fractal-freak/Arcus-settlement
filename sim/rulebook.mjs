@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-13",
+    "seen": "The large circular monolith plaza sits directly next to an unbordered dirt shore with open, empty river water, while the dense foreground tree grove lacks any path fencing or forestry staging to anchor it to the lane.",
+    "added": "shrine_riverfront_flanking, woodland_lane_transition, monolith_river_stone_edging, monolith_waterfront_flank_reeds, monolith_river_heraldry_posts, foreground_grove_enclosure, woodlot_timber_staging"
+  },
+  {
+    "at": "2026-09-13",
     "seen": "The riverbank adjacent to the monolith plaza drops abruptly into bare water without reeds or stone edging, while the open ground between the timber cottages and the monolith plaza feels visually empty and unanchored.",
     "added": "riverbank_flank_edging, shrine_flank_composition, flank_waterplant_buffer, monolith_shore_edging_rocks, monolith_water_flank_votives, monolith_flank_stone_boundary"
   },

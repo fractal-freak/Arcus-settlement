@@ -450,3 +450,21 @@ that validated rulebook. Changed rules still receive the full original checks
 and rollback behavior. This avoids a second identical several-minute software
 render after unavailable/no-change critic calls. Baseline cache keys include the
 new screenshot preparation helper.
+
+
+## September 13 — celestial mage integration
+
+Approved celestial costume translated into a genuine animated mesh, replacing
+Mage/Wizard appearances and available as the default Celestial Mage player.
+Original tailored surfaces, separate leg-driven robe halves, lunar stole, silver
+hair, modeled face and hands; measured rest-pose retargeting preserves equipment
+slots and the existing animation API. Geometry and materials are shared across
+instances, with separate skeletons/mixers. Other character types are unchanged.
+
+Validation: 67 local logic tests, rulebook, build, player movement/jump/broom/
+conversation/controller checks and completed-frame world check passed.
+Local completed GPU frame median 34.45ms, p95 37.05ms; CPU median 6.6ms, p95 8.1ms.
+Front/profile/back/face and walking views were inspected, plus the actual world
+and mounted broom. Evidence: .local/mage and .local/player-review.
+This is a stylized playable interpretation; facial modeling and costume drape
+remain less detailed than the approved concept. Public release pending.

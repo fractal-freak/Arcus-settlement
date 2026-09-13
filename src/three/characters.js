@@ -24,6 +24,7 @@
  *    load rather than assumed (see retarget()).
  */
 
+import { tailorCelestialMage } from './celestialMage.js';
 import { AnimationMixer, LoopRepeat, LoopOnce, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial, Color, LatheGeometry, Vector2, SphereGeometry, TorusGeometry } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -32,8 +33,8 @@ const BASE = './assets/kaykit-characters/';
 
 /** The six the free tier ships. Picked per person by a stable hash, never at random. */
 const BASE_KINDS = ['Knight', 'Mage', 'Ranger', 'Rogue', 'Rogue_Hooded', 'Barbarian'];
-export const KINDS = [...BASE_KINDS, 'Witch', 'Wizard', 'Starfarer'];
-const BASE_KIND = { Witch:'Rogue', Wizard:'Mage', Starfarer:'Ranger' };
+export const KINDS = [...BASE_KINDS, 'Witch', 'Wizard', 'Starfarer', 'Celestial Mage'];
+const BASE_KIND = { 'Celestial Mage':'Mage', Witch:'Rogue', Wizard:'Mage', Starfarer:'Ranger' };
 
 /**
  * The dig crew's uniform: every active session wears this one.
@@ -144,7 +145,8 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     o.geometry.computeBoundingBox();
     maxY = Math.max(maxY, o.geometry.boundingBox.max.y);
   });
-  const scale = maxY > 0 ? targetHeight / maxY : 1;
+  const celestial = ['Mage','Wizard','Celestial Mage'].includes(kind) ? tailorCelestialMage(root,{background}) : null;
+  const scale = targetHeight / (celestial?.bodyHeight || maxY || targetHeight);
   // Accessories are fitted to the measured bind-pose head, then parented to its bone.
   if(kind==='Witch'||kind==='Starfarer') {
     const headMesh=root.getObjectByName(`${BASE_KIND[kind]}_Head`);
@@ -178,10 +180,12 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
 
   const mixer = new AnimationMixer(root);
   const actions = new Map();
+  const tailoredClips = new Map();
   let current = null;
 
   function play(name, { fade = 0.25, timeScale = 1, once = false } = {}) {
-    const clip = clips.get(name);
+    let clip = clips.get(name);
+    if(clip && celestial){if(!tailoredClips.has(name))tailoredClips.set(name,celestial.retarget(clip));clip=tailoredClips.get(name);}
     if (!clip) return false;
     let action = actions.get(name);
     if (!action) {
@@ -245,7 +249,7 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     get animation() { return current?.getClip().name ?? null; },
     /** Advance the animation. Seconds, not milliseconds. */
     update: (dt) => mixer.update(dt),
-    dispose: () => { root.userData.accessories?.traverse(o=>{o.geometry?.dispose();}); mixer.stopAllAction(); mixer.uncacheRoot(root); },
+    dispose: () => { celestial?.dispose(); root.userData.accessories?.traverse(o=>{o.geometry?.dispose();}); mixer.stopAllAction(); mixer.uncacheRoot(root); },
   };
 }
 

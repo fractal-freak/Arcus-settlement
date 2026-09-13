@@ -43,7 +43,7 @@ export class PlayerHud {
       header.querySelector('button').onclick=()=>setPanel(panel,false);panel.prepend(header);panel.setAttribute('aria-label',title);
     }
     outfit.addEventListener('click',()=>setPanel(wardrobe,wardrobe.hidden));
-    for (const kind of ['Ranger','Witch','Wizard','Starfarer','Mage','Rogue','Rogue_Hooded','Knight','Barbarian']) {
+    for (const kind of ['Celestial Mage','Ranger','Witch','Wizard','Starfarer','Mage','Rogue','Rogue_Hooded','Knight','Barbarian']) {
       const button=text('button',kind.replaceAll('_',' '));button.type='button';button.dataset.kind=kind;
       button.addEventListener('click',()=>{ actions.character(kind); setPanel(wardrobe,false); });
       wardrobe.querySelector(':scope > div').append(button);

@@ -18,7 +18,7 @@ export class Walk3D {
     this.active=false;this.ready=false;this.keys=new Set();
     this.motion=new PlayerMotion({solid:(x,z,r)=>blocked(x,z,r)||crowd.intersects(x,z,r,'player',this.motion?.position.y)});
     this.position=this.motion.position;
-    this.yaw=0;this.pitch=.32;this.distance=5.5;this.cameraDistance=5.5;this.kind='Ranger';
+    this.yaw=0;this.pitch=.32;this.distance=5.5;this.cameraDistance=5.5;this.kind='Celestial Mage';
     this.group=new Group();this.group.name='The Traveller';this.group.visible=false;scene.add(this.group);
     this.target=new Vector3();this.desired=new Vector3();this.direction=new Vector3();this.projection=new Vector3();
     this.ray=new Raycaster();this.ray.firstHitOnly=true;this.hits=[];

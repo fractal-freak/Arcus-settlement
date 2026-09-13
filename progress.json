@@ -103,6 +103,19 @@
       "summary": "No candidate produced",
       "reason": "Attempt failed before review; inspect this run before repeating.",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-13T10:30:00.884Z",
+      "run": "34750996203",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": true,
+      "published": true,
+      "stageComplete": false,
+      "summary": "Extend stratified rock cliff geometry across the front slope and underneath the gatehouse causeway to ground the castle hill.",
+      "reason": "The extended cliff mesh adds detailed rock strata texture and geometry under the gatehouse causeway and front hill slope, clearly visible across all three camera angles and effectively grounding the castle architecture.",
+      "next": "Enhance the stone path transition leading into the central plaza/square with refined cobble border edge geometry and restrained decorative stone markers."
     }
   ],
   "draft": null

@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-13",
+    "seen": "The dirt riverbank around the monolith plaza drops bare into the water without revetment stone or aquatic plants, while the well area near the residential timber cottages sits open on plain turf without functional barrels or water gear.",
+    "added": "riverbank_embankment, wellside_working_yard, monolith_river_revetment, monolith_shore_reeds, wellside_utility_staging, wellside_timber_store"
+  },
+  {
+    "at": "2026-09-13",
     "seen": "The foreground sapling grove is planted in a rigid grid along the dirt lane without any fencing, while the monolith's circular plaza ends abruptly on raw earth and riverbank without perimeter markers.",
     "added": "timber_grove_boundary, shrine_river_flanking, grove_perimeter_fencing, woodlot_lumber_depot, monolith_river_parapet, monolith_ceremonial_standards"
   },

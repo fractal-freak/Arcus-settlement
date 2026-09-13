@@ -287,6 +287,56 @@ export const EXTRA_PROJECTS = [
       "building_market_red",
       "building_market_green"
     ]
+  },
+  {
+    "key": "castle_stair_banners",
+    "dim": "castle_ascent",
+    "want": "to frame the hillside staircase with heraldic banners along the ascent",
+    "needs": 45,
+    "place": "rim",
+    "tag": "tall",
+    "n": 4,
+    "kinds": [
+      "flag_red",
+      "flag_blue"
+    ]
+  },
+  {
+    "key": "monolith_stone_border",
+    "dim": "shrine_perimeter",
+    "want": "to outline the circular monolith cobble plaza with low stone walls",
+    "needs": 50,
+    "place": "shrine",
+    "tag": "edge",
+    "n": 5,
+    "kinds": [
+      "fence_stone_straight"
+    ]
+  },
+  {
+    "key": "monolith_votive_flags",
+    "dim": "shrine_perimeter",
+    "want": "to place sacred banners around the edge of the circular monolith plaza",
+    "needs": 35,
+    "place": "shrine",
+    "tag": "sacred",
+    "n": 3,
+    "kinds": [
+      "flag_yellow"
+    ]
+  },
+  {
+    "key": "monolith_offering_vessels",
+    "dim": "monolith_sanctity",
+    "want": "to add ritual water buckets and barrels near the monolith fire pit",
+    "needs": 30,
+    "place": "shrine",
+    "tag": "clutter",
+    "n": 3,
+    "kinds": [
+      "bucket_water",
+      "barrel"
+    ]
   }
 ];
 
@@ -364,6 +414,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-13",
+    "seen": "The carved stone monolith sits on a circular cobble ring that ends abruptly against bare turf without boundary markers, while the long stone staircase ascending to the castle hill stands completely plain and unadorned.",
+    "added": "castle_ascent, shrine_perimeter, castle_stair_banners, monolith_stone_border, monolith_votive_flags, monolith_offering_vessels, wellside_supply_staging"
+  },
   {
     "at": "2026-09-12",
     "seen": "The carved stone monolith draws large crowds onto unbordered cobbles while the massive stair path climbing the castle hill in the background sits completely unadorned on bare turf.",

@@ -289,43 +289,6 @@ export const EXTRA_PROJECTS = [
     ]
   },
   {
-    "key": "castle_stair_banners",
-    "dim": "castle_ascent",
-    "want": "to frame the hillside staircase with heraldic banners along the ascent",
-    "needs": 45,
-    "place": "rim",
-    "tag": "tall",
-    "n": 4,
-    "kinds": [
-      "flag_red",
-      "flag_blue"
-    ]
-  },
-  {
-    "key": "monolith_stone_border",
-    "dim": "shrine_perimeter",
-    "want": "to outline the circular monolith cobble plaza with low stone walls",
-    "needs": 50,
-    "place": "shrine",
-    "tag": "edge",
-    "n": 5,
-    "kinds": [
-      "fence_stone_straight"
-    ]
-  },
-  {
-    "key": "monolith_votive_flags",
-    "dim": "shrine_perimeter",
-    "want": "to place sacred banners around the edge of the circular monolith plaza",
-    "needs": 35,
-    "place": "shrine",
-    "tag": "sacred",
-    "n": 3,
-    "kinds": [
-      "flag_yellow"
-    ]
-  },
-  {
     "key": "monolith_offering_vessels",
     "dim": "monolith_sanctity",
     "want": "to add ritual water buckets and barrels near the monolith fire pit",

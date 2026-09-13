@@ -248,7 +248,7 @@ export function makeCharacter(kind, targetHeight, { background = false, appearan
     bone,
     get animation() { return current?.getClip().name ?? null; },
     /** Advance the animation. Seconds, not milliseconds. */
-    update: (dt) => mixer.update(dt),
+    update: (dt) => { mixer.update(dt); celestial?.update(dt,current?.getClip().name); },
     dispose: () => { celestial?.dispose(); root.userData.accessories?.traverse(o=>{o.geometry?.dispose();}); mixer.stopAllAction(); mixer.uncacheRoot(root); },
   };
 }

@@ -468,3 +468,29 @@ Front/profile/back/face and walking views were inspected, plus the actual world
 and mounted broom. Evidence: .local/mage and .local/player-review.
 This is a stylized playable interpretation; facial modeling and costume drape
 remain less detailed than the approved concept. Public release pending.
+
+
+## September 13 — mage face, tailoring and motion refinement
+
+Replaced the separate nose forms with a continuous cheek/socket/nose sculpt,
+reduced eye and lip outlines, tapered fingers and hair locks, and replaced the
+round shoulder caps with an asymmetric lined mantle. Added wider robe folds,
+dye variation, a true crescent cutout, and relaxed locomotion arm clips. Four
+secondary bones provide bounded turn response for hair and robe. Background
+citizens share a reduced geometry variant; player detail stays intact.
+
+Inspected front/profile/back/face, walking and actual in-world broom views.
+67 local logic tests, rulebook, build, player/broom/conversation checks passed.
+Motion check: zero accumulated pose drift, peak turn response 0.093 radians,
+settling to 0.006 radians; independent rigs and normalized weights verified.
+An inconsistent frame run failed; a baseline check and immediate optimized
+recheck passed: baseline completed median/p95 20.33/33.22ms, refined
+23.07/37.81ms, CPU median/p95 6.1/7.9ms. Historical failed run retained.
+Evidence: .local/mage-refined. Still a stylized interpretation, not concept-level
+facial realism. Local integration complete; public release pending.
+
+Release validation: 80 tests passed, one existing skip; player and world render
+checks passed. Release preparation also found three existing orphan jobs in the
+latest generated rulebook. The checker now evaluates supplied candidate scores
+and jobs instead of cached generated entries; three regression tests cover
+removal and addition. The existing pruner removed only the three invalid jobs.

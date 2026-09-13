@@ -65,8 +65,10 @@ export async function check(collect = null, rulebookModule = null) {
   const quality = await import('./quality.mjs');
   const kinds = realKinds();
 
-  const dimKeys = new Set(quality.DIMENSIONS.map((d) => d.key));
-  const seenKeys = new Set(quality.PROJECTS.map((p) => p.key));
+  // Evaluate this candidate, not generated entries retained by Node's module cache.
+  const dimKeys = new Set([...quality.DIMENSIONS.filter(d=>!d.generated).map(d=>d.key), ...(rulebook.EXTRA_DIMENSIONS??[]).map(d=>d?.key)]);
+  const authoredProjects = quality.PROJECTS.filter(p=>!p.generated);
+  const seenKeys = new Set(authoredProjects.map((p) => p.key));
 
   // ── 1, 2: shape and names ────────────────────────────────────────────────
   const projects = rulebook.EXTRA_PROJECTS ?? [];
@@ -105,7 +107,7 @@ export async function check(collect = null, rulebookModule = null) {
     if (!Number.isFinite(d.target) || d.target < 10 || d.target > 160) blame(d, `${at}: "target" must be 10 to 160`);
 
     // ── 3: reachable ──────────────────────────────────────────────────────
-    const servedBy = [...projects, ...quality.PROJECTS].filter((p) => p.dim === d.key);
+    const servedBy = [...projects, ...authoredProjects].filter((p) => p.dim === d.key);
     if (!servedBy.length) blame(d, `${at}: nothing the citizens can do would ever raise it`);
     if (!servedBy.some((p) => p.tag === d.tag)) blame(d, `${at}: counts "${d.tag}" but no job that serves it makes one`);
   }

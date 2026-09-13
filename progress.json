@@ -90,6 +90,19 @@
       "summary": "Rescale village stone/timber material tiling to human proportions and extend castle hill cliff rock under the gatehouse causeway.",
       "reason": "The candidate changes to material UV scaling and cliff geometry generation produce no noticeable visual difference across all three reference viewpoints (opening, village walking, and gatehouse views). The cliff geometry added under the gatehouse does not visibly extend or ground the cliff face in the rendered views.",
       "next": "Focus on tangible visual improvements to the stone-to-square path and hill foundations, ensuring terrain or cliff geometry changes are clearly visible and properly integrated under the gatehouse causeway and village structures."
+    },
+    {
+      "at": "2026-09-13T05:08:54.588Z",
+      "run": "34738930864",
+      "stage": 0,
+      "outcome": "proposal-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

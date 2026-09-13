@@ -494,3 +494,10 @@ checks passed. Release preparation also found three existing orphan jobs in the
 latest generated rulebook. The checker now evaluates supplied candidate scores
 and jobs instead of cached generated entries; three regression tests cover
 removal and addition. The existing pruner removed only the three invalid jobs.
+
+## 2026-09-13T10:29:49.124Z — API development
+
+Extend stratified rock cliff geometry across the front slope and underneath the gatehouse causeway to ground the castle hill.
+
+Tests, rulebook, build, boot/frame gate and Gemini visual review passed.
+Base: 6b60b8031f55fa7589a640b119f0b4c05f47f9df. Candidate evidence is retained in the workflow artifacts.

@@ -11,11 +11,24 @@ import {realmFloor,realmBlocked} from '../app/realm.js';
 export class PalaceLandscape3D {
   constructor(scene){
     this.group=new Group();this.group.name='Gatehouse weathered cliff and planting';scene.add(this.group);
-    const positions=[],uv=[],step=.22;
-    const vertex=(x,z)=>[x,smoothHeightAt(x,z)+.025,z];
+    const positions=[],uv=[],step=.32;
+    const vertex=(x,z)=>{
+      const h=smoothHeightAt(x,z);
+      const m=palaceCliffMask(x,z);
+      const hL=smoothHeightAt(x-.4,z),hR=smoothHeightAt(x+.4,z),hD=smoothHeightAt(x,z-.4),hU=smoothHeightAt(x,z+.4);
+      const slope=Math.hypot(hR-hL,hU-hD);
+      const strata=Math.floor((h+Math.sin(x*.6+z*.4)*.5)/.8)*.12;
+      const nse=(Math.sin(x*1.9+z*2.7)*.07+Math.cos(x*3.3-z*1.7)*.05)*Math.min(1,slope);
+      const bump=Math.max(.03,.03+.14*m+strata+nse);
+      return [x+Math.sin(z*2.1)*.04*slope,h+bump,z+Math.cos(x*2.1)*.04*slope];
+    };
     const triangle=(a,b,c)=>{positions.push(...a,...b,...c);for(const p of [a,b,c])uv.push(p[0]/3,(p[1]+p[2]*.28)/3);};
-    for(let x=-85;x<-58.5;x+=step)for(let z=-43;z<-18;z+=step){
-      const m=palaceCliffMask(x+step/2,z+step/2);if(m<.01)continue;
+    for(let x=-85;x<-35;x+=step)for(let z=-45;z<-12;z+=step){
+      const cx=x+step/2,cz=z+step/2,h=smoothHeightAt(cx,cz);
+      const hL=smoothHeightAt(cx-.4,cz),hR=smoothHeightAt(cx+.4,cz),hD=smoothHeightAt(cx,cz-.4),hU=smoothHeightAt(cx,cz+.4);
+      const slope=Math.hypot(hR-hL,hU-hD);
+      const m=palaceCliffMask(cx,cz);
+      if(m<.01 && (h<3.2 || slope<.22))continue;
       const a=vertex(x,z),b=vertex(x+step,z),c=vertex(x+step,z+step),d=vertex(x,z+step);
       triangle(a,d,b);triangle(b,d,c);
     }

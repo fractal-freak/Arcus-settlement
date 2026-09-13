@@ -116,6 +116,19 @@
       "summary": "Extend stratified rock cliff geometry across the front slope and underneath the gatehouse causeway to ground the castle hill.",
       "reason": "The extended cliff mesh adds detailed rock strata texture and geometry under the gatehouse causeway and front hill slope, clearly visible across all three camera angles and effectively grounding the castle architecture.",
       "next": "Enhance the stone path transition leading into the central plaza/square with refined cobble border edge geometry and restrained decorative stone markers."
+    },
+    {
+      "at": "2026-09-13T14:38:53.323Z",
+      "run": "34762637352",
+      "stage": 0,
+      "outcome": "validation-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Add cobble border edge geometry framing the processional approach path to define the stone transition into the square.",
+      "reason": "pe: 'test'\n  ...\n# Subtest: compact edits refuse ambiguous and missing targets and preserve surrounding source\nok 32 - compact edits refuse ambiguous and missing targets and preserve surrounding source\n  ---\n  duration_ms: 0.405689\n  type: 'test'\n  ...\n# Subtest: proposal continues a retained draft and adds new modules against original preimages\nok 33 - proposal continues a retained draft and adds new modules against original preimages\n  ---\n  duration_ms: 78.495688\n  type: 'test'\n  ...\n# Subtest: publisher requires approval and exact tested revision, then pushes only candidate and journal\nok 34 - publisher requires approval and exact tested revision, then pushes only candidate and journal\n  ---\n  duration_ms: 331.663232\n  type: 'test'\n  ...\n# Subtest: snapshot draws while the live feed is pending, then live data takes over\nok 35 - snapshot draws while the live feed is pending, then live data takes over\n  ---\n  duration_ms: 4.596827\n  type: 'test'\n  ...\n# Subtest: a slow snapshot cannot overwrite the live feed\nok 36 - a slow snapshot cannot overwrite the live feed\n  ---\n  duration_ms: 1.239148\n  type: 'test'\n  ...\n# Subtest: a refresh can immediately seed the settlement from its local cache\nok 37 - a refresh can immediately seed the settlement from its local cache\n  ---\n  duration_ms: 1.088866\n  type: 'test'\n  ...\n# Subtest: live collection waits until opening assets are ready\nok 38 - live collection waits until opening assets are ready\n  ---\n  duration_ms: 7.607046\n  type: 'test'\n  ...\n# Subtest: frame completion waits through pending work and releases its GPU fence\nok 39 - frame completion waits through pending work and releases its GPU fence\n  ---\n  duration_ms: 15.584375\n  type: 'test'\n  ...\n# Subtest: a failed GPU fence refuses the check and still releases the resource\nok 40 - a failed GPU fence refuses the check and still releases the resource\n  ---\n  duration_ms: 2.281627\n  type: 'test'\n  ...\n# Subtest: unfinished GPU work has a finite deadline and cannot sil",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

@@ -300,6 +300,19 @@ export const EXTRA_PROJECTS = [
       "bucket_water",
       "barrel"
     ]
+  },
+  {
+    "key": "monolith_ceremonial_standards",
+    "dim": "shrine_river_flanking",
+    "want": "to frame the shrine plaza approach with twin ceremonial flags",
+    "needs": 45,
+    "place": "shrine",
+    "tag": "sacred",
+    "n": 2,
+    "kinds": [
+      "flag_blue",
+      "flag_yellow"
+    ]
   }
 ];
 
@@ -367,6 +380,13 @@ export const EXTRA_DIMENSIONS = [
     "why": "The area around the upper houses lacks active market structures or trade hubs, leaving visual voids in the residential quarter.",
     "tag": "accent",
     "target": 40
+  },
+  {
+    "key": "shrine_river_flanking",
+    "name": "Shrine River Flanking",
+    "why": "The circular monolith cobble plaza drops into bare turf along the riverward side, lacking structural borders or ceremonial standards.",
+    "tag": "sacred",
+    "target": 85
   }
 ];
 
@@ -377,6 +397,11 @@ export const EXTRA_DIMENSIONS = [
  * actually gets better over time. Newest first, capped at forty.
  */
 export const JOURNAL = [
+  {
+    "at": "2026-09-13",
+    "seen": "The foreground sapling grove is planted in a rigid grid along the dirt lane without any fencing, while the monolith's circular plaza ends abruptly on raw earth and riverbank without perimeter markers.",
+    "added": "timber_grove_boundary, shrine_river_flanking, grove_perimeter_fencing, woodlot_lumber_depot, monolith_river_parapet, monolith_ceremonial_standards"
+  },
   {
     "at": "2026-09-13",
     "seen": "The carved stone monolith sits on a circular cobble ring that ends abruptly against bare turf without boundary markers, while the long stone staircase ascending to the castle hill stands completely plain and unadorned.",

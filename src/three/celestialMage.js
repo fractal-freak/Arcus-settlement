@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 const V=(x,y,z)=>new Vector3(x,y,z);
 const clamp=(x)=>Math.max(0,Math.min(1,x));
-let materials, textileMaps, textilePromise;
+let materials, textileMaps, textilePromise, instanceCount=0;
 /** Share decoded images and wait before the first material is constructed. */
 export function loadMageTextiles(){
   if(!textilePromise)textilePromise=Promise.all(['brocade-v1.png','lunar-stole-v1.png'].map(name=>new TextureLoader().loadAsync('./assets/celestial-mage/'+name))).then(([brocade,stole])=>{
@@ -57,6 +57,10 @@ function getMaterials(){
     gold:new MeshStandardMaterial({map:textile('#b79a5e',false),roughness:.7,metalness:.3}),
     skin:new MeshStandardMaterial({color:0xc3a38f,roughness:1}),
     hair:new MeshStandardMaterial({color:0xb6b1a5,roughness:1}),
+    eyeWhite:new MeshStandardMaterial({color:0xc9c2ad,roughness:.85}),
+    eyeIris:new MeshStandardMaterial({color:0x647776,roughness:.65}),
+    eyePupil:new MeshStandardMaterial({color:0x202b31,roughness:.6}),
+    eyeLash:new MeshStandardMaterial({color:0x51443f,roughness:1}),
     ink:new MeshStandardMaterial({color:0x272632,roughness:1}),
     lips:new MeshStandardMaterial({color:0x956e65,roughness:1}),
   };return materials;
@@ -99,6 +103,7 @@ export function tailorCelestialMage(root, {background=false}={}) {
     }
     if(!g.attributes.uv)g.setAttribute('uv',new Float32BufferAttribute(new Float32Array(p.count*2),2));
     g.setAttribute('skinIndex',new Uint16BufferAttribute(si,4));g.setAttribute('skinWeight',new Float32BufferAttribute(sw,4));g.setAttribute('color',new Float32BufferAttribute(colors,3));
+    if(mat.startsWith('eye')){const closed=p.clone();for(let i=0;i<p.count;i++){closed.setY(i,1.691+.008*Math.pow((Math.abs(p.getX(i))-.034)/.019,2));if(mat!=='eyeLash')closed.setZ(i,p.getZ(i)-.016);}g.morphAttributes.position=[closed];}
     (buckets[mat]??=[]).push(g.toNonIndexed());g.dispose();
   }
   function surface(rows,mat,weights,{start=0,end=Math.PI*2,segments=40,folds=0,sculpt=null,density=.04}={}){
@@ -172,22 +177,23 @@ export function tailorCelestialMage(root, {background=false}={}) {
   const gaussian=(x,c,w)=>Math.exp(-(((x-c)/w)**2));
   surface(faceRows,'skin',rigid('head'),{segments:background?48:96,density:background?.012:.006,sculpt:(p,a)=>{
     const front=Math.max(0,Math.cos(a));
-    p.z+=front**8*(.034*gaussian(p.x,0,.014)*gaussian(p.y,1.67,.037)+.028*gaussian(p.x,0,.015)*gaussian(p.y,1.65,.013));
+    p.z+=front**8*(.034*gaussian(p.x,0,.014)*gaussian(p.y,1.67,.037)+.016*gaussian(p.x,0,.015)*gaussian(p.y,1.65,.013));
     p.z-=front**6*.010*gaussian(Math.abs(p.x),.036,.022)*gaussian(p.y,1.695,.013);
     p.z+=front**5*.012*gaussian(Math.abs(p.x),.053,.029)*gaussian(p.y,1.661,.02);
     p.z+=front**8*.009*gaussian(p.x,0,.03)*gaussian(p.y,1.624,.014);
   }});
   for(const side of [-1,1]){
     ellipsoid([side*.083,1.67,-.003],[.012,.026,.018],'skin','head');
-    ellipsoid([side*.035,1.697,.072],[.018,.004,.005],'ivory','head');
-    ellipsoid([side*.033,1.697,.078],[.005,.0038,.002],'ink','head');
-    cord([[side*.016,1.697,.077],[side*.033,1.704,.079],[side*.052,1.699,.068]],.0015,'ink','head');
-    cord([[side*.016,1.695,.077],[side*.034,1.69,.077],[side*.052,1.699,.068]],.0018,'skin','head');
-    cord([[side*.017,1.716,.073],[side*.036,1.72,.075],[side*.057,1.714,.064]],.0018,'ink','head');
-    cord([[side*.006,1.644,.107],[side*.012,1.642,.102]],.002,'lips','head');
+    ellipsoid([side*.035,1.697,.072],[.018,.0045,.005],'eyeWhite','head');
+    ellipsoid([side*.033,1.697,.077],[.0054,.0042,.0018],'eyeIris','head');
+    ellipsoid([side*.033,1.697,.079],[.0024,.0032,.0008],'eyePupil','head');
+    cord([[side*.016,1.697,.077],[side*.033,1.704,.079],[side*.052,1.699,.068]],.0008,'eyeLash','head');
+    cord([[side*.016,1.695,.077],[side*.034,1.69,.077],[side*.052,1.699,.068]],.0008,'skin','head');
+    cord([[side*.017,1.716,.073],[side*.036,1.72,.075],[side*.057,1.714,.064]],.0011,'ink','head');
+    cord([[side*.006,1.644,.096],[side*.012,1.643,.092]],.0007,'lips','head');
   }
-  cord([[-.02,1.624,.072],[-.009,1.628,.078],[0,1.626,.081],[.01,1.628,.078],[.02,1.624,.072]],.0017,'lips','head');
-  cord([[-.016,1.623,.074],[0,1.619,.08],[.016,1.623,.074]],.0022,'lips','head');
+  cord([[-.02,1.624,.072],[-.009,1.628,.078],[0,1.626,.081],[.01,1.628,.078],[.02,1.624,.072]],.0009,'lips','head');
+  cord([[-.016,1.623,.074],[0,1.619,.08],[.016,1.623,.074]],.0011,'lips','head');
   // Flattened, tapering locks with uneven parting and S-shaped flow. Each
   // strand has a rounded cross-section, so it remains volumetric in profile.
   function lock(path,width,depth,phase){
@@ -236,9 +242,16 @@ export function tailorCelestialMage(root, {background=false}={}) {
     }
     return result;
   };
+  // Each character owns its expression; shared geometry is never mutated.
+  const eyes=kit.children.filter(mesh=>mesh.name.startsWith('Celestial_eye'));
+  const blinkPeriod=3.4+(instanceCount++%7)*.37;
   let time=0,turn=0,lastHeading=null;
+  let blinkTime=(instanceCount*.713)%blinkPeriod;
   const update=(dt,animation)=>{
     dt=Math.max(0,Math.min(dt,.05));time+=dt;
+    blinkTime=(blinkTime+dt)%blinkPeriod;
+    const blink=blinkTime<.24?Math.sin(Math.PI*blinkTime/.24)**2:0;
+    for(const eye of eyes)eye.morphTargetInfluences[0]=blink;
     const heading=root.rotation.y+(root.parent?.rotation.y||0);
     let delta=lastHeading===null?0:Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading));lastHeading=heading;
     const wanted=dt>0?Math.max(-.10,Math.min(.10,-delta*.18/dt)):0;

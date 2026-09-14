@@ -518,3 +518,7 @@ Completed world frames measured median 20.83ms / p95 36.86ms, CPU 5.9/7.6ms.
 Normal-texture and forced-download-failure checks exercise character startup.
 Artwork generated with the built-in image tool, not Higgsfield; provenance
 and CC0 dedication recorded in ASSETS.md. Public release pending.
+
+## 2026-09-13 — Celestial mage expression
+
+Refined the mage with muted blue-gray irises, smaller pupils, finer brows and lip contours, and a softer nose. Added brief independent blink timing using per-instance morph influences over shared skinned geometry. Review checks cover full closure, open intervals, independent expressions and zero-time stability in addition to the existing rig and cloth checks.

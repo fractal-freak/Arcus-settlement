@@ -24,7 +24,7 @@
  *    load rather than assumed (see retarget()).
  */
 
-import { tailorCelestialMage } from './celestialMage.js';
+import { tailorCelestialMage, loadMageTextiles } from './celestialMage.js';
 import { AnimationMixer, LoopRepeat, LoopOnce, Group, Mesh, CylinderGeometry, BoxGeometry, MeshLambertMaterial, Color, LatheGeometry, Vector2, SphereGeometry, TorusGeometry } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
@@ -99,6 +99,7 @@ const clips = new Map();  // clip name -> AnimationClip
 export function loadCharacters() {
   if (readyPromise) return readyPromise;
   readyPromise = Promise.all([
+    loadMageTextiles(),
     ...BASE_KINDS.map((k) => load(k).then((g) => models.set(k, g.scene))),
     ...ANIM_FILES.map((f) => load(f).then((g) => {
       for (const c of g.animations) if (!clips.has(c.name)) clips.set(c.name, c);

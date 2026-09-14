@@ -195,10 +195,23 @@ reuses the existing recorded CC0 sanctuary rock maps; no external assets added.
 ### Celestial court mage
 
 `src/three/celestialMage.js` authors the original 3D clothing, face, hands, hair,
-headdress and canvas textile artwork directly. No downloaded or reference-image
-pixels are embedded. The body uses a proportion-adjusted KayKit Rig_Medium
+headdress and fallback canvas textile artwork directly. The approved concept
+image itself is not embedded. Production textile artwork is recorded below. The body uses a proportion-adjusted KayKit Rig_Medium
 skeleton and its existing CC0 animation clips (see the character pack above).
 The new procedural mesh and textile artwork are dedicated to CC0. The approved
 generated concept remains a private modeling reference under design/characters;
 it is not copied into the public asset bundle. The first game interpretation is
 more stylized than that concept and does not claim equivalent facial detail.
+
+
+### Celestial mage brocade and lunar stole
+
+`public/assets/celestial-mage/brocade-v1.png` and `lunar-stole-v1.png` are
+original AI-generated textile artwork made for this project with the built-in
+image tool on September 13, 2026, dedicated to CC0 under the project dedication.
+No third-party image was supplied as an edit target or copied into these maps.
+The brocade is a repeating base-color swatch; the stole atlas reserves its
+central quarter for embroidered lunar phases and its sides for plain navy cloth.
+Shared sRGB textures use the model's UV coordinates. Existing code-drawn
+materials remain the fallback if a texture request fails. Original prompts
+are saved in design/characters/textiles-v1-prompts.txt in the local workspace.

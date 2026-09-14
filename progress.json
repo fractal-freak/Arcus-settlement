@@ -194,6 +194,19 @@
       "summary": "No candidate produced",
       "reason": "Attempt failed before review; inspect this run before repeating.",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-14T11:06:00.775Z",
+      "run": "34835568562",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

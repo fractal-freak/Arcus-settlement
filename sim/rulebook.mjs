@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-14",
+    "seen": "The circular monolith plaza drops abruptly into bare dirt along the eastern riverbank without revetment stones or aquatic borders, while the stair climbing the castle hill sits unbordered and plain against the bare slope.",
+    "added": "monolith_river_revetment, hillside_processional_ascent, monolith_shoreline_boulder_revetment, shrine_waterfront_reeds_and_lilies, castle_stair_heraldic_flags, castle_hill_retaining_fences"
+  },
+  {
     "at": "2026-09-13",
     "seen": "The large circular monolith plaza sits directly next to an unbordered dirt shore with open, empty river water, while the dense foreground tree grove lacks any path fencing or forestry staging to anchor it to the lane.",
     "added": "shrine_riverfront_flanking, woodland_lane_transition, monolith_river_stone_edging, monolith_waterfront_flank_reeds, monolith_river_heraldry_posts, foreground_grove_enclosure, woodlot_timber_staging"

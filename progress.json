@@ -181,6 +181,19 @@
       "summary": "No candidate produced",
       "reason": "Invalid edit",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-14T05:25:01.099Z",
+      "run": "34809291273",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

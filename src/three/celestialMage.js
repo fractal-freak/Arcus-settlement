@@ -1,12 +1,24 @@
 /** Original, volumetric court mage. Tailored surfaces and a measured KayKit animation rig.
- * Geometry and textile artwork are authored here; no concept-image pixels are shipped.
+ * Geometry is authored here. Original generated textile assets are recorded in ASSETS.md.
  */
-import { Group, Bone, Quaternion, Vector3, Color, BufferGeometry, Float32BufferAttribute, Uint16BufferAttribute, SkinnedMesh, Skeleton, MeshStandardMaterial, CanvasTexture, SRGBColorSpace, DoubleSide, SphereGeometry, TubeGeometry, CatmullRomCurve3 } from 'three';
+import { Group, Bone, Quaternion, Vector3, Color, BufferGeometry, Float32BufferAttribute, Uint16BufferAttribute, SkinnedMesh, Skeleton, MeshStandardMaterial, CanvasTexture, TextureLoader, RepeatWrapping, SRGBColorSpace, DoubleSide, SphereGeometry, TubeGeometry, CatmullRomCurve3 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const V=(x,y,z)=>new Vector3(x,y,z);
 const clamp=(x)=>Math.max(0,Math.min(1,x));
-let materials;
+let materials, textileMaps, textilePromise;
+/** Share decoded images and wait before the first material is constructed. */
+export function loadMageTextiles(){
+  if(!textilePromise)textilePromise=Promise.all(['brocade-v1.png','lunar-stole-v1.png'].map(name=>new TextureLoader().loadAsync('./assets/celestial-mage/'+name))).then(([brocade,stole])=>{
+    for(const t of [brocade,stole]){t.colorSpace=SRGBColorSpace;t.anisotropy=4;}
+    brocade.wrapS=brocade.wrapT=RepeatWrapping;
+    const plain=stole.clone();plain.offset.x=.02;plain.repeat.x=.28;plain.needsUpdate=true;
+    // The atlas dedicates its middle quarter to the narrow embroidered strip.
+    stole.offset.x=.375;stole.repeat.x=.25;
+    textileMaps={brocade,stole,plain};
+  }).catch(error=>{console.warn('Celestial textiles unavailable; using the built-in cloth.',error);});
+  return textilePromise;
+}
 const geometryKits=new Map();
 function textile(base,ornament=true) {
   const c=document.createElement('canvas');c.width=1024;c.height=1024;const x=c.getContext('2d');
@@ -37,8 +49,9 @@ function stoleTexture(){
 }
 function getMaterials(){
   if(!materials)materials={
-    stole:new MeshStandardMaterial({map:stoleTexture(),roughness:1,side:DoubleSide}),
-    blue:new MeshStandardMaterial({map:textile('#253044'),roughness:.94,side:DoubleSide}),
+    stole:new MeshStandardMaterial({map:textileMaps?.stole??stoleTexture(),roughness:1,side:DoubleSide}),
+    blue:new MeshStandardMaterial({map:textileMaps?.brocade??textile('#253044'),roughness:.94,side:DoubleSide}),
+    plain:new MeshStandardMaterial({map:textileMaps?.plain??textile('#253044',false),roughness:1,side:DoubleSide}),
     red:new MeshStandardMaterial({map:textile('#793739',false),roughness:1,side:DoubleSide}),
     ivory:new MeshStandardMaterial({map:textile('#c9b994',false),roughness:1,side:DoubleSide}),
     gold:new MeshStandardMaterial({map:textile('#b79a5e',false),roughness:.7,metalness:.3}),
@@ -91,9 +104,10 @@ export function tailorCelestialMage(root, {background=false}={}) {
   function surface(rows,mat,weights,{start=0,end=Math.PI*2,segments=40,folds=0,sculpt=null,density=.04}={}){
     const smooth=[];for(let j=0;j<rows.length-1;j++){const a=rows[j],b=rows[j+1],steps=Math.max(1,Math.ceil((b[0]-a[0])/density));for(let i=0;i<steps;i++)smooth.push(Array.from({length:5},(_,k)=>{const t=i/steps,av=a[k]||0,bv=b[k]||0;if(k===0)return av+(bv-av)*t;const prev=rows[Math.max(0,j-1)][k]||0,next=rows[Math.min(rows.length-1,j+2)][k]||0;const value=(2*t*t*t-3*t*t+1)*av+(t*t*t-2*t*t+t)*(bv-prev)*.5+(-2*t*t*t+3*t*t)*bv+(t*t*t-t*t)*(next-av)*.5;return k<3?Math.max(0,value):value;}));}smooth.push(rows.at(-1));rows=smooth;
     const pos=[],uv=[],ix=[];
+    const textileWidth=Math.max(...rows.map(r=>(r[1]+r[2])*.5))*(end-start)/.9;
     for(let j=0;j<rows.length;j++){
       const [y,rx,rz,cx=0,cz=0]=rows[j];
-      for(let i=0;i<=segments;i++){const a=start+(end-start)*i/segments,f=1+folds*(Math.sin(a*12+.25)+.4*Math.sin(a*23))*(.35+.65*(1-j/(rows.length-1)));const point=V(cx+Math.sin(a)*rx*f,y,cz+Math.cos(a)*rz*f);sculpt?.(point,a);pos.push(point.x,point.y,point.z);uv.push(i/segments,j/(rows.length-1));}
+      for(let i=0;i<=segments;i++){const a=start+(end-start)*i/segments,f=1+folds*(Math.sin(a*12+.25)+.4*Math.sin(a*23))*(.35+.65*(1-j/(rows.length-1)));const point=V(cx+Math.sin(a)*rx*f,y,cz+Math.cos(a)*rz*f);sculpt?.(point,a);pos.push(point.x,point.y,point.z);uv.push(mat==='blue'?i/segments*textileWidth:i/segments,mat==='blue'?(y-rows[0][0])/.9:j/(rows.length-1));}
     }
     for(let j=0;j<rows.length-1;j++)for(let i=0;i<segments;i++){const a=j*(segments+1)+i,b=a+1,c=a+segments+1,d=c+1;ix.push(a,b,c,b,d,c);}
     const g=new BufferGeometry();g.setAttribute('position',new Float32BufferAttribute(pos,3));g.setAttribute('uv',new Float32BufferAttribute(uv,2));g.setIndex(ix);g.computeVertexNormals();add(g,mat,weights);
@@ -109,6 +123,11 @@ export function tailorCelestialMage(root, {background=false}={}) {
   surface(robe,'red',skirt,{folds:.105});
   surface(robe.map(([y,x,z])=>[y+.012,x+.009,z+.012]),'blue',skirt,{start:.17,end:Math.PI-.035,segments:background?28:52,folds:.105});
   surface(robe.map(([y,x,z])=>[y+.012,x+.009,z+.012]),'blue',skirt,{start:Math.PI+.035,end:Math.PI*2-.17,segments:background?28:52,folds:.105});
+  // Sewn gold hems follow the same sculpted cut as the two outer robe panels.
+  for(const [start,end] of [[.17,Math.PI-.035],[Math.PI+.035,Math.PI*2-.17]]){
+    const edge=Array.from({length:65},(_,i)=>{const a=start+(end-start)*i/64,f=1+.105*(Math.sin(a*12+.25)+.4*Math.sin(a*23));return V(Math.sin(a)*.330*f,.16,Math.cos(a)*.249*f);});
+    add(new TubeGeometry(new CatmullRomCurve3(edge),96,.003,5,false),'gold',skirt);
+  }
   surface([[1.02,.16,.118],[1.14,.145,.11],[1.3,.172,.12],[1.43,.205,.105],[1.49,.10,.085],[1.53,.062,.061]],'blue',body,{folds:.015});
   // Front lunar stole, slightly proud of the cloth, with a sculpted drape.
   const panel=(mat,x0,x1,y0,y1,z0,z1,weight)=>{
@@ -124,23 +143,27 @@ export function tailorCelestialMage(root, {background=false}={}) {
   const mantleSculpt=(p,a)=>{const t=clamp((1.53-p.y)/.32);p.y+=t*(Math.abs(Math.sin(a))*.215+.012*Math.sin(a));p.z+=.008*Math.sin(a*7)*t;};
   const mantleRows=[[1.195,.32,.194],[1.28,.295,.18],[1.4,.25,.128],[1.5,.10,.078],[1.53,.063,.068]];
   surface(mantleRows.map(([y,x,z])=>[y-.005,x-.004,z-.004]),'red',mantleWeight,{start:.39,end:Math.PI*2-.39,segments:background?36:64,folds:.035,sculpt:mantleSculpt});
-  surface(mantleRows,'blue',mantleWeight,{start:.39,end:Math.PI*2-.39,segments:background?36:64,folds:.035,sculpt:mantleSculpt});
+  surface(mantleRows,'plain',mantleWeight,{start:.39,end:Math.PI*2-.39,segments:background?36:64,folds:.035,sculpt:mantleSculpt});
   surface([[1.19,.322,.197],[1.201,.322,.197]],'gold',mantleWeight,{start:.39,end:Math.PI*2-.39,segments:background?36:64,sculpt:mantleSculpt});
   surface([[1.07,.164,.125],[1.103,.163,.125]],'gold',rigid('spine'));
   ellipsoid([0,1.084,.132],[.03,.027,.012],'gold','spine');
   ellipsoid([0,1.434,.109],[.028,.031,.01],'gold','chest');
+  const starPoints=[.145,1.435,.122],starUV=[.5,.5],starIndices=[];
+  for(let i=0;i<=16;i++){const a=i*Math.PI/8,r=i%2?.013:.042;starPoints.push(.145+Math.cos(a)*r,1.435+Math.sin(a)*r,.122);starUV.push(.5+Math.cos(a)*.5,.5+Math.sin(a)*.5);if(i>0)starIndices.push(0,i,i+1);}
+  const starGeometry=new BufferGeometry();starGeometry.setAttribute('position',new Float32BufferAttribute(starPoints,3));starGeometry.setAttribute('uv',new Float32BufferAttribute(starUV,2));starGeometry.setIndex(starIndices);starGeometry.computeVertexNormals();add(starGeometry,'gold',rigid('chest'));
+
   for(const [side,s] of [['l',1],['r',-1]]){
     // Sewn sleeves in T pose, weighted across the elbow; tailored cuffs conceal joints.
     const g=new BufferGeometry(),p=[],uv=[],ix=[];
     for(let j=0;j<=16;j++){const t=j/16,x=s*(.19+t*.555),radius=(.059+.017*Math.sin(t*Math.PI)+.035*t*t)*(j===0?.72:1);
-      for(let i=0;i<=24;i++){const a=i/24*Math.PI*2;const pleat=1+.11*Math.sin(a*7+t*2)*Math.sin(t*Math.PI*.9);p.push(x,1.46+Math.cos(a)*radius*pleat-(.025*Math.sin(t*Math.PI)),Math.sin(a)*radius*pleat);uv.push(i/24,t);}}
+      for(let i=0;i<=24;i++){const a=i/24*Math.PI*2;const pleat=1+.11*Math.sin(a*7+t*2)*Math.sin(t*Math.PI*.9);p.push(x,1.46+Math.cos(a)*radius*pleat-(.025*Math.sin(t*Math.PI)),Math.sin(a)*radius*pleat);uv.push(i/24*.55,t*.62);}}
     for(let j=0;j<16;j++)for(let i=0;i<24;i++){const a=j*25+i;ix.push(a,a+25,a+1,a+1,a+25,a+26);}g.setAttribute('position',new Float32BufferAttribute(p,3));g.setAttribute('uv',new Float32BufferAttribute(uv,2));g.setIndex(ix);g.computeVertexNormals();add(g,'blue',p=>{const t=clamp((Math.abs(p.x)-.43)/.12);return [['upperarm'+side,1-t],['lowerarm'+side,t]];});
     ellipsoid([s*.78,1.455,.0],[.058,.026,.035],'skin','wrist'+side);
     for(let f=0;f<4;f++)cord([[s*.803,1.456,-.032+f*.021],[s*(.855-(f===0?.008:0)),1.445,-.032+f*.021],[s*(.881-(f===0||f===3?.018:0)),1.426,-.03+f*.021]],.008,'skin','hand'+side);
     cord([[s*.78,1.43,.035],[s*.80,1.407,.052],[s*.827,1.41,.054]],.012,'skin','wrist'+side);
     surface([[.10,.061,.061,s*.105,0],[.48,.065,.06,s*.105,0],[.91,.086,.079,s*.105,0]],'ink',p=>[[p.y>.49?'upperleg'+side:'lowerleg'+side,1]]);
     ellipsoid([s*.105,.065,.077],[.067,.052,.145],'ink','foot'+side);
-    ellipsoid([s*.105,.052,.19],[.042,.033,.1],'blue','foot'+side);
+    ellipsoid([s*.105,.052,.19],[.042,.033,.1],'plain','foot'+side);
     cord([[s*.055,.099,.015],[s*.105,.112,.055],[s*.15,.092,.13]],.005,'gold','foot'+side);
   }
   // One sculpted facial surface: cheek planes, sockets and the bridge/tip
@@ -180,10 +203,10 @@ export function tailorCelestialMage(root, {background=false}={}) {
     lock([[sx*.058,1.805,sz*.06],[sx*.084,1.757,sz*.083],[sx*(.092+.006*wave),1.695,sz*.087],[sx*(.116+.012*wave),1.625,sz*.101],[sx*(.113-.009*wave),1.566,sz*.111],[sx*(.139+.013*wave),1.508+length,sz*.12],[sx*.119,1.467+length,sz*.108]],.013+(i%3)*.003,.004,i);
   }
   // Cloth mitre: two soft tapered peaks, backed by a falling veil.
-  surface([[1.78,.095,.083],[1.87,.10,.084],[1.98,.089,.077],[2.10,.060,.051],[2.23,.009,.012]],'blue',rigid('head'),{segments:32,folds:.02});
-  surface([[1.82,.064,.063,0,-.055],[1.98,.055,.055,.028,-.06],[2.13,.038,.035,.048,-.055],[2.22,.002,.003,.065,-.05]],'blue',rigid('head'),{segments:24});
+  surface([[1.78,.095,.083],[1.87,.10,.084],[1.98,.089,.077],[2.10,.060,.051],[2.23,.009,.012]],'plain',rigid('head'),{segments:32,folds:.02});
+  surface([[1.82,.064,.063,0,-.055],[1.98,.055,.055,.028,-.06],[2.13,.038,.035,.048,-.055],[2.22,.002,.003,.065,-.05]],'plain',rigid('head'),{segments:24});
   surface([[1.79,.098,.086],[1.83,.101,.087]],'gold',rigid('head'));
-  panel('blue',-.071,.071,1.42,1.90,-.15,-.086,rigid('head'));
+  panel('plain',-.071,.071,1.42,1.90,-.15,-.086,rigid('head'));
   // Crescent ornament is an actual strip of geometry, with an open cutout.
   const cp=[],cu=[],ci=[];
   for(let i=0;i<=40;i++){const t=i/40,outer=1.201+t*(Math.PI*2-2*1.201),inner=1.686+t*(Math.PI*2-2*1.686);cp.push(Math.cos(outer)*.049,1.88+Math.sin(outer)*.049,.09,.023+Math.cos(inner)*.046,1.88+Math.sin(inner)*.046,.09);cu.push(t,0,t,1);}
@@ -227,6 +250,6 @@ export function tailorCelestialMage(root, {background=false}={}) {
     }
 
   };
-  root.userData.celestialMage={bodyHeight:1.818,totalHeight:2.23,retarget,update,dispose:()=>{skeleton.dispose();}};
+  root.userData.celestialMage={bodyHeight:1.818,totalHeight:2.23,textiles:!!textileMaps,retarget,update,dispose:()=>{skeleton.dispose();}};
   return root.userData.celestialMage;
 }

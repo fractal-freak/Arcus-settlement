@@ -501,3 +501,20 @@ Extend stratified rock cliff geometry across the front slope and underneath the 
 
 Tests, rulebook, build, boot/frame gate and Gemini visual review passed.
 Base: 6b60b8031f55fa7589a640b119f0b4c05f47f9df. Candidate evidence is retained in the workflow artifacts.
+
+
+## September 13 — celestial textile artwork
+
+Replaced repetitive vector-like cloth marks with original brocade and lunar
+embroidery textures, mapped at consistent physical scale. Kept the mantle and
+headdress plain navy to preserve silhouette and the front-panel focal point.
+Added a star clasp and gold hem cords following the sculpted robe cut. Shared
+textures load once before character construction; failed downloads use the
+existing procedural cloth instead of preventing characters from appearing.
+
+Inspected front/back/side/face and walking views. Local player, broom,
+conversation and controller checks passed; 72 local logic tests passed.
+Completed world frames measured median 20.83ms / p95 36.86ms, CPU 5.9/7.6ms.
+Normal-texture and forced-download-failure checks exercise character startup.
+Artwork generated with the built-in image tool, not Higgsfield; provenance
+and CC0 dedication recorded in ASSETS.md. Public release pending.

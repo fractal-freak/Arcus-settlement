@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-15",
+    "seen": "The circular monolith plaza drops into bare mud along the river edge without stone lining or aquatic vegetation, while the sacred rune stone itself lacks heraldic banners or defined boundary stones along its cobble ring.",
+    "added": "shrine_waterfront_flank, monolith_sanctuary_boundary, monolith_river_reed_margin, monolith_waterlily_flourish, monolith_precinct_standards, monolith_sacred_stone_ring"
+  },
+  {
+    "at": "2026-09-15",
     "seen": "The riverbank flanking the monolith plaza is raw unarmored dirt dropping directly into bare water, while the paved monolith circle ends abruptly against open turf with no defined boundary stones or sacred markers.",
     "added": "shrine_waterfront_promenade, sacred_approach_enclosure, monolith_riverbank_boulder_edge, shrine_flank_aquatic_reeds, monolith_plaza_stone_border, wellside_paved_lane_edging"
   },

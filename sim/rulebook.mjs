@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-15",
+    "seen": "The riverbank flanking the monolith plaza is raw unarmored dirt dropping directly into bare water, while the paved monolith circle ends abruptly against open turf with no defined boundary stones or sacred markers.",
+    "added": "shrine_waterfront_promenade, sacred_approach_enclosure, monolith_riverbank_boulder_edge, shrine_flank_aquatic_reeds, monolith_plaza_stone_border, wellside_paved_lane_edging"
+  },
+  {
     "at": "2026-09-14",
     "seen": "The circular monolith plaza drops abruptly into bare dirt along the eastern riverbank without revetment stones or aquatic borders, while the stair climbing the castle hill sits unbordered and plain against the bare slope.",
     "added": "monolith_river_revetment, hillside_processional_ascent, monolith_shoreline_boulder_revetment, shrine_waterfront_reeds_and_lilies, castle_stair_heraldic_flags, castle_hill_retaining_fences"

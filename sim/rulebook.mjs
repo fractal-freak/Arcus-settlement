@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-16",
+    "seen": "The winding dirt path past the well house floats across empty green turf without fence lines or edge rock framing, while the well area lacks working clutter and depth to connect the foreground orchard to the background cottages.",
+    "added": "midground_lane_framing, wellspring_vicinity_depth, midground_lane_fencing, wellspring_utility_hub, cottage_lane_waymarking, wellside_storage_staging"
+  },
+  {
+    "at": "2026-09-16",
     "seen": "The circular stone monolith plaza drops into bare dirt along the riverbank without stone revetment or sacred heraldry to mark the water threshold.",
     "added": "monolith_river_verge, sacred_water_boundary, monolith_shore_boulders, shrine_heraldic_standards, sacred_river_reeds, monolith_votive_encirclement"
   },

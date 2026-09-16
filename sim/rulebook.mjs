@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-16",
+    "seen": "The far left horizon behind the cottages is entirely flat and empty, causing the composition to feel lopsided against the massive castle hill on the right, while the riverbank beside the monolith plaza remains bare dirt dropping into plain water without stone revetment or votive standards.",
+    "added": "horizon_composition, sacred_waterfront_flanking, western_horizon_watchtowers, monolith_flank_votive_standards, monolith_river_embankment_stones, monolith_aquatic_verge"
+  },
+  {
+    "at": "2026-09-16",
     "seen": "The winding dirt path past the well house floats across empty green turf without fence lines or edge rock framing, while the well area lacks working clutter and depth to connect the foreground orchard to the background cottages.",
     "added": "midground_lane_framing, wellspring_vicinity_depth, midground_lane_fencing, wellspring_utility_hub, cottage_lane_waymarking, wellside_storage_staging"
   },

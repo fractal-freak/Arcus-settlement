@@ -350,6 +350,19 @@
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-16T13:14:53.534Z",
+      "run": "35098221740",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": true,
+      "published": true,
+      "stageComplete": false,
+      "summary": "Fix InstancedMesh matrix and color update flags for processional verge vegetation to ensure reliable GPU buffer synchronization and frame completion.",
+      "reason": "Correctly sets needsUpdate flags on instanceMatrix and instanceColor for processional verge vegetation in jupiterApproach3d.js, resolving GPU buffer update and frame fence test failures while preserving performance and collision invariants.",
+      "next": "Refine the processional approach transition into the village square with weathered curb edging and restrained planting to improve path readability from player scale."
     }
   ],
   "draft": null

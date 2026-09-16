@@ -389,6 +389,19 @@
       "summary": "No candidate produced",
       "reason": "API output truncated; use smaller exact edits instead of complete existing files",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-16T23:22:38.343Z",
+      "run": "35161240928",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
     }
   ],
   "draft": null

@@ -24,5 +24,5 @@ export function jupiterApproach(){
  const fern=new InstancedMesh(fernFrond(),new MeshStandardMaterial({color:0x8d986e,roughness:1,side:DoubleSide}),plants.length*5),dummy=new Object3D(),color=new Color();
  plants.forEach((p,i)=>{for(let k=0;k<5;k++){
   dummy.position.set(p.x,smoothHeightAt(p.x,p.z)+.02,p.z);dummy.rotation.set(0,p.seed+k*1.256,0);dummy.scale.setScalar(p.scale);dummy.updateMatrix();fern.setMatrixAt(i*5+k,dummy.matrix);fern.setColorAt(i*5+k,color.setHSL(.20+(i%4)*.007,.22,.36+(i%5)*.025));
- }});fern.receiveShadow=true;group.add(fern);return group;
+ }});fern.instanceMatrix.needsUpdate=true;if(fern.instanceColor)fern.instanceColor.needsUpdate=true;fern.receiveShadow=true;group.add(fern);return group;
 }

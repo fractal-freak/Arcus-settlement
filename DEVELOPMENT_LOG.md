@@ -522,3 +522,10 @@ and CC0 dedication recorded in ASSETS.md. Public release pending.
 ## 2026-09-13 — Celestial mage expression
 
 Refined the mage with muted blue-gray irises, smaller pupils, finer brows and lip contours, and a softer nose. Added brief independent blink timing using per-instance morph influences over shared skinned geometry. Review checks cover full closure, open intervals, independent expressions and zero-time stability in addition to the existing rig and cloth checks.
+
+## 2026-09-16T13:14:30.082Z — API development
+
+Fix InstancedMesh matrix and color update flags for processional verge vegetation to ensure reliable GPU buffer synchronization and frame completion.
+
+Tests, rulebook, build, boot/frame gate and Gemini visual review passed.
+Base: 836b6110c05dd492dd6f7be0ea392a5ef7bfb426. Candidate evidence is retained in the workflow artifacts.

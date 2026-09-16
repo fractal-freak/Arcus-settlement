@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-16",
+    "seen": "The main dirt path from the timber cottages spills onto the monolith plaza without any ceremonial entryway or threshold, while the river edge directly beside the rune stone remains raw mud dropping straight into open water.",
+    "added": "shrine_portal_threshold, waterfront_sacred_margin, monolith_approach_gateway, shrine_entry_votive_standards, monolith_shore_stone_revetment, monolith_aquatic_flora_fringe"
+  },
+  {
+    "at": "2026-09-16",
     "seen": "The far left horizon behind the cottages is entirely flat and empty, causing the composition to feel lopsided against the massive castle hill on the right, while the riverbank beside the monolith plaza remains bare dirt dropping into plain water without stone revetment or votive standards.",
     "added": "horizon_composition, sacred_waterfront_flanking, western_horizon_watchtowers, monolith_flank_votive_standards, monolith_river_embankment_stones, monolith_aquatic_verge"
   },

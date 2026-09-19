@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-13T05:08:54.588Z",
-      "run": "34738930864",
-      "stage": 0,
-      "outcome": "proposal-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-13T10:30:00.884Z",
       "run": "34750996203",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "Ground processional paving slab skirts below terrain grade and harmonize stone tone with sacred court limestone.",
       "reason": "ype: 'test'\n  ...\n# Subtest: compact edits refuse ambiguous and missing targets and preserve surrounding source\nok 32 - compact edits refuse ambiguous and missing targets and preserve surrounding source\n  ---\n  duration_ms: 0.596291\n  type: 'test'\n  ...\n# Subtest: proposal continues a retained draft and adds new modules against original preimages\nok 33 - proposal continues a retained draft and adds new modules against original preimages\n  ---\n  duration_ms: 78.421751\n  type: 'test'\n  ...\n# Subtest: publisher requires approval and exact tested revision, then pushes only candidate and journal\nok 34 - publisher requires approval and exact tested revision, then pushes only candidate and journal\n  ---\n  duration_ms: 353.349533\n  type: 'test'\n  ...\n# Subtest: snapshot draws while the live feed is pending, then live data takes over\nok 35 - snapshot draws while the live feed is pending, then live data takes over\n  ---\n  duration_ms: 4.805752\n  type: 'test'\n  ...\n# Subtest: a slow snapshot cannot overwrite the live feed\nok 36 - a slow snapshot cannot overwrite the live feed\n  ---\n  duration_ms: 1.204557\n  type: 'test'\n  ...\n# Subtest: a refresh can immediately seed the settlement from its local cache\nok 37 - a refresh can immediately seed the settlement from its local cache\n  ---\n  duration_ms: 1.138571\n  type: 'test'\n  ...\n# Subtest: live collection waits until opening assets are ready\nok 38 - live collection waits until opening assets are ready\n  ---\n  duration_ms: 8.650304\n  type: 'test'\n  ...\n# Subtest: frame completion waits through pending work and releases its GPU fence\nok 39 - frame completion waits through pending work and releases its GPU fence\n  ---\n  duration_ms: 16.452033\n  type: 'test'\n  ...\n# Subtest: a failed GPU fence refuses the check and still releases the resource\nok 40 - a failed GPU fence refuses the check and still releases the resource\n  ---\n  duration_ms: 3.097959\n  type: 'test'\n  ...\n# Subtest: unfinished GPU work has a finite deadline and cannot si",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-19T14:50:37.663Z",
+      "run": "35449892713",
+      "stage": 0,
+      "outcome": "proposal-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Edit must match exactly one location; include more context",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

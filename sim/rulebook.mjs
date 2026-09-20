@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-20",
+    "seen": "The main dirt path running behind the monolith plaza toward the castle hill sits entirely open against the sacred cobble circle without fencing or boundary stones, while the dense sapling plantation in the foreground lacks any forestry staging gear to explain its cultivation.",
+    "added": "sacred_roadside_buffer, forester_plantation_depot, monolith_roadside_fencing, monolith_approach_standards, plantation_timber_staging, nursery_utility_clutter"
+  },
+  {
     "at": "2026-09-16",
     "seen": "The main dirt path from the timber cottages spills onto the monolith plaza without any ceremonial entryway or threshold, while the river edge directly beside the rune stone remains raw mud dropping straight into open water.",
     "added": "shrine_portal_threshold, waterfront_sacred_margin, monolith_approach_gateway, shrine_entry_votive_standards, monolith_shore_stone_revetment, monolith_aquatic_flora_fringe"

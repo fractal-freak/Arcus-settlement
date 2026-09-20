@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-14T17:06:48.812Z",
-      "run": "34871550649",
-      "stage": 0,
-      "outcome": "proposal-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Gemini unavailable (503); 3 attempts exhausted",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-14T20:53:45.942Z",
       "run": "34895427417",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-20T19:49:32.616Z",
+      "run": "35533442852",
+      "stage": 0,
+      "outcome": "validation-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Ground processional paving slab skirts 0.12m below terrain grade to eliminate slope gaps and streamline verge fern instancing to 3 fronds per cluster for optimal frame performance.",
+      "reason": "e: 'test'\n  ...\n# Subtest: compact edits refuse ambiguous and missing targets and preserve surrounding source\nok 32 - compact edits refuse ambiguous and missing targets and preserve surrounding source\n  ---\n  duration_ms: 0.399469\n  type: 'test'\n  ...\n# Subtest: proposal continues a retained draft and adds new modules against original preimages\nok 33 - proposal continues a retained draft and adds new modules against original preimages\n  ---\n  duration_ms: 83.931886\n  type: 'test'\n  ...\n# Subtest: publisher requires approval and exact tested revision, then pushes only candidate and journal\nok 34 - publisher requires approval and exact tested revision, then pushes only candidate and journal\n  ---\n  duration_ms: 369.371108\n  type: 'test'\n  ...\n# Subtest: snapshot draws while the live feed is pending, then live data takes over\nok 35 - snapshot draws while the live feed is pending, then live data takes over\n  ---\n  duration_ms: 3.57731\n  type: 'test'\n  ...\n# Subtest: a slow snapshot cannot overwrite the live feed\nok 36 - a slow snapshot cannot overwrite the live feed\n  ---\n  duration_ms: 0.963167\n  type: 'test'\n  ...\n# Subtest: a refresh can immediately seed the settlement from its local cache\nok 37 - a refresh can immediately seed the settlement from its local cache\n  ---\n  duration_ms: 0.808025\n  type: 'test'\n  ...\n# Subtest: live collection waits until opening assets are ready\nok 38 - live collection waits until opening assets are ready\n  ---\n  duration_ms: 7.704411\n  type: 'test'\n  ...\n# Subtest: frame completion waits through pending work and releases its GPU fence\nok 39 - frame completion waits through pending work and releases its GPU fence\n  ---\n  duration_ms: 16.41501\n  type: 'test'\n  ...\n# Subtest: a failed GPU fence refuses the check and still releases the resource\nok 40 - a failed GPU fence refuses the check and still releases the resource\n  ---\n  duration_ms: 3.126004\n  type: 'test'\n  ...\n# Subtest: unfinished GPU work has a finite deadline and cannot silent",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

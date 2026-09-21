@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-21",
+    "seen": "The stone arch bridge lands beside the monolith plaza onto plain unadorned mud without threshold heraldry, while the steep earth slope beneath the castle processional stair remains raw and unbuttressed.",
+    "added": "bridgehead_sacred_threshold, hillside_stair_shoring, bridgehead_heraldic_flanking, bridgehead_stone_portal, castle_stair_timber_scaffolding, hillside_retaining_boulders"
+  },
+  {
     "at": "2026-09-20",
     "seen": "The main dirt path running behind the monolith plaza toward the castle hill sits entirely open against the sacred cobble circle without fencing or boundary stones, while the dense sapling plantation in the foreground lacks any forestry staging gear to explain its cultivation.",
     "added": "sacred_roadside_buffer, forester_plantation_depot, monolith_roadside_fencing, monolith_approach_standards, plantation_timber_staging, nursery_utility_clutter"

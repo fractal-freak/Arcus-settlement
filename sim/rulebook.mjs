@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-22",
+    "seen": "The riverbank directly framing the monolith plaza remains raw bare dirt dropping into open water without aquatic vegetation or votive flags, while the broad grass fields on the far left outskirt spill into empty distance without perimeter fencing.",
+    "added": "shrine_water_flank, outskirt_field_boundary, monolith_river_flank_flags, monolith_waterfront_plants, western_outskirt_fence_line, outskirt_roadside_boulders"
+  },
+  {
+    "at": "2026-09-22",
     "seen": "The river shoreline directly flanking the monolith plaza remains raw bare earth without stone revetment or water plants, while the broad turf gap between the well shelter and timber cottages lacks domestic work staging.",
     "added": "shrine_riparian_flank, cottage_court_clutter, shrine_bank_waterplants, shrine_bank_stone_armor, cottage_well_work_staging, cottage_lane_timber_piles"
   },

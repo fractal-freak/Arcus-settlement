@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-22",
+    "seen": "The river shoreline directly flanking the monolith plaza remains raw bare earth without stone revetment or water plants, while the broad turf gap between the well shelter and timber cottages lacks domestic work staging.",
+    "added": "shrine_riparian_flank, cottage_court_clutter, shrine_bank_waterplants, shrine_bank_stone_armor, cottage_well_work_staging, cottage_lane_timber_piles"
+  },
+  {
     "at": "2026-09-21",
     "seen": "The stone arch bridge lands beside the monolith plaza onto plain unadorned mud without threshold heraldry, while the steep earth slope beneath the castle processional stair remains raw and unbuttressed.",
     "added": "bridgehead_sacred_threshold, hillside_stair_shoring, bridgehead_heraldic_flanking, bridgehead_stone_portal, castle_stair_timber_scaffolding, hillside_retaining_boulders"

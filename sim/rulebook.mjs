@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-22",
+    "seen": "The main dirt path between the well house and the monolith plaza is an unbordered strip of bare earth cutting through open turf, while the steep hillside beneath the castle processional stair drops abruptly into empty grass without retaining terraces.",
+    "added": "castle_slope_terracing, village_lane_articulation, castle_slope_retaining_walls, castle_hill_watch_standards, wellside_lane_fencing, village_waypoint_staging"
+  },
+  {
+    "at": "2026-09-22",
     "seen": "The riverbank directly framing the monolith plaza remains raw bare dirt dropping into open water without aquatic vegetation or votive flags, while the broad grass fields on the far left outskirt spill into empty distance without perimeter fencing.",
     "added": "shrine_water_flank, outskirt_field_boundary, monolith_river_flank_flags, monolith_waterfront_plants, western_outskirt_fence_line, outskirt_roadside_boulders"
   },

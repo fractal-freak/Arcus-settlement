@@ -8,18 +8,18 @@
  },
  "ci": {
   "backend": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
-  "median": 19.2,
-  "p95": 28.5,
-  "max": 31.4,
-  "startupMs": 44813,
+  "median": 16.8,
+  "p95": 24,
+  "max": 31.8,
+  "startupMs": 30579,
   "chunks": 86,
-  "triangles": 8093134,
-  "drawCalls": 1362,
+  "triangles": 10544474,
+  "drawCalls": 1614,
   "ready": true,
   "terrainWorker": true,
   "pendingVisible": 0,
-  "placed": 114,
-  "completedMedian": 3644.39,
-  "completedP95": 4151.26
+  "placed": 122,
+  "completedMedian": 2366.76,
+  "completedP95": 2750.48
  }
 }

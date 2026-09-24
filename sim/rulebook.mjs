@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-24",
+    "seen": "The riverbank directly alongside the monolith plaza remains a bare dirt slope with scattered weeds, while the circular sacred plaza itself lacks heraldic markers to elevate the stone above a mere field boulder.",
+    "added": "river_sanctuary_framing, monolith_votive_presence, shrine_water_lily_clusters, shrine_bank_granite_armor, monolith_ceremonial_flags, shrine_waterfront_reeds"
+  },
+  {
     "at": "2026-09-22",
     "seen": "The main dirt path between the well house and the monolith plaza is an unbordered strip of bare earth cutting through open turf, while the steep hillside beneath the castle processional stair drops abruptly into empty grass without retaining terraces.",
     "added": "castle_slope_terracing, village_lane_articulation, castle_slope_retaining_walls, castle_hill_watch_standards, wellside_lane_fencing, village_waypoint_staging"

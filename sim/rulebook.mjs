@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-25",
+    "seen": "The riverbank bordering the circular monolith plaza remains a bare dirt wedge dropping into open water without sacred markers or stone armor, while the foreground tree grove spills onto the dirt lane without fence boundaries.",
+    "added": "monolith_waterfront_sacred_edge, foreground_grove_lane_edge, monolith_shore_votive_flags, monolith_waterfront_reeds_and_lilies, monolith_riverbank_boulder_revetment, grove_lane_wooden_fence, grove_roadside_boulder_framing"
+  },
+  {
+    "at": "2026-09-25",
     "seen": "The massive castle hill dominates the right background while the far left outskirt remains flat and bare, leaving the settlement's composition visually lopsided and the central dirt lane without midground anchors.",
     "added": "outskirt_composition_balance, pathway_midground_framing, western_outskirt_watchtower_station, western_outskirt_windmill_anchor, lane_waypoint_market_staging, lane_roadside_rest_haven"
   },

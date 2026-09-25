@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-25",
+    "seen": "The riverbank directly between the monolith plaza and the stone bridge remains a bare dirt shore without sacred threshold markers, while the dirt junction around the well shelter is completely open grass without goods or trade staging.",
+    "added": "shrine_bridge_flank, wellside_trade_staging, shrine_bridgehead_votives, monolith_river_waterlilies, shrine_waterfront_boulders, wellside_cargo_depot"
+  },
+  {
+    "at": "2026-09-25",
     "seen": "The riverbank bordering the circular monolith plaza remains a bare dirt wedge dropping into open water without sacred markers or stone armor, while the foreground tree grove spills onto the dirt lane without fence boundaries.",
     "added": "monolith_waterfront_sacred_edge, foreground_grove_lane_edge, monolith_shore_votive_flags, monolith_waterfront_reeds_and_lilies, monolith_riverbank_boulder_revetment, grove_lane_wooden_fence, grove_roadside_boulder_framing"
   },

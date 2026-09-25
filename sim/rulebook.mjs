@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-25",
+    "seen": "The massive castle hill dominates the right background while the far left outskirt remains flat and bare, leaving the settlement's composition visually lopsided and the central dirt lane without midground anchors.",
+    "added": "outskirt_composition_balance, pathway_midground_framing, western_outskirt_watchtower_station, western_outskirt_windmill_anchor, lane_waypoint_market_staging, lane_roadside_rest_haven"
+  },
+  {
     "at": "2026-09-24",
     "seen": "The riverbank directly alongside the monolith plaza remains a bare dirt slope with scattered weeds, while the circular sacred plaza itself lacks heraldic markers to elevate the stone above a mere field boulder.",
     "added": "river_sanctuary_framing, monolith_votive_presence, shrine_water_lily_clusters, shrine_bank_granite_armor, monolith_ceremonial_flags, shrine_waterfront_reeds"

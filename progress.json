@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-19T17:56:21.774Z",
-      "run": "35459500392",
-      "stage": 0,
-      "outcome": "validation-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "Ground processional paving slab skirts below terrain grade and harmonize stone tone with sacred court limestone.",
-      "reason": "pe: 'test'\n  ...\n# Subtest: compact edits refuse ambiguous and missing targets and preserve surrounding source\nok 32 - compact edits refuse ambiguous and missing targets and preserve surrounding source\n  ---\n  duration_ms: 0.349145\n  type: 'test'\n  ...\n# Subtest: proposal continues a retained draft and adds new modules against original preimages\nok 33 - proposal continues a retained draft and adds new modules against original preimages\n  ---\n  duration_ms: 63.591408\n  type: 'test'\n  ...\n# Subtest: publisher requires approval and exact tested revision, then pushes only candidate and journal\nok 34 - publisher requires approval and exact tested revision, then pushes only candidate and journal\n  ---\n  duration_ms: 317.048607\n  type: 'test'\n  ...\n# Subtest: snapshot draws while the live feed is pending, then live data takes over\nok 35 - snapshot draws while the live feed is pending, then live data takes over\n  ---\n  duration_ms: 3.580297\n  type: 'test'\n  ...\n# Subtest: a slow snapshot cannot overwrite the live feed\nok 36 - a slow snapshot cannot overwrite the live feed\n  ---\n  duration_ms: 1.14612\n  type: 'test'\n  ...\n# Subtest: a refresh can immediately seed the settlement from its local cache\nok 37 - a refresh can immediately seed the settlement from its local cache\n  ---\n  duration_ms: 0.98588\n  type: 'test'\n  ...\n# Subtest: live collection waits until opening assets are ready\nok 38 - live collection waits until opening assets are ready\n  ---\n  duration_ms: 7.477087\n  type: 'test'\n  ...\n# Subtest: frame completion waits through pending work and releases its GPU fence\nok 39 - frame completion waits through pending work and releases its GPU fence\n  ---\n  duration_ms: 16.131743\n  type: 'test'\n  ...\n# Subtest: a failed GPU fence refuses the check and still releases the resource\nok 40 - a failed GPU fence refuses the check and still releases the resource\n  ---\n  duration_ms: 3.160268\n  type: 'test'\n  ...\n# Subtest: unfinished GPU work has a finite deadline and cannot silen",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-19T20:28:50.185Z",
       "run": "35467357740",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "No candidate produced",
       "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-26T07:58:33.069Z",
+      "run": "36227791316",
+      "stage": 0,
+      "outcome": "proposal-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Gemini unavailable (503); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

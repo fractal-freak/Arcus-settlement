@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-26",
+    "seen": "The circular stone monolith plaza sits directly on a bare sand bank without heraldic banners or perimeter markers, while the river edge along the shrine is empty mud lacking aquatic plants or stone revetments.",
+    "added": "monolith_embankment_sanctity, plaza_shrine_boundary, monolith_water_flora_fringe, monolith_shoreline_boulder_belt, monolith_plaza_heraldic_standards, monolith_perimeter_stone_sentinels"
+  },
+  {
     "at": "2026-09-25",
     "seen": "The riverbank directly between the monolith plaza and the stone bridge remains a bare dirt shore without sacred threshold markers, while the dirt junction around the well shelter is completely open grass without goods or trade staging.",
     "added": "shrine_bridge_flank, wellside_trade_staging, shrine_bridgehead_votives, monolith_river_waterlilies, shrine_waterfront_boulders, wellside_cargo_depot"

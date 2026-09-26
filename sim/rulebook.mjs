@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-26",
+    "seen": "The sandy riverbank in front of the rune monolith drops into the river as a bare, flat strip of dirt without stone armor or riparian vegetation, while the dense foreground sapling field sits on featureless lawn without any forestry tools or lumber piles.",
+    "added": "monolith_shoreline_articulation, forester_nursery_staging, monolith_shoreline_boulder_guard, monolith_riparian_flora_fringe, forester_lumber_storage_yard, forester_worksite_equipment"
+  },
+  {
+    "at": "2026-09-26",
     "seen": "The circular stone monolith plaza sits directly on a bare sand bank without heraldic banners or perimeter markers, while the river edge along the shrine is empty mud lacking aquatic plants or stone revetments.",
     "added": "monolith_embankment_sanctity, plaza_shrine_boundary, monolith_water_flora_fringe, monolith_shoreline_boulder_belt, monolith_plaza_heraldic_standards, monolith_perimeter_stone_sentinels"
   },

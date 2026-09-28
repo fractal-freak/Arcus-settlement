@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-21T11:12:02.863Z",
-      "run": "35591769222",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-21T17:16:33.222Z",
       "run": "35629714764",
       "stage": 0,
@@ -521,6 +508,19 @@
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-09-28T07:53:46.739Z",
+      "run": "36393229370",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Apply weathered timber and masonry materials to village buildings and remove missing scaffolding fallback box",
+      "reason": "The candidate changes produced identical visual output across all three verification camera angles (images 4-6 match published images 1-3 exactly). The grey placeholder box on the left side of the walking view remains unchanged, and no visible compositional or visual improvements were realized.",
+      "next": "Modify the village layout or assets to eliminate the untextured grey placeholder box, improve pathing readability towards the castle approach, and ensure visual updates render as intended in the viewport."
     }
   ],
   "draft": null

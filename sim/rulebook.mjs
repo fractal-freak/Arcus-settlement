@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-28",
+    "seen": "The dirt shore directly beside the monolith plaza remains completely bare without aquatic vegetation or votive banners, while the wide grass slope behind the shrine rises toward the castle hill with no structural edging or staging.",
+    "added": "shrine_shoreline_sanctuary, hillside_transition_tiering, shrine_water_votive_posts, shrine_riverbank_boulder_tier, castle_slope_retaining_fence, hillside_staging_piles"
+  },
+  {
     "at": "2026-09-26",
     "seen": "The sandy riverbank in front of the rune monolith drops into the river as a bare, flat strip of dirt without stone armor or riparian vegetation, while the dense foreground sapling field sits on featureless lawn without any forestry tools or lumber piles.",
     "added": "monolith_shoreline_articulation, forester_nursery_staging, monolith_shoreline_boulder_guard, monolith_riparian_flora_fringe, forester_lumber_storage_yard, forester_worksite_equipment"

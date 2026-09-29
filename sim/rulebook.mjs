@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-09-29",
+    "seen": "The bare dirt riverbank in front of the monolith plaza sits raw and unadorned beside open water without aquatic plants or votive markers, while the foreground sapling grove spills onto the grass without fencing or timber work tools.",
+    "added": "shrine_riparian_sacred_threshold, forester_clearing_enclosure, shrine_water_flora_fringe, shrine_shore_votive_standards, shrine_riparian_boulder_guard, forester_lane_boundary_fence, forester_timber_staging_yard"
+  },
+  {
+    "at": "2026-09-29",
     "seen": "The towering castle hill creates a strong vertical anchor on the right, but the left cottage cluster is completely flat and low, making the overall composition feel lopsided. Additionally, the dirt shore where the stone bridge meets the monolith plaza lacks distinct vertical heraldry and water plant",
     "added": "midground_vertical_rhythm, monolith_flank_framing, midground_watch_beacon, shrine_bridgehead_banners, cottage_market_staging, monolith_water_edge_rockery"
   },

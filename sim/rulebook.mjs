@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-29",
+    "seen": "The towering castle hill creates a strong vertical anchor on the right, but the left cottage cluster is completely flat and low, making the overall composition feel lopsided. Additionally, the dirt shore where the stone bridge meets the monolith plaza lacks distinct vertical heraldry and water plant",
+    "added": "midground_vertical_rhythm, monolith_flank_framing, midground_watch_beacon, shrine_bridgehead_banners, cottage_market_staging, monolith_water_edge_rockery"
+  },
+  {
     "at": "2026-09-28",
     "seen": "The dirt shore directly beside the monolith plaza remains completely bare without aquatic vegetation or votive banners, while the wide grass slope behind the shrine rises toward the castle hill with no structural edging or staging.",
     "added": "shrine_shoreline_sanctuary, hillside_transition_tiering, shrine_water_votive_posts, shrine_riverbank_boulder_tier, castle_slope_retaining_fence, hillside_staging_piles"

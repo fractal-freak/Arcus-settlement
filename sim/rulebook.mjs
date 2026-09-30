@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-09-30",
+    "seen": "The circular monolith plaza lacks ceremonial path markers along the dirt approach from the village, while the dirt shore where the stone monolith meets the bridgehead remains raw earth without structural stone edging or heraldic markers.",
+    "added": "shrine_processional_flank, monolith_bridgehead_flank, shrine_processional_banners, shrine_pathway_stone_guard, bridgehead_monolith_wall_anchor, bridgehead_heraldic_posts"
+  },
+  {
     "at": "2026-09-29",
     "seen": "The bare dirt riverbank in front of the monolith plaza sits raw and unadorned beside open water without aquatic plants or votive markers, while the foreground sapling grove spills onto the grass without fencing or timber work tools.",
     "added": "shrine_riparian_sacred_threshold, forester_clearing_enclosure, shrine_water_flora_fringe, shrine_shore_votive_standards, shrine_riparian_boulder_guard, forester_lane_boundary_fence, forester_timber_staging_yard"

@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-24T00:58:13.407Z",
-      "run": "35940017219",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-24T06:08:21.924Z",
       "run": "35962400781",
       "stage": 0,
@@ -512,6 +499,19 @@
     {
       "at": "2026-10-01T13:35:06.112Z",
       "run": "36868300064",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-01T19:08:46.988Z",
+      "run": "36910967080",
       "stage": 0,
       "outcome": "skipped",
       "validated": false,

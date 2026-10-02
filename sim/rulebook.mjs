@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-02",
+    "seen": "The dirt shore directly facing the circular monolith plaza remains a bare sand bank without stone revetments or sacred banners, while the foreground tree grove spills onto open lawn near the well without edge fencing.",
+    "added": "monolith_shore_sanctity, forester_boundary_articulation, monolith_waterfront_stone_revetment, monolith_river_votive_banners, forester_lane_perimeter_fence, bridgehead_water_reeds_and_lilies"
+  },
+  {
     "at": "2026-09-30",
     "seen": "The circular monolith plaza lacks ceremonial path markers along the dirt approach from the village, while the dirt shore where the stone monolith meets the bridgehead remains raw earth without structural stone edging or heraldic markers.",
     "added": "shrine_processional_flank, monolith_bridgehead_flank, shrine_processional_banners, shrine_pathway_stone_guard, bridgehead_monolith_wall_anchor, bridgehead_heraldic_posts"

@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-25T06:52:19.767Z",
-      "run": "36103943124",
-      "stage": 0,
-      "outcome": "proposal-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Gemini unavailable (503); 3 attempts exhausted",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-25T12:20:08.453Z",
       "run": "36134216389",
       "stage": 0,
@@ -521,6 +508,19 @@
       "summary": "No candidate produced",
       "reason": "Attempt failed before review; inspect this run before repeating.",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-03T05:16:01.497Z",
+      "run": "37098232643",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Extend earth path texture blending across all village street lanes and the Jupiter processional approach for a readable, continuous stone-to-square approach.",
+      "reason": "The change to path blending calculation in village.js yields no perceptible visual or structural improvement in any of the view angles (opening view, village street walking view, or gatehouse approach). It fails the requirement for a noticeable visual improvement at player scale.",
+      "next": "Implement a substantive visual or spatial improvement along the stone-to-square approach, such as clearer path defining borders, refined focal framing near the Settlement Stone, or distinct paving transitions into the village lanes."
     }
   ],
   "draft": null

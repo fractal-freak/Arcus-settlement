@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-03",
+    "seen": "The circular stone monolith plaza terminates along a plain dirt shoreline with no riverbank vegetation or ceremonial banners, while the dirt pathway connecting the well house to the shrine remains entirely unbordered against the grass.",
+    "added": "shrine_waterway_framing, village_shrine_thoroughfare, monolith_flank_votive_standards, shrine_riparian_aquatic_fringe, monolith_approach_stone_edging, shrine_pathway_heraldic_beacons"
+  },
+  {
     "at": "2026-10-02",
     "seen": "The dirt shore directly facing the circular monolith plaza remains a bare sand bank without stone revetments or sacred banners, while the foreground tree grove spills onto open lawn near the well without edge fencing.",
     "added": "monolith_shore_sanctity, forester_boundary_articulation, monolith_waterfront_stone_revetment, monolith_river_votive_banners, forester_lane_perimeter_fence, bridgehead_water_reeds_and_lilies"

@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-26T22:48:06.343Z",
-      "run": "36276853276",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-27T01:06:56.150Z",
       "run": "36283979173",
       "stage": 0,
@@ -519,6 +506,19 @@
       "published": false,
       "stageComplete": false,
       "summary": "No candidate produced",
+      "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-04T23:36:46.107Z",
+      "run": "37243154589",
+      "stage": 0,
+      "outcome": "review-failed",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Frame the stone-to-square processional avenue with bevelled stone border kerbs and twin entrance stone piers at the court threshold.",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
     }

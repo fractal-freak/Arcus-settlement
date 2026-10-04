@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-04",
+    "seen": "The riverbank in front of the carved monolith plaza remains a bare sandy shore lacking stone armoring or aquatic flora, while the far left outskirt behind the houses is flat lawn that leaves the skyline unbalanced against the massive castle hill.",
+    "added": "shrine_riverbank_definition, western_horizon_anchor, monolith_riverbank_rockery, monolith_riparian_reeds, shrine_waterfront_standards, western_ridge_windmill, western_outskirt_watchtower"
+  },
+  {
     "at": "2026-10-03",
     "seen": "The circular stone monolith plaza terminates along a plain dirt shoreline with no riverbank vegetation or ceremonial banners, while the dirt pathway connecting the well house to the shrine remains entirely unbordered against the grass.",
     "added": "shrine_waterway_framing, village_shrine_thoroughfare, monolith_flank_votive_standards, shrine_riparian_aquatic_fringe, monolith_approach_stone_edging, shrine_pathway_heraldic_beacons"

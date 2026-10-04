@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-26T02:05:56.791Z",
-      "run": "36210436156",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-26T07:58:33.069Z",
       "run": "36227791316",
       "stage": 0,
@@ -521,6 +508,19 @@
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (429); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-04T00:51:42.710Z",
+      "run": "37164966186",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Frame the stone-to-square approach with moss-grown fieldstone kerbs extending from the Settlement Stone court into the main village avenue.",
+      "reason": "The added fieldstones along the approach path in sacredCourt3d.js produce virtually no visible difference in the player-scale walking view (Image 5 vs Image 2) and only tiny, visually negligible dots in the overview (Image 4 vs Image 1). It fails to provide a meaningful, readable visual framing or distinct path definition along the stone-to-square approach at player scale.",
+      "next": "Add prominent, well-proportioned path borders, paving transitions, or framed stone steps/archways directly along the main walking view street and settlement approach so that the path structure is clearly defined and visibly enhanced at player scale."
     }
   ],
   "draft": null

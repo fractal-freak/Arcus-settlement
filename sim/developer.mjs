@@ -1,6 +1,6 @@
 /** API-only development passes. Invoked by GitHub Actions, never by a Codex heartbeat. */
-import {requestCompletion} from './developer-api.mjs';
-import {readFile,writeFile,mkdir,readdir} from 'node:fs/promises';
+import {requestCompletion,TemporaryApiError} from './developer-api.mjs';
+import {readFile,writeFile,appendFile,mkdir,readdir} from 'node:fs/promises';
 import {digest,validateCandidate,applyCandidate,applyTextEdits} from './developer-policy.mjs';
 const output='.local/api-development';
 const mode=process.argv[2]||'propose';
@@ -61,4 +61,10 @@ if(mode==='propose'){
   console.log('Review:',review.approved===true?'release':review.retain===true?'continue draft':'reject');
 }else throw Error('Unknown mode');
 
-}catch(error){await writeFile(output+'/attempt-error.json',JSON.stringify({phase:mode,reason:String(error.message).slice(0,1500)}));throw error;}
+}catch(error){
+  await writeFile(output+'/attempt-error.json',JSON.stringify({phase:mode,reason:String(error.message).slice(0,1500)}));
+  if (!(error instanceof TemporaryApiError)) throw error;
+  if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, 'deferred=true\n');
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, 'Temporary Gemini outage or quota limit. This pass was deferred, the published world and retained draft are unchanged.\n');
+  console.log('Development pass deferred: '+error.message);
+}

@@ -25,6 +25,7 @@ import {prepareView} from './prepare-view.mjs';
  */
 
 import { createServer } from 'node:http';
+import { baselineScope, comparableBaseline } from './performance-baseline.mjs';
 import { captureWorld } from './capture-world.mjs';
 import { finishGpuFrame } from './gpu-frame.mjs';
 import { readFile } from 'node:fs/promises';
@@ -49,9 +50,9 @@ const OUT = process.env.CRITIC_SHOT || join(HERE, '..', 'state', 'world.png');
  * What is worth catching is a REGRESSION — the rulebook asking for something
  * that costs much more than the last one did — and that is measurable on any
  * hardware as long as it is compared against the last measurement taken on the
- * SAME hardware. So each run records its own numbers and the next one is
- * refused if it is meaningfully worse. The first run has nothing to compare
- * against and is always accepted.
+ * SAME hardware. Each CI job records a fresh unchanged-world baseline, then refuses a
+ * candidate if it is meaningfully worse on that same runner. Historical
+ * reports remain diagnostic; they cannot gate a different hosted machine.
  */
 const WORSE_BY = 1.4;     // a median this many times the last one is a regression
 const AND_AT_LEAST = 4;   // ...but ignore anything under this many ms of change
@@ -292,9 +293,10 @@ const REPORT = process.env.CRITIC_REPORT || join(HERE, '..', 'state', 'report.js
 let reports = {};
 try { reports = JSON.parse(await readFile(REPORT, 'utf8')); } catch { /* first run */ }
 if (reports.median) reports = {};             // the old single-machine shape
+report.scope = baselineScope();
 const previous = reports[WHERE] ?? null;
 // Compare matching renderer backends only; headless macOS may also use software rendering.
-const before = previous?.backend === report.backend ? previous : null;
+const before = comparableBaseline(previous, report) ? previous : null;
 
 const problems = [];
 if (errors.length) problems.push(`the page threw: ${errors.slice(0, 3).join(' | ')}`);

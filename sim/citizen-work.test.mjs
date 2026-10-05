@@ -78,3 +78,18 @@ test('crowd replanning resolves walkable gaps between coarse navigation lanes',(
   assert.doesNotThrow(()=>JSON.stringify(job),'routes contain coordinates, not their owning job');
   assert.deepEqual(Object.keys(job.route[0]).sort(),['x','z']);
 });
+
+// Public geometry reproduced from the failed October 5 scheduled tick.
+test('narrow-lane town still gives all citizens distinct reachable delivery jobs',()=>{
+  const placements=JSON.parse(readFileSync(new URL('./fixtures/citizen-work-routing.json',import.meta.url)));
+  setPlacements(placements);
+  const system=new CitizenWork(placements);
+  const jobs=Array.from({length:48},(_,i)=>system.assign(i+1));
+  assert.ok(jobs.every(Boolean),`Unassigned: ${jobs.map((j,i)=>j?null:i+1).filter(Boolean)}`);
+  assert.equal(new Set(jobs.map(j=>`${j.work.x},${j.work.z}`)).size,48);
+  for(const job of jobs){
+    for(let i=1;i<job.route.length;i++)assert.ok(system.nav.segment(job.route[i-1],job.route[i]),'route stays on walkable ground');
+    for(let i=0;i<4000;i++)system.step(job,.1);
+    assert.ok(job.delivered>0,`${job.seed} completes a delivery`);
+  }
+});

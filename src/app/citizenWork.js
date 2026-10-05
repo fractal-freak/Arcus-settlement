@@ -70,6 +70,15 @@ export class WorkNavigation {
 export class CitizenWork {
   constructor(placements=[],navigation=new WorkNavigation()) {this.placements=placements.filter(outsideBridgeWorks);this.nav=navigation;this.claimed=[];this.deliveryClaims=[];}
   assign(seed,occupation=occupationFor(seed),available=()=>true,spacing=2.4) {
+    const job=this._assign(seed,occupation,available,spacing);
+    if(job||this.nav.gap<=.75)return job;
+    // A coarse lane grid can miss real gaps, just as in crowd replanning.
+    this.fineNavigation??=new WorkNavigation(this.nav.blocked,this.nav.height,.75);
+    const fallback=new CitizenWork(this.placements,this.fineNavigation);
+    fallback.claimed=this.claimed;fallback.deliveryClaims=this.deliveryClaims;
+    return fallback._assign(seed,occupation,available,spacing);
+  }
+  _assign(seed,occupation,available,spacing) {
     const role=ROLES[occupation]||ROLES.farmer;
     let candidates=this.placements.filter(p=>role.kinds.test(p.kind)&&Math.hypot(p.x,p.z)<100);
     if(occupation==='water_carrier')candidates=LANDMARKS.filter(p=>p.key==='well');

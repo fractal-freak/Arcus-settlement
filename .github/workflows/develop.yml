@@ -57,6 +57,8 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   propose:
+    outputs:
+      deferred: ${{ steps.proposal.outputs.deferred }}
     needs: baseline
     if: vars.FREE_API_CONFIRMED == 'true'
     runs-on: ubuntu-latest
@@ -75,6 +77,7 @@ jobs:
       - name: Load retained draft and prior feedback
         run: node sim/developer-memory.mjs load
       - name: Propose through Gemini free-tier project
+        id: proposal
         env:
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
           FREE_API_CONFIRMED: ${{ vars.FREE_API_CONFIRMED }}
@@ -88,8 +91,9 @@ jobs:
           include-hidden-files: true
   validate:
     needs: propose
+    if: needs.propose.outputs.deferred != 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     # Generated source is tested without the API key or a write credential.
     permissions:
       contents: read
@@ -107,6 +111,15 @@ jobs:
         with:
           name: developer-proposal
           path: .local/api-development
+      # Images may be cached, but timing must be measured on this runner.
+      - name: Measure unchanged world on the validation runner
+        env:
+          CRITIC_SHOT: .local/api-development/runner-before.png
+          DEVELOPMENT_FIXTURE: .local/api-development/fixture.json
+          CRITIC_REPORT: .local/api-development/baseline-report.json
+        run: |
+          npm run build
+          node sim/shoot.mjs
       - run: node sim/developer.mjs apply
       - name: Fixed checks with actionable failure evidence
         run: node sim/developer-checks.mjs
@@ -131,6 +144,8 @@ jobs:
           include-hidden-files: true
           retention-days: 7
   review:
+    outputs:
+      deferred: ${{ steps.review.outputs.deferred }}
     needs: [propose, validate]
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -153,6 +168,7 @@ jobs:
           name: developer-validation-image
           path: .local/api-development
       - name: Independent visual review through Gemini
+        id: review
         env:
           CRITIC_KEY: ${{ secrets.CRITIC_KEY }}
           FREE_API_CONFIRMED: ${{ vars.FREE_API_CONFIRMED }}
@@ -170,7 +186,7 @@ jobs:
     outputs:
       released: ${{ steps.release.outputs.released }}
     needs: [propose, validate, review]
-    if: github.ref == 'refs/heads/main' && vars.FREE_API_CONFIRMED == 'true'
+    if: github.ref == 'refs/heads/main' && vars.FREE_API_CONFIRMED == 'true' && needs.review.outputs.deferred != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -223,7 +239,7 @@ jobs:
       - name: Preserve useful drafts and every attempt's feedback
         env:
           VALIDATION_RESULT: ${{ needs.validate.result }}
-          DEVELOPMENT_RESULT: ${{ needs.propose.result == 'failure' && 'proposal-failed' || needs.validate.result == 'failure' && 'validation-failed' || needs.review.result == 'failure' && 'review-failed' || needs.publish.result }}
+          DEVELOPMENT_RESULT: ${{ (needs.propose.outputs.deferred == 'true' || needs.review.outputs.deferred == 'true') && 'provider-deferred' || needs.propose.result == 'failure' && 'proposal-failed' || needs.validate.result == 'failure' && 'validation-failed' || needs.review.result == 'failure' && 'review-failed' || needs.publish.result }}
         run: node sim/developer-memory.mjs save
   deploy:
     needs: publish

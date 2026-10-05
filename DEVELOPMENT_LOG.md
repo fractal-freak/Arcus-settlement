@@ -529,3 +529,25 @@ Fix InstancedMesh matrix and color update flags for processional verge vegetatio
 
 Tests, rulebook, build, boot/frame gate and Gemini visual review passed.
 Base: 836b6110c05dd492dd6f7be0ea392a5ef7bfb426. Candidate evidence is retained in the workflow artifacts.
+
+
+## October 5, scheduled workflow reliability
+
+Daily failures had three reproduced causes: rendering compared different hosted
+runners sharing the same SwiftShader label, transient Gemini 503 responses failed
+an optional development pass, and the coarse navigation grid missed reachable
+workstations for citizens 21 and 22 in the October 5 town layout.
+
+Performance reports now include run/attempt/job identity. Candidate validation
+measures unchanged code on its own runner before applying the proposal, retaining
+all sample counts and rejection thresholds. Transient provider failures defer the
+pass after the existing bounded retries, persist feedback, and skip validation
+or publication as appropriate. Authentication and other permanent failures still
+fail. Assignment retries on the existing finer navigation grid only when the
+coarse grid cannot supply a job, preserving claimed work and delivery spaces.
+
+Validation: public failing-layout regression completes deliveries for all 48
+citizens; provider CLI tests prove transient deferral cannot approve a candidate
+and authentication errors still fail. Full tests, rulebook verification, production
+build and headless boot are run before publication. Changes are isolated from
+unfinished local development. See the GitHub Actions run for publication status.

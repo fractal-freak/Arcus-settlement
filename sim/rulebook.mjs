@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-10-05",
+    "seen": "The bare sand shore beside the monolith plaza drops into the river without sacred threshold markers, while the dense foreground sapling grove sits unbordered against the main dirt thoroughfare.",
+    "added": "monolith_flank_composition, foreground_grove_anchor, monolith_votive_shore_pillars, shrine_flank_riparian_rockery, forester_clearing_timber_staging, grove_thoroughfare_boundary_fence"
+  },
+  {
+    "at": "2026-10-05",
     "seen": "The open dirt shore directly flanking the monolith plaza lacks water-edge definition and sacred markers, while the midground lane junction around the well house sits as empty grass, unbalancing the town's visual depth against the massive castle hill.",
     "added": "shrine_flank_definition, midground_junction_framing, shrine_flank_votive_posts, shrine_bridge_shore_armor, well_junction_trade_post, foreground_grove_boundary"
   },
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-12",
     "seen": "The raw grey dirt clearing on the left is an empty quarry patch lacking tools or stone stockpiles, while the expansive wooden platform on the right sits unbordered and featureless.",
     "added": "quarry_workings, outpost_wayfinding, equip_stone_quarry, quarry_scaffolding_access, waypoint_banner_posts, promenade_boundary_fence"
-  },
-  {
-    "at": "2026-09-11",
-    "seen": "The red stone tower and central dirt crossroads sit exposed on empty lawn without armories, practice equipment, or civic gathering structures, leaving major spaces feeling unpurposeful.",
-    "added": "garrison, civic_assembly, muster_archery_range, sentry_encampment, construct_public_stage, town_boundary_fencing"
   }
 ];

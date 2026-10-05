@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-05",
+    "seen": "The open dirt shore directly flanking the monolith plaza lacks water-edge definition and sacred markers, while the midground lane junction around the well house sits as empty grass, unbalancing the town's visual depth against the massive castle hill.",
+    "added": "shrine_flank_definition, midground_junction_framing, shrine_flank_votive_posts, shrine_bridge_shore_armor, well_junction_trade_post, foreground_grove_boundary"
+  },
+  {
     "at": "2026-10-04",
     "seen": "The riverbank in front of the carved monolith plaza remains a bare sandy shore lacking stone armoring or aquatic flora, while the far left outskirt behind the houses is flat lawn that leaves the skyline unbalanced against the massive castle hill.",
     "added": "shrine_riverbank_definition, western_horizon_anchor, monolith_riverbank_rockery, monolith_riparian_reeds, shrine_waterfront_standards, western_ridge_windmill, western_outskirt_watchtower"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-11",
     "seen": "The red stone tower and central dirt crossroads sit exposed on empty lawn without armories, practice equipment, or civic gathering structures, leaving major spaces feeling unpurposeful.",
     "added": "garrison, civic_assembly, muster_archery_range, sentry_encampment, construct_public_stage, town_boundary_fencing"
-  },
-  {
-    "at": "2026-09-11",
-    "seen": "A dense clump of identical small trees dominates the foreground while major structures like the red tower stand exposed on bare grass without defensive stone boundaries or organized staging yards.",
-    "added": "fortification, industry, build_curtain_wall, build_stone_enclosure, assemble_goods_depot, stockpile_resources"
   }
 ];

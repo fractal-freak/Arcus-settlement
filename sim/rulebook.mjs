@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-06",
+    "seen": "The open sandy shoreline between the circular rune monolith and the stone bridge is completely bare of ceremonial standards or stone edging, while the dirt path passing the red-roofed well house spills directly onto unbordered lawn.",
+    "added": "shrine_water_ceremonial_boundary, well_shrine_thoroughfare_verge, monolith_waterfront_ceremonial_flags, shrine_bridge_riparian_rockery, wellside_thoroughfare_stone_edging, shrine_approach_utility_staging"
+  },
+  {
     "at": "2026-10-05",
     "seen": "The bare sand shore beside the monolith plaza drops into the river without sacred threshold markers, while the dense foreground sapling grove sits unbordered against the main dirt thoroughfare.",
     "added": "monolith_flank_composition, foreground_grove_anchor, monolith_votive_shore_pillars, shrine_flank_riparian_rockery, forester_clearing_timber_staging, grove_thoroughfare_boundary_fence"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-11",
     "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",
     "added": "waterfront, heraldry, plant_water_reeds, scatter_waterlilies, dockside_staging, raise_heraldic_flags, skyline_scaffolding"
-  },
-  {
-    "at": "2026-09-12",
-    "seen": "The raw grey dirt clearing on the left is an empty quarry patch lacking tools or stone stockpiles, while the expansive wooden platform on the right sits unbordered and featureless.",
-    "added": "quarry_workings, outpost_wayfinding, equip_stone_quarry, quarry_scaffolding_access, waypoint_banner_posts, promenade_boundary_fence"
   }
 ];

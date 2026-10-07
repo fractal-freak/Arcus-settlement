@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-29T02:09:34.536Z",
-      "run": "36510574381",
-      "stage": 0,
-      "outcome": "proposal-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Gemini unavailable (503); 3 attempts exhausted",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-29T08:46:33.154Z",
       "run": "36543710239",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-07T17:00:59.741Z",
+      "run": "37655167855",
+      "stage": 0,
+      "outcome": "skipped",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Attempt failed before review; inspect this run before repeating.",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

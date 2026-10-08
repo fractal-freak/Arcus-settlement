@@ -93,3 +93,11 @@ test('narrow-lane town still gives all citizens distinct reachable delivery jobs
     assert.ok(job.delivered>0,`${job.seed} completes a delivery`);
   }
 });
+
+test('delivery walkers reach a corner exactly before following its clearance boundary',()=>{
+  const nav=new WorkNavigation((x,z)=>z<0&&x<0,()=>0);
+  const system=new CitizenWork([],nav);
+  const job={seed:1,delivered:0,x:-.125,z:0,phase:'outbound',waypoint:1,route:[{x:-.125,z:0},{x:0,z:0},{x:0,z:-2}],role:{output:'food'}};
+  for(let i=0;i<100;i++)system.step(job,.1);
+  assert.ok(job.delivered>0);
+});

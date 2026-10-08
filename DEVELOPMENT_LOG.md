@@ -551,3 +551,26 @@ citizens; provider CLI tests prove transient deferral cannot approve a candidate
 and authentication errors still fail. Full tests, rulebook verification, production
 build and headless boot are run before publication. Changes are isolated from
 unfinished local development. See the GitHub Actions run for publication status.
+
+
+## October 8, scheduled-run follow-up
+
+The October 5 fix deployed successfully, but subsequent growing town layouts
+exposed waypoint corner-cutting. A deterministic walker advanced within 0.025
+units of a corner, leaving a tiny lateral offset against the next collision
+boundary and stopping delivery forever. Deterministic movement now reaches the
+exact waypoint before advancing; crowd-controlled movement retains its arrival
+tolerance. Reproduced the October 8 tick and confirmed citizen 22 delivers after
+the correction. Added a minimal clearance-boundary regression.
+
+Headless startup previously submitted loading frames without GPU backpressure,
+then drained the queue at the end. Slow software runners could time out during
+loading while still making terrain progress. Startup now completes each rendered
+frame before submitting another. It retains the combined 270-second loading and
+drain allowance, bounded GPU checks, and all 60 measured performance frames.
+New tests cover frame ordering, the deadline, and GPU failure propagation.
+
+Validation: full logic suite, rulebook verification, production build and real
+headless rendering check. Settlement-only publication is authorized in this
+conversation; the separate astrology app is unchanged. Publication outcome is
+verified against GitHub Actions after pushing this fix.

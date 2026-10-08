@@ -131,7 +131,8 @@ export class CitizenWork {
       const to=route[job.waypoint];
       if(!to){job.phase=job.phase==='outbound'?'deliver':'work';job.remaining=job.phase==='deliver'?4:12+job.seed%9;return;}
       const dx=to.x-job.x,dz=to.z-job.z,d=Math.hypot(dx,dz),distance=Math.min(d,dt*1.15);
-      const x=job.x+(d?dx/d*distance:0),z=job.z+(d?dz/d*distance:0);
+      const reachesWaypoint=distance>=d;
+      const x=reachesWaypoint?to.x:job.x+(d?dx/d*distance:0),z=reachesWaypoint?to.z:job.z+(d?dz/d*distance:0);
       if(!move&&this.nav.blocked(x,z,CLEAR)){job.status='Route blocked — waiting for a clear path';job.action='Idle_A';return;}
       const next=move?move(to,distance):{x,z};
       const moved=Math.hypot(next.x-job.x,next.z-job.z);
@@ -147,7 +148,7 @@ export class CitizenWork {
       }
       job.x=next.x;job.z=next.z;
       job.action=job.waitForRoom>0?'Idle_A':'Walking_C';job.status=job.phase==='outbound'?`Delivering ${job.role.output}`:'Returning to work';
-      if(Math.hypot(to.x-job.x,to.z-job.z)<.025)job.waypoint++;
+      if(move?Math.hypot(to.x-job.x,to.z-job.z)<.025:job.x===to.x&&job.z===to.z)job.waypoint++;
       return;
     }
     job.remaining-=dt;

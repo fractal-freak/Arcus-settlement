@@ -1,3 +1,4 @@
+import {waitForOpeningView} from './opening-view.mjs';
 import {prepareView} from './prepare-view.mjs';
 /**
  * Boot the world on a machine with no screen, prove it works, and photograph it.
@@ -148,22 +149,7 @@ await page.waitForFunction(() => window.__world?.stats, null, { timeout: 90_000,
 // explicit evaluate/step calls still work. Time only the real frame body.
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 await page.evaluate(() => window.__world.look(34, -4, 8));
-const deadline = Date.now() + 90000;
-while (true) {
-  const status = await page.evaluate(() => {
-    const w = window.__world;
-    w.step(1);
-    return { ready: w.startup?.complete, pending: w.terrain.pendingVisible, stats: w.stats() };
-  });
-  if (status.ready && status.pending === 0) break;
-  if (Date.now() > deadline) throw new Error('Opening view did not load: ' + JSON.stringify(status));
-  await pause(5);
-}
-// Preserve the startup gate's streaming workload, then drain its outstanding
-// work once before warmup. This drains many loading frames, so use the
-// existing capture allowance. Individual measured frames retain a 90s bound.
-console.log('Draining the startup render queue');
-await finishGpuFrame(page, { timeout: 180000 });
+await waitForOpeningView(page);
 console.log('Opening view ready; warming up completed frames');
 for (let i = 0; i < 10; i++) {
   await page.evaluate(() => window.__world.step(1));

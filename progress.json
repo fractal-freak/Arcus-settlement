@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-29T20:12:49.363Z",
-      "run": "36623281284",
-      "stage": 0,
-      "outcome": "proposal-failed",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Gemini unavailable (503); 3 attempts exhausted",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-29T23:57:34.471Z",
       "run": "36646824455",
       "stage": 0,
@@ -521,6 +508,19 @@
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (429); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-08T08:25:33.458Z",
+      "run": "37747146322",
+      "stage": 0,
+      "outcome": "success",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Connect the settlement stone to the Jupiter castle gatehouse with continuous terrain street paths and processional stone paving",
+      "reason": "The draft fails to deliver a visible improvement in scene composition or path readability and introduces severe UI banner clutter across the walking view (Image 5), obscuring the background architecture. Furthermore, filtering LANDMARKS down to only the well strips landmark structures from the settlement.",
+      "next": "Refine street paving and path layout around the square without dropping settlement landmarks or cluttering the camera view with overlapping HUD elements."
     }
   ],
   "draft": null

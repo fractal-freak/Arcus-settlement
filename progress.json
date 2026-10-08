@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-09-30T02:41:41.611Z",
-      "run": "36659966701",
-      "stage": 0,
-      "outcome": "review-failed",
-      "validated": true,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "Remove missing scaffolding fallback box from active building site and enhance ground path readability towards castle approach",
-      "reason": "Gemini unavailable (429); 3 attempts exhausted",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-09-30T09:05:29.437Z",
       "run": "36692981577",
       "stage": 0,
@@ -512,6 +499,19 @@
     {
       "at": "2026-10-08T15:52:11.331Z",
       "run": "37802629080",
+      "stage": 0,
+      "outcome": "provider-deferred",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "No candidate produced",
+      "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-08T21:03:52.014Z",
+      "run": "37842529398",
       "stage": 0,
       "outcome": "provider-deferred",
       "validated": false,

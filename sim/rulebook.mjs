@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-10-10",
+    "seen": "The hill path climbing behind the well house toward the upper castle stair sits as open grass without banners or path markers, while the dirt yard between the central cottages and well house lacks trade barrels, wheelbarrows, and storage goods.",
+    "added": "castle_ascent_heraldry, wellside_artisan_staging, castle_stair_approach_banners, castle_slope_waypoint_beacons, wellside_craft_wheelbarrow_staging, cottage_yard_freight_depot"
+  },
+  {
+    "at": "2026-10-10",
     "seen": "The dirt riverbank directly flanking the circular stone monolith is flat and unarmored, while the approach lane from the well house terminates at the sacred plaza without stone edging or votive markers.",
     "added": "shrine_waterfront_flank, monolith_sanctuary_framing, shrine_riverbank_boulder_belt, shrine_water_reed_fringe, monolith_flank_votive_beacons, monolith_path_edging_stones"
   },
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-12",
     "seen": "The large carved stone monolith dominating the central plaza sits on unbordered cobbles without sacred offerings or boundary markers, while the riverbank beside the stone bridge remains a bare dirt drop into open water.",
     "added": "monolith_sanctity, waterfront_flourish, shrine_votive_offerings, monolith_stone_enclosure, bridgehead_waterplants, riverbank_boulder_accent"
-  },
-  {
-    "at": "2026-09-11",
-    "seen": "Skyline is the only score still behind, and the critic's heraldry jobs never get taken because they share the tall tag and already read as finished. The outskirts have no mills or taller keeps, only the same flags and watchposts.",
-    "added": "raise_windmills, raise_keep_towers, works_scaffolding"
   }
 ];

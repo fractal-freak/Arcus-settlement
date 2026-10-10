@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-10-01T23:15:17.360Z",
-      "run": "36938987969",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-10-02T02:28:59.812Z",
       "run": "36954983624",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-10T16:38:08.002Z",
+      "run": "38067276682",
+      "stage": 0,
+      "outcome": "validation-failed",
+      "validated": false,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Restore all village landmarks and extend worn street terrain shading across all village streets for readable approach paths.",
+      "reason": "ubtest: snapshot draws while the live feed is pending, then live data takes over\nok 41 - snapshot draws while the live feed is pending, then live data takes over\n  ---\n  duration_ms: 1.940064\n  type: 'test'\n  ...\n# Subtest: a slow snapshot cannot overwrite the live feed\nok 42 - a slow snapshot cannot overwrite the live feed\n  ---\n  duration_ms: 0.468859\n  type: 'test'\n  ...\n# Subtest: a refresh can immediately seed the settlement from its local cache\nok 43 - a refresh can immediately seed the settlement from its local cache\n  ---\n  duration_ms: 0.401277\n  type: 'test'\n  ...\n# Subtest: live collection waits until opening assets are ready\nok 44 - live collection waits until opening assets are ready\n  ---\n  duration_ms: 2.65784\n  type: 'test'\n  ...\n# Subtest: frame completion waits through pending work and releases its GPU fence\nok 45 - frame completion waits through pending work and releases its GPU fence\n  ---\n  duration_ms: 14.252186\n  type: 'test'\n  ...\n# Subtest: a failed GPU fence refuses the check and still releases the resource\nok 46 - a failed GPU fence refuses the check and still releases the resource\n  ---\n  duration_ms: 1.825741\n  type: 'test'\n  ...\n# Subtest: unfinished GPU work has a finite deadline and cannot silently pass\nok 47 - unfinished GPU work has a finite deadline and cannot silently pass\n  ---\n  duration_ms: 1.120865\n  type: 'test'\n  ...\n# Subtest: Hermes has solid exposed stone and an accessible aisle around the excavation\nok 48 - Hermes has solid exposed stone and an accessible aisle around the excavation\n  ---\n  duration_ms: 8.570713\n  type: 'test'\n  ...\n# Subtest: the excavation is real terrain and rendered vertex heights match the walking floor\nok 49 - the excavation is real terrain and rendered vertex heights match the walking floor\n  ---\n  duration_ms: 24.896064\n  type: 'test'\n  ...\n# Subtest: retired giant arms and detached sandal no longer create invisible barriers\nok 50 - retired giant arms and detached sandal no longer create invisibl",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

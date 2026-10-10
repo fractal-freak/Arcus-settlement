@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-10",
+    "seen": "The dirt riverbank directly flanking the circular stone monolith is flat and unarmored, while the approach lane from the well house terminates at the sacred plaza without stone edging or votive markers.",
+    "added": "shrine_waterfront_flank, monolith_sanctuary_framing, shrine_riverbank_boulder_belt, shrine_water_reed_fringe, monolith_flank_votive_beacons, monolith_path_edging_stones"
+  },
+  {
     "at": "2026-10-06",
     "seen": "The open sandy shoreline between the circular rune monolith and the stone bridge is completely bare of ceremonial standards or stone edging, while the dirt path passing the red-roofed well house spills directly onto unbordered lawn.",
     "added": "shrine_water_ceremonial_boundary, well_shrine_thoroughfare_verge, monolith_waterfront_ceremonial_flags, shrine_bridge_riparian_rockery, wellside_thoroughfare_stone_edging, shrine_approach_utility_staging"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-11",
     "seen": "Skyline is the only score still behind, and the critic's heraldry jobs never get taken because they share the tall tag and already read as finished. The outskirts have no mills or taller keeps, only the same flags and watchposts.",
     "added": "raise_windmills, raise_keep_towers, works_scaffolding"
-  },
-  {
-    "at": "2026-09-11",
-    "seen": "The river edge is completely naked turf dropping into bare water, while low foliage is densely repeated on land instead of adding vertical variety or waterfront detail.",
-    "added": "waterfront, heraldry, plant_water_reeds, scatter_waterlilies, dockside_staging, raise_heraldic_flags, skyline_scaffolding"
   }
 ];

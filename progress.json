@@ -3,19 +3,6 @@
   "stage": 0,
   "history": [
     {
-      "at": "2026-10-01T06:15:48.999Z",
-      "run": "36822970583",
-      "stage": 0,
-      "outcome": "skipped",
-      "validated": false,
-      "retain": false,
-      "published": false,
-      "stageComplete": false,
-      "summary": "No candidate produced",
-      "reason": "Attempt failed before review; inspect this run before repeating.",
-      "next": "Continue the current milestone; address the last failure."
-    },
-    {
       "at": "2026-10-01T13:35:06.112Z",
       "run": "36868300064",
       "stage": 0,
@@ -520,6 +507,19 @@
       "stageComplete": false,
       "summary": "No candidate produced",
       "reason": "Gemini unavailable (503); 3 attempts exhausted",
+      "next": "Continue the current milestone; address the last failure."
+    },
+    {
+      "at": "2026-10-10T00:19:54.968Z",
+      "run": "38006795908",
+      "stage": 0,
+      "outcome": "provider-deferred",
+      "validated": true,
+      "retain": false,
+      "published": false,
+      "stageComplete": false,
+      "summary": "Restore village landmarks (well and outer tower) and extend worn street terrain shading across all village streets for a readable approach.",
+      "reason": "Gemini unavailable (429); 3 attempts exhausted",
       "next": "Continue the current milestone; address the last failure."
     }
   ],

@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-10-11",
+    "seen": "A vast empty lawn stretches between the well house thoroughfare and the monolith plaza, creating a hollow void in the center of the town's composition, while the hillside rising behind the shrine toward the castle stair lacks structural framing.",
+    "added": "central_green_framing, castle_stair_terrace, meadow_lane_stone_border, central_meadow_artisan_market, castle_hill_watch_bastion, castle_path_waypoint_flags"
+  },
+  {
+    "at": "2026-10-11",
     "seen": "The dirt riverbank directly flanking the circular monolith plaza remains a bare sandy strip without stone revetments or ceremonial standards, while the far left outskirt behind the cottage cluster sits completely flat against the massive castle hill.",
     "added": "shrine_shore_sanctuary, cottage_hill_flank, shrine_shore_boulder_revetment, monolith_river_votive_standards, monolith_water_lily_bed, western_outskirt_windmill_anchor, western_ridge_guard_tower"
   },
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-12",
     "seen": "The carved stone monolith draws large crowds onto unbordered cobbles while the massive stair path climbing the castle hill in the background sits completely unadorned on bare turf.",
     "added": "hillside_procession, monolith_sanctuary, hillside_banner_posts, hillside_stone_retaining, monolith_sacred_enclosure, monolith_devotional_banners"
-  },
-  {
-    "at": "2026-09-12",
-    "seen": "The open ground between the upper timber houses and the monolith plaza is a bare grass expanse dotted randomly with lone barrels, while the residential area lacks any market structures or defined trade space.",
-    "added": "civic_commerce, lane_thresholds, erect_market_stalls, market_goods_staging, plaza_approach_fencing, waypoint_storage_alcove"
   }
 ];

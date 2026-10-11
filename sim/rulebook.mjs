@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-11",
+    "seen": "The sandy river shore immediately flanking the circular monolith plaza is completely bare of water flora and stone retaining boulders, while the foreground sapling plantation sits unbordered against the main dirt lane.",
+    "added": "shrine_riparian_sacred_guard, foreground_grove_lane_enclosure, monolith_river_waterlily_fringe, monolith_shoreline_rock_revetment, shrine_approach_votive_standards, foreground_sapling_perimeter_fence, forester_lane_timber_depot"
+  },
+  {
     "at": "2026-10-10",
     "seen": "The hill path climbing behind the well house toward the upper castle stair sits as open grass without banners or path markers, while the dirt yard between the central cottages and well house lacks trade barrels, wheelbarrows, and storage goods.",
     "added": "castle_ascent_heraldry, wellside_artisan_staging, castle_stair_approach_banners, castle_slope_waypoint_beacons, wellside_craft_wheelbarrow_staging, cottage_yard_freight_depot"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-12",
     "seen": "The large runic monolith draws heavy crowd gatherings but lacks sacred ceremonial banners or ritual offerings, while the foreground tree grove sits in an artificial grid on open grass without natural stone margins or timber workings.",
     "added": "sacred_hallow, forest_boundary, monolith_hallow_banners, monolith_votive_shrine, forester_timber_stockpile, woodland_boulder_margin"
-  },
-  {
-    "at": "2026-09-12",
-    "seen": "The large carved stone monolith dominating the central plaza sits on unbordered cobbles without sacred offerings or boundary markers, while the riverbank beside the stone bridge remains a bare dirt drop into open water.",
-    "added": "monolith_sanctity, waterfront_flourish, shrine_votive_offerings, monolith_stone_enclosure, bridgehead_waterplants, riverbank_boulder_accent"
   }
 ];

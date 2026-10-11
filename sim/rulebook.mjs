@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-10-11",
+    "seen": "The dirt riverbank directly flanking the circular monolith plaza remains a bare sandy strip without stone revetments or ceremonial standards, while the far left outskirt behind the cottage cluster sits completely flat against the massive castle hill.",
+    "added": "shrine_shore_sanctuary, cottage_hill_flank, shrine_shore_boulder_revetment, monolith_river_votive_standards, monolith_water_lily_bed, western_outskirt_windmill_anchor, western_ridge_guard_tower"
+  },
+  {
+    "at": "2026-10-11",
     "seen": "The sandy river shore immediately flanking the circular monolith plaza is completely bare of water flora and stone retaining boulders, while the foreground sapling plantation sits unbordered against the main dirt lane.",
     "added": "shrine_riparian_sacred_guard, foreground_grove_lane_enclosure, monolith_river_waterlily_fringe, monolith_shoreline_rock_revetment, shrine_approach_votive_standards, foreground_sapling_perimeter_fence, forester_lane_timber_depot"
   },
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-12",
     "seen": "The open ground between the upper timber houses and the monolith plaza is a bare grass expanse dotted randomly with lone barrels, while the residential area lacks any market structures or defined trade space.",
     "added": "civic_commerce, lane_thresholds, erect_market_stalls, market_goods_staging, plaza_approach_fencing, waypoint_storage_alcove"
-  },
-  {
-    "at": "2026-09-12",
-    "seen": "The large runic monolith draws heavy crowd gatherings but lacks sacred ceremonial banners or ritual offerings, while the foreground tree grove sits in an artificial grid on open grass without natural stone margins or timber workings.",
-    "added": "sacred_hallow, forest_boundary, monolith_hallow_banners, monolith_votive_shrine, forester_timber_stockpile, woodland_boulder_margin"
   }
 ];

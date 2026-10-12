@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-12",
+    "seen": "The dirt shoreline directly in front of the circular monolith plaza remains a bare sandy strip without structural boulder revetment, while the paved shrine perimeter lacks ceremonial standards to establish a sacred threshold.",
+    "added": "monolith_flank_riparian_armor, shrine_sanctuary_heraldry, monolith_riverbank_boulder_revetment, monolith_shoreline_water_flora, shrine_entry_votive_standards, shrine_perimeter_stone_boundary"
+  },
+  {
     "at": "2026-10-11",
     "seen": "A vast empty lawn stretches between the well house thoroughfare and the monolith plaza, creating a hollow void in the center of the town's composition, while the hillside rising behind the shrine toward the castle stair lacks structural framing.",
     "added": "central_green_framing, castle_stair_terrace, meadow_lane_stone_border, central_meadow_artisan_market, castle_hill_watch_bastion, castle_path_waypoint_flags"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-13",
     "seen": "The carved stone monolith sits on a circular cobble ring that ends abruptly against bare turf without boundary markers, while the long stone staircase ascending to the castle hill stands completely plain and unadorned.",
     "added": "castle_ascent, shrine_perimeter, castle_stair_banners, monolith_stone_border, monolith_votive_flags, monolith_offering_vessels, wellside_supply_staging"
-  },
-  {
-    "at": "2026-09-12",
-    "seen": "The carved stone monolith draws large crowds onto unbordered cobbles while the massive stair path climbing the castle hill in the background sits completely unadorned on bare turf.",
-    "added": "hillside_procession, monolith_sanctuary, hillside_banner_posts, hillside_stone_retaining, monolith_sacred_enclosure, monolith_devotional_banners"
   }
 ];

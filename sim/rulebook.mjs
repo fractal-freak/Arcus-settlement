@@ -399,6 +399,11 @@ export const EXTRA_DIMENSIONS = [
 export const JOURNAL = [
   {
     "at": "2026-10-12",
+    "seen": "The grassy slope rising from the cottage cluster to the upper castle stairs is a bare green void that breaks the visual composition between lower town and upper fortress, while the river bridge landing enters the town without guard posts or defensive thresholding.",
+    "added": "castle_slope_framing, bridgehead_defensive_threshold, castle_slope_watch_outpost, midground_terrace_woodland, bridgehead_guard_checkpoint, bridgehead_heraldic_beacons"
+  },
+  {
+    "at": "2026-10-12",
     "seen": "The dirt shoreline directly in front of the circular monolith plaza remains a bare sandy strip without structural boulder revetment, while the paved shrine perimeter lacks ceremonial standards to establish a sacred threshold.",
     "added": "monolith_flank_riparian_armor, shrine_sanctuary_heraldry, monolith_riverbank_boulder_revetment, monolith_shoreline_water_flora, shrine_entry_votive_standards, shrine_perimeter_stone_boundary"
   },
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-13",
     "seen": "The foreground sapling grove is planted in a rigid grid along the dirt lane without any fencing, while the monolith's circular plaza ends abruptly on raw earth and riverbank without perimeter markers.",
     "added": "timber_grove_boundary, shrine_river_flanking, grove_perimeter_fencing, woodlot_lumber_depot, monolith_river_parapet, monolith_ceremonial_standards"
-  },
-  {
-    "at": "2026-09-13",
-    "seen": "The carved stone monolith sits on a circular cobble ring that ends abruptly against bare turf without boundary markers, while the long stone staircase ascending to the castle hill stands completely plain and unadorned.",
-    "added": "castle_ascent, shrine_perimeter, castle_stair_banners, monolith_stone_border, monolith_votive_flags, monolith_offering_vessels, wellside_supply_staging"
   }
 ];

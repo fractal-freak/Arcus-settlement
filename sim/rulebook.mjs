@@ -398,6 +398,11 @@ export const EXTRA_DIMENSIONS = [
  */
 export const JOURNAL = [
   {
+    "at": "2026-10-13",
+    "seen": "The circular monolith plaza meets the river along an unarmored sandy bank completely lacking water plants or stone revetment, while the stone bridge landing adjacent to the shrine enters without heraldic boundary markers or ceremonial standards.",
+    "added": "monolith_river_flank, bridge_shrine_threshold, monolith_shoreline_aquatic_fringe, monolith_riparian_boulder_belt, bridgehead_heraldic_threshold, shrine_entry_guard_post"
+  },
+  {
     "at": "2026-10-12",
     "seen": "The grassy slope rising from the cottage cluster to the upper castle stairs is a bare green void that breaks the visual composition between lower town and upper fortress, while the river bridge landing enters the town without guard posts or defensive thresholding.",
     "added": "castle_slope_framing, bridgehead_defensive_threshold, castle_slope_watch_outpost, midground_terrace_woodland, bridgehead_guard_checkpoint, bridgehead_heraldic_beacons"
@@ -591,10 +596,5 @@ export const JOURNAL = [
     "at": "2026-09-13",
     "seen": "The dirt riverbank around the monolith plaza drops bare into the water without revetment stone or aquatic plants, while the well area near the residential timber cottages sits open on plain turf without functional barrels or water gear.",
     "added": "riverbank_embankment, wellside_working_yard, monolith_river_revetment, monolith_shore_reeds, wellside_utility_staging, wellside_timber_store"
-  },
-  {
-    "at": "2026-09-13",
-    "seen": "The foreground sapling grove is planted in a rigid grid along the dirt lane without any fencing, while the monolith's circular plaza ends abruptly on raw earth and riverbank without perimeter markers.",
-    "added": "timber_grove_boundary, shrine_river_flanking, grove_perimeter_fencing, woodlot_lumber_depot, monolith_river_parapet, monolith_ceremonial_standards"
   }
 ];
